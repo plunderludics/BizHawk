@@ -44,6 +44,8 @@ namespace BizHawk.Client.Common
 
 		public readonly string? openExtToolDll;
 
+		public readonly string? customWindowTitle;
+
 		public readonly string? cmdRom;
 
 		public ParsedCLIFlags(
@@ -66,6 +68,7 @@ namespace BizHawk.Client.Common
 			(string? UrlGet, string? UrlPost)? httpAddresses,
 			bool? audiosync,
 			string? openExtToolDll,
+			string? customWindowTitle,
 			string? cmdRom)
 		{
 			this.cmdLoadSlot = cmdLoadSlot;
@@ -87,6 +90,7 @@ namespace BizHawk.Client.Common
 			HTTPAddresses = httpAddresses;
 			this.audiosync = audiosync;
 			this.openExtToolDll = openExtToolDll;
+			this.customWindowTitle = customWindowTitle;
 			this.cmdRom = cmdRom;
 		}
 	}

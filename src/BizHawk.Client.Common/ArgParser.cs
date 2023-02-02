@@ -43,6 +43,7 @@ namespace BizHawk.Client.Common
 			bool? audiosync = null;
 			string? openExtToolDll = null;
 			string? cmdRom = null;
+			string? customWindowTitle = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -157,6 +158,10 @@ namespace BizHawk.Client.Common
 					// - dll path matches given string; or dll filename matches given string with or without `.dll`
 					openExtToolDll = arg.Substring(20);
 				}
+				else if (argDowncased.StartsWith("--windowtitle="))
+				{
+					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else
 				{
 					cmdRom = arg;
@@ -200,6 +205,7 @@ namespace BizHawk.Client.Common
 				httpAddresses: httpAddresses,
 				audiosync: audiosync,
 				openExtToolDll: openExtToolDll,
+				customWindowTitle: customWindowTitle,
 				cmdRom: cmdRom
 			);
 		}

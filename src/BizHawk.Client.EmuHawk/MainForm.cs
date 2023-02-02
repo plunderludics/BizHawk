@@ -1770,6 +1770,8 @@ namespace BizHawk.Client.EmuHawk
 					: VersionInfo.CustomBuildString);
 				if (VersionInfo.DeveloperBuild) sb.Append(" (interim)");
 
+				if (_argParser.customWindowTitle != null) sb.Append(" "+_argParser.customWindowTitle);
+
 				return sb.ToString();
 			}
 		}

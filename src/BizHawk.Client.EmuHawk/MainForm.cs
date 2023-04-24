@@ -2565,6 +2565,20 @@ namespace BizHawk.Client.EmuHawk
 			Sound.StopSound();
 			Sound.StartSound();
 		}
+		public void SetVolume(int volume)
+		{
+			Config.SoundVolume = volume;
+			if (Config.SoundVolume > 100)
+			{
+				Config.SoundVolume = 100;
+			}
+			else if (Config.SoundVolume < 0)
+			{
+				Config.SoundVolume = 0;
+			}
+
+			AddOnScreenMessage($"Volume {Config.SoundVolume}");
+		}
 
 		private void VolumeUp()
 		{

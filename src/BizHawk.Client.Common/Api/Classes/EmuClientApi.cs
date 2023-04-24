@@ -193,6 +193,11 @@ namespace BizHawk.Client.Common
 			if (enable != _config.SoundEnabled) _mainForm.ToggleSound();
 		}
 
+		public void SetVolume(int volume)
+		{
+			_mainForm.SetVolume(volume);
+		}
+
 		public void SetTargetScanlineIntensity(int val) => _config.TargetScanlineFilterIntensity = val;
 
 		public void SetWindowSize(int size)

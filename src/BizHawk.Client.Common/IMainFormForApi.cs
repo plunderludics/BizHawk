@@ -116,6 +116,9 @@ namespace BizHawk.Client.Common
 		/// <remarks>only referenced from <c>EmuClientApi</c></remarks>
 		void ToggleSound();
 
+		/// <remarks>only referenced from <c>EmuClientApi</c></remarks>
+		void SetVolume(int volume);
+
 		void UnpauseEmulator();
 	}
 }

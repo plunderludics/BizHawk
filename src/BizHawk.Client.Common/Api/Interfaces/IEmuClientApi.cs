@@ -68,6 +68,7 @@ namespace BizHawk.Client.Common
 
 		bool GetSoundOn();
 
+
 		int GetTargetScanlineIntensity();
 
 		int GetWindowSize();
@@ -177,6 +178,8 @@ namespace BizHawk.Client.Common
 		void SetScreenshotOSD(bool value);
 
 		void SetSoundOn(bool enable);
+
+		void SetVolume(int value);
 
 		void SetTargetScanlineIntensity(int val);
 

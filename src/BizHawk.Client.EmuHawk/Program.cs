@@ -145,7 +145,8 @@ namespace BizHawk.Client.EmuHawk
 				new ExceptionBox(e.Message).ShowDialog();
 			}
 
-			var configPath = cliFlags.cmdConfigFile ?? Path.Combine(PathUtils.ExeDirectoryPath, "config.ini");
+			var configPath = cliFlags.cmdConfigFile ??  Path.Combine(PathUtils.ExeDirectoryPath, "config.ini");
+
 
 			Config initialConfig;
 			try

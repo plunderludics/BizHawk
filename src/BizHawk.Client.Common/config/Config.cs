@@ -15,7 +15,7 @@ namespace BizHawk.Client.Common
 {
 	public class Config
 	{
-		public static string ControlDefaultPath => Path.Combine(PathUtils.ExeDirectoryPath, "defctrl.json");
+		public static string ControlDefaultPath = Path.Combine(PathUtils.ExeDirectoryPath, "defctrl.json");
 
 		/// <remarks>
 		/// <c>AppliesTo[0]</c> is used as the group label, and
@@ -44,20 +44,25 @@ namespace BizHawk.Client.Common
 				new[] { CoreNames.TI83Hawk, CoreNames.Emu83 }),
 		};
 
-		public Config()
+		public Config() : this(ControlDefaultPath)
+		{
+		}
+
+		public Config(string controlDefaultPath)
 		{
 			if (AllTrollers.Count == 0
 				&& AllTrollersAutoFire.Count == 0
 				&& AllTrollersAnalog.Count == 0
 				&& AllTrollersFeedbacks.Count == 0)
 			{
-				var cd = ConfigService.Load<DefaultControls>(ControlDefaultPath);
+				var cd = ConfigService.Load<DefaultControls>(controlDefaultPath);
 				AllTrollers = cd.AllTrollers;
 				AllTrollersAutoFire = cd.AllTrollersAutoFire;
 				AllTrollersAnalog = cd.AllTrollersAnalog;
 				AllTrollersFeedbacks = cd.AllTrollersFeedbacks;
 			}
 		}
+
 
 		public void ResolveDefaults()
 		{

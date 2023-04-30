@@ -185,10 +185,15 @@ namespace BizHawk.Common.PathExtensions
 
 		static PathUtils()
 		{
-			var dirPath = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
-			ExeDirectoryPath = OSTailoredCode.IsUnixHost
-				? string.IsNullOrEmpty(dirPath) || dirPath == "/" ? string.Empty : dirPath
-				: string.IsNullOrEmpty(dirPath) ? throw new Exception("failed to get location of executable, very bad things must have happened") : dirPath.RemoveSuffix('\\');
+			// [04/30/23 - dv: GetEntryAssembly() seems to return null when called from a dll within Unity so removing for now, to avoid throwing an exception]
+			// var dirPath = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
+			// ExeDirectoryPath = OSTailoredCode.IsUnixHost
+			// 	? string.IsNullOrEmpty(dirPath) || dirPath == "/" ? string.Empty : dirPath
+			// 	: string.IsNullOrEmpty(dirPath) ? throw new Exception("failed to get location of executable, very bad things must have happened") : dirPath.RemoveSuffix('\\');
+
+			ExeDirectoryPath = "not-set"; // hopefully this never actually gets used for UnityHawk purposes
+			// [TODO find a cleaner workaround]
+			
 			DllDirectoryPath = Path.Combine(OSTailoredCode.IsUnixHost && ExeDirectoryPath == string.Empty ? "/" : ExeDirectoryPath, "dll");
 			// yes, this is a lot of extra code to make sure BizHawk can run in `/` on Unix, but I've made up for it by caching these for the program lifecycle --yoshi
 			DataDirectoryPath = ExeDirectoryPath;

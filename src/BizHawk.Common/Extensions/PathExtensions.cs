@@ -170,7 +170,7 @@ namespace BizHawk.Common.PathExtensions
 		/// returned string omits trailing slash<br/>
 		/// on Windows, the env. var is ignored and the fallback of <see cref="ExeDirectoryPath"/> is always used
 		/// </remarks>
-		public static readonly string DataDirectoryPath;
+		public static readonly string? DataDirectoryPath;
 
 		/// <returns>absolute path of the dll dir (sibling of EmuHawk.exe)</returns>
 		/// <remarks>returned string omits trailing slash</remarks>
@@ -178,21 +178,20 @@ namespace BizHawk.Common.PathExtensions
 
 		/// <returns>absolute path of the parent dir of DiscoHawk.exe/EmuHawk.exe, commonly referred to as <c>%exe%</c> though none of our code adds it to the environment</returns>
 		/// <remarks>returned string omits trailing slash</remarks>
-		public static readonly string ExeDirectoryPath;
+		public static readonly string? ExeDirectoryPath;
 
 		public static string SpecialRecentsDir
 			=> Environment.GetFolderPath(Environment.SpecialFolder.Recent, Environment.SpecialFolderOption.DoNotVerify);
 
 		static PathUtils()
-		{
-			// [04/30/23 - dv: GetEntryAssembly() seems to return null when called from a dll within Unity so removing for now, to avoid throwing an exception]
-			// var dirPath = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
-			// ExeDirectoryPath = OSTailoredCode.IsUnixHost
-			// 	? string.IsNullOrEmpty(dirPath) || dirPath == "/" ? string.Empty : dirPath
-			// 	: string.IsNullOrEmpty(dirPath) ? throw new Exception("failed to get location of executable, very bad things must have happened") : dirPath.RemoveSuffix('\\');
-
-			ExeDirectoryPath = "not-set"; // hopefully this never actually gets used for UnityHawk purposes
-			// [TODO find a cleaner workaround]
+		{			
+			// [05/04/23 - dv: GetEntryAssembly() seems to return null when called from a dll within Unity -
+			//  in that case we set ExeDirectoryPath to null which seems to work ok for UnityHawk purposes]
+			var dirPath = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
+			
+			ExeDirectoryPath = OSTailoredCode.IsUnixHost
+				? string.IsNullOrEmpty(dirPath) || dirPath == "/" ? string.Empty : dirPath
+				: string.IsNullOrEmpty(dirPath) ? /*throw new Exception("failed to get location of executable, very bad things must have happened")*/ null : dirPath.RemoveSuffix('\\');
 			
 			DllDirectoryPath = Path.Combine(OSTailoredCode.IsUnixHost && ExeDirectoryPath == string.Empty ? "/" : ExeDirectoryPath, "dll");
 			// yes, this is a lot of extra code to make sure BizHawk can run in `/` on Unix, but I've made up for it by caching these for the program lifecycle --yoshi

@@ -127,7 +127,7 @@ namespace BizHawk.Common
 			public IntPtr LoadOrThrow(string dllToLoad)
 			{
 				var ret = LoadOrZero(dllToLoad);
-				return ret != IntPtr.Zero ? ret : throw new InvalidOperationException($"got null pointer from {nameof(dlopen)}, error: {Marshal.PtrToStringAnsi(dlerror())}");
+				return ret != IntPtr.Zero ? ret : throw new InvalidOperationException($"for {dllToLoad} got null pointer from {nameof(dlopen)}, error: {Marshal.PtrToStringAnsi(dlerror())}");
 			}
 
 			public string GetErrorMessage()

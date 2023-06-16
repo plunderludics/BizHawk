@@ -185,16 +185,27 @@ namespace BizHawk.Common.PathExtensions
 
 		static PathUtils()
 		{
-			var dirPath = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
-			if (string.IsNullOrEmpty(dirPath)) {
-				// hack for UnityHawk - when running within unity GetEntryAssembly() returns null,
-				// so avoid triggering an exception [hacky but seems to work for now]
-				ExeDirectoryPath = "ExeDirectoryPathNotSet"; // hopefully this never actually gets used for UnityHawk purposes
-			} else {
-				ExeDirectoryPath = OSTailoredCode.IsUnixHost
-					? string.IsNullOrEmpty(dirPath) || dirPath == "/" ? string.Empty : dirPath
-					: dirPath.RemoveSuffix('\\');
+			// Console.WriteLine($"GetEntryAssembly: {Assembly.GetEntryAssembly()?.Location}");
+			// Console.WriteLine($"GetCallingAssembly: {Assembly.GetCallingAssembly()?.Location}");
+
+			// [GetEntryAssembly returns null when running inside Unity,
+			// so for the sake of UnityHawk use GetCallingAssembly instead (which is identical within the standalone exe)]
+			var callingAssembly = Assembly.GetCallingAssembly()?.Location;
+
+			if (string.IsNullOrEmpty(callingAssembly)) {
+				throw new Exception("failed to get location of calling assembly, very bad things must have happened");
 			}
+
+			// [another hack for UnityHawk - determine whether being called from EmuHawk or
+			//  Unity by checking if callingAssembly ends in "dll" or "exe" respectively]
+			var dirPath = callingAssembly!.EndsWith(".dll")
+				? Directory.GetParent(Path.GetDirectoryName(callingAssembly)).FullName
+				: Path.GetDirectoryName(callingAssembly);
+
+
+			ExeDirectoryPath = OSTailoredCode.IsUnixHost
+				? string.IsNullOrEmpty(dirPath) || dirPath == "/" ? string.Empty : dirPath
+				: dirPath.RemoveSuffix('\\');
 
 			DllDirectoryPath = Path.Combine(OSTailoredCode.IsUnixHost && ExeDirectoryPath == string.Empty ? "/" : ExeDirectoryPath, "dll");
 			// yes, this is a lot of extra code to make sure BizHawk can run in `/` on Unix, but I've made up for it by caching these for the program lifecycle --yoshi

@@ -175,7 +175,7 @@ namespace BizHawk.Common
 			public IntPtr GetProcAddrOrThrow(IntPtr hModule, string procName)
 			{
 				var ret = GetProcAddrOrZero(hModule, procName);
-				return ret != IntPtr.Zero ? ret : throw new InvalidOperationException($"got null pointer from {nameof(GetProcAddress)}, error code: {GetLastError()}");
+				return ret != IntPtr.Zero ? ret : throw new InvalidOperationException($"for {procName} got null pointer from {nameof(GetProcAddress)}, error code: {GetLastError()}");
 			}
 
 			public IntPtr LoadOrZero(string dllToLoad) => LoadLibrary(dllToLoad);
@@ -183,7 +183,7 @@ namespace BizHawk.Common
 			public IntPtr LoadOrThrow(string dllToLoad)
 			{
 				var ret = LoadOrZero(dllToLoad);
-				return ret != IntPtr.Zero ? ret : throw new InvalidOperationException($"got null pointer from {nameof(LoadLibrary)}, error code: {GetLastError()}");
+				return ret != IntPtr.Zero ? ret : throw new InvalidOperationException($"for {dllToLoad} got null pointer from {nameof(LoadLibrary)}, error code: {GetLastError()}");
 			}
 
 			public string GetErrorMessage()

@@ -11,6 +11,13 @@
 	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
 		<OutputType>WinExe</OutputType>
 	</PropertyGroup>
+	<!-- Sort of hacky right now but for UnityHawk build EmuHawk as a .dll instead of an .exe
+	     (compile with `dotnet build . -p:UnityHawk=true`)
+		 Also ensure .pdb files get generated in a format Unity can read (for stack trace line numbers) -->
+	<PropertyGroup Condition=" '$(UnityHawk)' != '' ">
+		<OutputType>Library</OutputType>
+		<DebugType>portable</DebugType>
+	</PropertyGroup>
 	<ItemGroup>
 		<Compile Include="$(ProjectDir)../BizHawk.Common/OSTailoredCode.cs" />
 	</ItemGroup>

@@ -21,7 +21,7 @@ namespace BizHawk.Client.EmuHawk
 			LuaFileList scriptList,
 			LuaFunctionList registeredFuncList,
 			IEmulatorServiceProvider serviceProvider,
-			MainForm mainForm,
+			IMainFormForApi mainForm,
 			DisplayManagerBase displayManager,
 			InputManager inputManager,
 			Config config,
@@ -55,7 +55,7 @@ namespace BizHawk.Client.EmuHawk
 			RegisteredFunctions = registeredFuncList;
 			ScriptList = scriptList;
 			Docs.Clear();
-			_apiContainer = ApiManager.RestartLua(serviceProvider, LogToLuaConsole, _mainForm, _displayManager, _inputManager, _mainForm.MovieSession, _mainForm.Tools, config, emulator, game);
+			_apiContainer = ApiManager.RestartLua(serviceProvider, LogToLuaConsole, _mainForm, _displayManager, _inputManager, _mainForm.MovieSession, /*_mainForm.Tools*/null, config, emulator, game);
 
 			// Register lua libraries
 			foreach (var lib in Client.Common.ReflectionCache.Types.Concat(EmuHawk.ReflectionCache.Types)
@@ -73,15 +73,15 @@ namespace BizHawk.Client.EmuHawk
 					{
 						clientLib.MainForm = _mainForm;
 					}
-					else if (instance is ConsoleLuaLibrary consoleLib)
-					{
-						consoleLib.Tools = _mainForm.Tools;
-						_logToLuaConsoleCallback = consoleLib.Log;
-					}
-					else if (instance is FormsLuaLibrary formsLib)
-					{
-						formsLib.MainForm = _mainForm;
-					}
+					// else if (instance is ConsoleLuaLibrary consoleLib)
+					// {
+					// 	consoleLib.Tools = _mainForm.Tools;
+					// 	_logToLuaConsoleCallback = consoleLib.Log;
+					// }
+					// else if (instance is FormsLuaLibrary formsLib)
+					// {
+					// 	formsLib.MainForm = _mainForm;
+					// }
 					else if (instance is GuiLuaLibrary guiLib)
 					{
 						// emu lib may be null now, depending on order of ReflectionCache.Types, but definitely won't be null when this is called
@@ -92,10 +92,10 @@ namespace BizHawk.Client.EmuHawk
 							return _th.ObjectToTable(canvas);
 						};
 					}
-					else if (instance is TAStudioLuaLibrary tastudioLib)
-					{
-						tastudioLib.Tools = _mainForm.Tools;
-					}
+					// else if (instance is TAStudioLuaLibrary tastudioLib)
+					// {
+					// 	tastudioLib.Tools = _mainForm.Tools;
+					// }
 
 					EnumerateLuaFunctions(instance.Name, lib, instance);
 					Libraries.Add(lib, instance);
@@ -126,7 +126,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private readonly InputManager _inputManager;
 
-		private readonly MainForm _mainForm;
+		private readonly IMainFormForApi _mainForm;
 
 		private Lua _lua = new();
 		private LuaThread _currThread;
@@ -165,7 +165,7 @@ namespace BizHawk.Client.EmuHawk
 			IEmulator emulator,
 			IGameInfo game)
 		{
-			_apiContainer = ApiManager.RestartLua(newServiceProvider, LogToLuaConsole, _mainForm, _displayManager, _inputManager, _mainForm.MovieSession, _mainForm.Tools, config, emulator, game);
+			_apiContainer = ApiManager.RestartLua(newServiceProvider, LogToLuaConsole, _mainForm, _displayManager, _inputManager, _mainForm.MovieSession, /*_mainForm.Tools*/null, config, emulator, game);
 			PathEntries = config.PathEntries;
 			foreach (var lib in Libraries.Values)
 			{

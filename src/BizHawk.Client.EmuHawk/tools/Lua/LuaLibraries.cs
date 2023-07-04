@@ -21,7 +21,7 @@ namespace BizHawk.Client.EmuHawk
 			LuaFileList scriptList,
 			LuaFunctionList registeredFuncList,
 			IEmulatorServiceProvider serviceProvider,
-			IMainFormForApi mainForm, // [for UnityHawk: changed this from a concrete MainForm to IMainFormForApi]
+			MainForm mainForm,
 			DisplayManagerBase displayManager,
 			InputManager inputManager,
 			Config config,
@@ -50,17 +50,12 @@ namespace BizHawk.Client.EmuHawk
 			_displayManager = displayManager;
 			_inputManager = inputManager;
 			_mainForm = mainForm;
-			
-			// [EmuHawk provides a concrete MainForm but UnityHawk provides a different implementation
-			//  of IMainFormForApi - some features are outside that api so not supported by UnityHawk]
-			MainForm concreteMainForm = _mainForm as MainForm;
-			
 			LuaWait = new AutoResetEvent(false);
 			PathEntries = config.PathEntries;
 			RegisteredFunctions = registeredFuncList;
 			ScriptList = scriptList;
 			Docs.Clear();
-			_apiContainer = ApiManager.RestartLua(serviceProvider, LogToLuaConsole, _mainForm, _displayManager, _inputManager, _mainForm.MovieSession, concreteMainForm?.Tools, config, emulator, game);
+			_apiContainer = ApiManager.RestartLua(serviceProvider, LogToLuaConsole, _mainForm, _displayManager, _inputManager, _mainForm.MovieSession, _mainForm.Tools, config, emulator, game);
 
 			// Register lua libraries
 			foreach (var lib in Client.Common.ReflectionCache.Types.Concat(EmuHawk.ReflectionCache.Types)
@@ -80,12 +75,12 @@ namespace BizHawk.Client.EmuHawk
 					}
 					else if (instance is ConsoleLuaLibrary consoleLib)
 					{
-						consoleLib.Tools = concreteMainForm?.Tools;
+						consoleLib.Tools = _mainForm.Tools;
 						_logToLuaConsoleCallback = consoleLib.Log;
 					}
 					else if (instance is FormsLuaLibrary formsLib)
 					{
-						formsLib.MainForm = concreteMainForm;
+						formsLib.MainForm = _mainForm;
 					}
 					else if (instance is GuiLuaLibrary guiLib)
 					{
@@ -99,7 +94,7 @@ namespace BizHawk.Client.EmuHawk
 					}
 					else if (instance is TAStudioLuaLibrary tastudioLib)
 					{
-						tastudioLib.Tools = concreteMainForm?.Tools;
+						tastudioLib.Tools = _mainForm.Tools;
 					}
 
 					EnumerateLuaFunctions(instance.Name, lib, instance);
@@ -131,15 +126,14 @@ namespace BizHawk.Client.EmuHawk
 
 		private readonly InputManager _inputManager;
 
-		private readonly IMainFormForApi _mainForm;
+		private readonly MainForm _mainForm;
 
 		private Lua _lua = new();
 		private LuaThread _currThread;
 
 		private readonly NLuaTableHelper _th;
 
-		// [making this public so that UnityHawk can redirect logging output]
-		public static Action<object[]> _logToLuaConsoleCallback = a => Console.WriteLine("a Lua lib is logging during init and the console lib hasn't been initialised yet");
+		private static Action<object[]> _logToLuaConsoleCallback = a => Console.WriteLine("a Lua lib is logging during init and the console lib hasn't been initialised yet");
 
 		private FormsLuaLibrary FormsLibrary => (FormsLuaLibrary)Libraries[typeof(FormsLuaLibrary)];
 
@@ -171,8 +165,7 @@ namespace BizHawk.Client.EmuHawk
 			IEmulator emulator,
 			IGameInfo game)
 		{
-			MainForm concreteMainForm = _mainForm as MainForm;
-			_apiContainer = ApiManager.RestartLua(newServiceProvider, LogToLuaConsole, _mainForm, _displayManager, _inputManager, _mainForm.MovieSession, concreteMainForm?.Tools, config, emulator, game);
+			_apiContainer = ApiManager.RestartLua(newServiceProvider, LogToLuaConsole, _mainForm, _displayManager, _inputManager, _mainForm.MovieSession, _mainForm.Tools, config, emulator, game);
 			PathEntries = config.PathEntries;
 			foreach (var lib in Libraries.Values)
 			{

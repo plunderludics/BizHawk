@@ -6,6 +6,9 @@ namespace BizHawk.Client.Common
 {
 	public interface IMainFormForApi
 	{
+		// [Added for the sake of UnityHawk since it has its own implementation of this interface]
+		IMovieSession MovieSession { get; }
+
 		/// <remarks>only referenced from <c>ClientLuaLibrary</c></remarks>
 		CheatCollection CheatList { get; }
 

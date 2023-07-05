@@ -28,6 +28,11 @@ namespace BizHawk.Client.Common
 		/// <returns>True if the current directory was sucessfully set. Otherwise, false.</returns>
 		private bool CoolSetCurrentDirectory(string path, string currDirSpeedHack = null)
 		{
+			// [for UnityHawk, disabling this for now]
+			return true;
+
+			/*
+
 			string target = $"{path}\\";
 
 			// first we'll bypass it with a general hack: don't do any setting if the value's already there (even at the OS level, setting the directory can be slow)
@@ -40,6 +45,8 @@ namespace BizHawk.Client.Common
 			if (!System.IO.Directory.Exists(path)) return false; //TODO is this necessary with Mono? Linux is fine with the CWD being nonexistent. also, is this necessary with .NET Core on Windows? --yoshi
 			Environment.CurrentDirectory = path;
 			return true;
+
+			*/
 		}
 
 		private void Sandbox(Action callback, Action exceptionCallback)

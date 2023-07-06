@@ -79,7 +79,9 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		private static readonly WaterboxHostNative NativeImpl;
 
 		// [hacky stuff for managing parallel cores (multiple dlls) for UnityHawk]
-		private static readonly int nDllCopies = 2; // How many copies of the waterbox dlls are available on disk?
+		public static int nDllCopies = 2; // How many copies of the waterbox dlls are available on disk?
+		// [making this public for now so we can conveniently tweak it from unity if needed]
+
 		private static int[] userCountPerDll; // userCountPerCore[x] tracks how many users of core x
 		private int dllId; // dll being used by this waterbox core
 

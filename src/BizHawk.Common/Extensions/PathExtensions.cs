@@ -165,48 +165,39 @@ namespace BizHawk.Common.PathExtensions
 
 	public static class PathUtils
 	{
+		// [hack for UnityHawk, make these all writeable so we can override the values]
+
 		/// <returns>absolute path of the user data dir <c>$BIZHAWK_DATA_HOME</c>, or fallback value equal to <see cref="ExeDirectoryPath"/></returns>
 		/// <remarks>
 		/// returned string omits trailing slash<br/>
 		/// on Windows, the env. var is ignored and the fallback of <see cref="ExeDirectoryPath"/> is always used
 		/// </remarks>
-		public static readonly string DataDirectoryPath;
+		public static /*readonly*/ string DataDirectoryPath;
 
 		/// <returns>absolute path of the dll dir (sibling of EmuHawk.exe)</returns>
 		/// <remarks>returned string omits trailing slash</remarks>
-		public static readonly string DllDirectoryPath;
+		public static /*readonly*/ string DllDirectoryPath;
 
 		/// <returns>absolute path of the parent dir of DiscoHawk.exe/EmuHawk.exe, commonly referred to as <c>%exe%</c> though none of our code adds it to the environment</returns>
 		/// <remarks>returned string omits trailing slash</remarks>
-		public static readonly string ExeDirectoryPath;
+		public static /*readonly*/ string ExeDirectoryPath;
 
 		public static string SpecialRecentsDir
 			=> Environment.GetFolderPath(Environment.SpecialFolder.Recent, Environment.SpecialFolderOption.DoNotVerify);
 
 		static PathUtils()
 		{
-			// Console.WriteLine($"GetEntryAssembly: {Assembly.GetEntryAssembly()?.Location}");
-			// Console.WriteLine($"GetCallingAssembly: {Assembly.GetCallingAssembly()?.Location}");
-
-			// [GetEntryAssembly returns null when running inside Unity,
-			// so for the sake of UnityHawk use GetCallingAssembly instead (which is identical within the standalone exe)]
-			var callingAssembly = Assembly.GetCallingAssembly()?.Location;
-
-			if (string.IsNullOrEmpty(callingAssembly)) {
-				throw new Exception("failed to get location of calling assembly, very bad things must have happened");
+			Assembly entryAssembly = Assembly.GetEntryAssembly();
+			if (entryAssembly == null) {
+				// This probably means running within UnityHawk,
+				// just give up and let Unity set the path variables itself
+				DataDirectoryPath = DllDirectoryPath = ExeDirectoryPath = "NOT SET";
+				return;
 			}
-
-			// [another hack for UnityHawk - determine whether being called from EmuHawk or
-			//  Unity by checking if callingAssembly ends in "dll" or "exe" respectively]
-			var dirPath = callingAssembly!.EndsWith(".dll")
-				? Directory.GetParent(Path.GetDirectoryName(callingAssembly)).FullName
-				: Path.GetDirectoryName(callingAssembly);
-
-
+			var dirPath = Path.GetDirectoryName(entryAssembly.Location);
 			ExeDirectoryPath = OSTailoredCode.IsUnixHost
 				? string.IsNullOrEmpty(dirPath) || dirPath == "/" ? string.Empty : dirPath
-				: dirPath.RemoveSuffix('\\');
-
+				: string.IsNullOrEmpty(dirPath) ? throw new Exception("failed to get location of executable, very bad things must have happened") : dirPath.RemoveSuffix('\\');
 			DllDirectoryPath = Path.Combine(OSTailoredCode.IsUnixHost && ExeDirectoryPath == string.Empty ? "/" : ExeDirectoryPath, "dll");
 			// yes, this is a lot of extra code to make sure BizHawk can run in `/` on Unix, but I've made up for it by caching these for the program lifecycle --yoshi
 			DataDirectoryPath = ExeDirectoryPath;

@@ -41,6 +41,7 @@ namespace BizHawk.Client.Common
 			// For dumb historical reasons the rompath is currently given relative to the parent of the sample directory
 			// [we should fix this and update all the existing samples]
 			string romPathFull = Path.Combine(Path.GetDirectoryName(sampleDirPath), romPathRelative);
+			romPathFull = Path.GetFullPath(romPathFull); // partly 'normalize' the path ie avoid stuff like x/../y
 
 			// Look for config, save state, and lua based on extension
 			Matcher matcher = new();

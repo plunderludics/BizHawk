@@ -26,6 +26,8 @@ namespace BizHawk.Client.EmuHawk
 			this.OpenAdvancedMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.CloseRomMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.toolStripMenuItem1 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
+			this.SaveSampleMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.LoadSampleMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SaveStateSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SaveState1MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SaveState2MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
@@ -421,6 +423,8 @@ namespace BizHawk.Client.EmuHawk
 			this.OpenAdvancedMenuItem,
 			this.CloseRomMenuItem,
 			this.toolStripMenuItem1,
+			this.SaveSampleMenuItem,
+			this.LoadSampleMenuItem,
 			this.SaveStateSubMenu,
 			this.LoadStateSubMenu,
 			this.SaveSlotSubMenu,
@@ -455,6 +459,16 @@ namespace BizHawk.Client.EmuHawk
 			// 
 			this.CloseRomMenuItem.Text = "&Close ROM";
 			this.CloseRomMenuItem.Click += new System.EventHandler(this.CloseRomMenuItem_Click);
+			// 
+			// SaveSampleMenuItem
+			// 
+			this.SaveSampleMenuItem.Text = "Save Sample (not implemented)";
+			this.SaveSampleMenuItem.Click += new System.EventHandler(this.SaveSampleMenuItem_Click);
+			// 
+			// LoadSampleMenuItem
+			// 
+			this.LoadSampleMenuItem.Text = "Load Sample";
+			this.LoadSampleMenuItem.Click += new System.EventHandler(this.LoadSampleMenuItem_Click);
 			// 
 			// SaveStateSubMenu
 			// 
@@ -2446,6 +2460,8 @@ namespace BizHawk.Client.EmuHawk
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx OpenRomMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripSeparatorEx toolStripMenuItem1;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx ExitMenuItem;
+		private BizHawk.WinForms.Controls.ToolStripMenuItemEx SaveSampleMenuItem;
+		private BizHawk.WinForms.Controls.ToolStripMenuItemEx LoadSampleMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx SaveStateSubMenu;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx SaveState1MenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx SaveState2MenuItem;

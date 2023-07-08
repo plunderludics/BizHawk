@@ -4273,6 +4273,43 @@ namespace BizHawk.Client.EmuHawk
 			return LoadState(path: path, userFriendlyStateName: quickSlotName, suppressOSD: suppressOSD);
 		}
 
+		// Loads a (plunderludics) sample, ie a directory containing savestate, config, lua, and a rom (or a rompath.txt pointing to a rom)
+		// (format will probably change in future)
+		public bool LoadSample() {
+			var samplePath = this.ShowFileOpenDialog(initDir: Config.PathEntries.SaveStateAbsolutePath(Game.System)); // TODO tweak initDir, maybe have a config for it
+	
+			if (samplePath is null || !File.Exists(samplePath)) return false;
+
+			// Read the sample dir to get the necessary filenames (rom, config, etc)
+			PlunderludicSample s = PlunderludicSample.LoadFromDir(samplePath);
+
+			// Actually load the files into bizhawk
+			// Load the rom using the same logic as when it's provided on the command line
+			Console.WriteLine($"LoadSample: Looking for rom in {s.romPath}");
+			var ioa = OpenAdvancedSerializer.ParseWithLegacy(s.romPath);
+			if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
+			_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
+			if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {s.romPath}");
+	
+			if (s.configPath != null) LoadConfigFile(s.configPath);
+			if (s.saveStatePath != null) LoadState(s.saveStatePath, Path.GetFileName(s.saveStatePath));
+			if (s.luaScriptPaths.Length > 0) {
+				Tools.Load<LuaConsole>();
+				Tools.LuaConsole.RemoveAllLuaFiles();
+			}
+			foreach (string luaScriptPath in s.luaScriptPaths) {
+				Tools.LuaConsole.LoadLuaFile(luaScriptPath);
+			}
+
+			return true;
+		}
+
+		// Saves a sample (see above)
+		public bool SaveSample() {
+			Console.WriteLine("SaveSample not implemented");
+			return false;
+		}
+
 		public void SaveState(string path, string userFriendlyStateName, bool fromLua = false, bool suppressOSD = false)
 		{
 			if (!Emulator.HasSavestates())

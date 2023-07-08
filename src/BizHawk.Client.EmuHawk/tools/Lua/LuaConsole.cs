@@ -374,7 +374,7 @@ namespace BizHawk.Client.EmuHawk
 			LuaImp.ScriptList.Remove(item);
 		}
 
-		private void RemoveAllLuaFiles()
+		public void RemoveAllLuaFiles()
 		{
 			while (LuaImp.ScriptList.Count > 0)
 			{

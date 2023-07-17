@@ -46,6 +46,10 @@ using BizHawk.Client.EmuHawk.CustomControls;
 using BizHawk.Common.CollectionExtensions;
 using BizHawk.WinForms.Controls;
 
+using H.Pipes;
+using H.Pipes.Args;
+
+
 namespace BizHawk.Client.EmuHawk
 {
 	public partial class MainForm : FormBase, IDialogParent, IMainFormForApi, IMainFormForTools, IMainFormForRetroAchievements
@@ -763,6 +767,19 @@ namespace BizHawk.Client.EmuHawk
 			BringToFront();
 
 			InitializeFpsData();
+			var server = new PipeServer<int[]>("bizhawk-pipe");
+			server.ClientConnected += (o, args) =>
+			{
+				Console.WriteLine($"Client {args.Connection.PipeName} is now connected!");
+			};
+			server.ClientDisconnected += (o, args) =>
+			{
+				Console.WriteLine($"Client {args.Connection.PipeName} disconnected");
+			};
+			server.MessageReceived += HandleUnityRequest;
+			// server.ExceptionOccurred += (o, args) => OnExceptionOccurred(args.Exception);
+
+			server.StartAsync();
 
 			for (; ; )
 			{
@@ -4900,6 +4917,15 @@ namespace BizHawk.Client.EmuHawk
 			});
 
 			RA?.Restart();
+		}
+
+		private async void HandleUnityRequest(object sender, ConnectionMessageEventArgs<int[]> args) {
+			Console.WriteLine($"Client {args.Connection.PipeName} says: {args.Message}");
+			await args.Connection.WriteAsync(
+				// _currentVideoProvider.BufferWidth,
+				// _currentVideoProvider.BufferHeight,
+				_currentVideoProvider.GetVideoBuffer()
+			);
 		}
 	}
 }

@@ -44,6 +44,7 @@ namespace BizHawk.Client.Common
 			string? openExtToolDll = null;
 			string? cmdRom = null;
 			string? customWindowTitle = null;
+			bool? headless = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -112,6 +113,11 @@ namespace BizHawk.Client.Common
 				{
 					// chrome is never shown, even in windowed mode
 					chromeless = true;
+				}
+				else if (argDowncased.StartsWith("--headless"))
+				{
+					// don't open any gui at all
+					headless = true;
 				}
 				else if (argDowncased.StartsWith("--fullscreen"))
 				{
@@ -206,7 +212,8 @@ namespace BizHawk.Client.Common
 				audiosync: audiosync,
 				openExtToolDll: openExtToolDll,
 				customWindowTitle: customWindowTitle,
-				cmdRom: cmdRom
+				cmdRom: cmdRom,
+				headless: headless ?? false
 			);
 		}
 

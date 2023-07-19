@@ -46,9 +46,7 @@ using BizHawk.Client.EmuHawk.CustomControls;
 using BizHawk.Common.CollectionExtensions;
 using BizHawk.WinForms.Controls;
 
-using H.Pipes;
-using H.Pipes.Args;
-
+using SharedMemory;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -767,19 +765,11 @@ namespace BizHawk.Client.EmuHawk
 			BringToFront();
 
 			InitializeFpsData();
-			var server = new PipeServer<int[]>("bizhawk-pipe");
-			server.ClientConnected += (o, args) =>
-			{
-				Console.WriteLine($"Client {args.Connection.PipeName} is now connected!");
-			};
-			server.ClientDisconnected += (o, args) =>
-			{
-				Console.WriteLine($"Client {args.Connection.PipeName} disconnected");
-			};
-			server.MessageReceived += HandleUnityRequest;
-			// server.ExceptionOccurred += (o, args) => OnExceptionOccurred(args.Exception);
 
-			server.StartAsync();
+			// Init shared texture buffer for passing to unity
+			Console.WriteLine($"Init texture buffer");
+			int[] texbuf = _currentVideoProvider.GetVideoBuffer(); // TODO not necessary todo this twice in each frame
+			SharedArray<int> sharedTextureBuffer = new ("unityhawk-texbuf", texbuf.Length+10);
 
 			for (; ; )
 			{
@@ -825,6 +815,16 @@ namespace BizHawk.Client.EmuHawk
 				StepRunLoop_Throttle();
 
 				Render();
+
+				int[] texbuf2 = _currentVideoProvider.GetVideoBuffer();
+				int width =  _currentVideoProvider.BufferWidth;
+				int height =  _currentVideoProvider.BufferHeight;
+				
+				sharedTextureBuffer.Write(texbuf2, 0);
+				sharedTextureBuffer[sharedTextureBuffer.Length - 2] = width;
+				sharedTextureBuffer[sharedTextureBuffer.Length - 1] = height;
+				// Console.WriteLine($"writing {width*height} pixels; bufsize = {texbuf2.Length}");
+				// ^ don't even need to do this every frame if running faster than unity, but maybe it's easier this way
 
 				// HACK: RAIntegration might peek at memory during messages
 				// we need this to allow memory access here, otherwise it will deadlock
@@ -4917,15 +4917,6 @@ namespace BizHawk.Client.EmuHawk
 			});
 
 			RA?.Restart();
-		}
-
-		private async void HandleUnityRequest(object sender, ConnectionMessageEventArgs<int[]> args) {
-			Console.WriteLine($"Client {args.Connection.PipeName} says: {args.Message}");
-			await args.Connection.WriteAsync(
-				// _currentVideoProvider.BufferWidth,
-				// _currentVideoProvider.BufferHeight,
-				_currentVideoProvider.GetVideoBuffer()
-			);
 		}
 	}
 }

@@ -766,10 +766,13 @@ namespace BizHawk.Client.EmuHawk
 
 			InitializeFpsData();
 
-			// Init shared texture buffer for passing to unity
-			Console.WriteLine($"Init texture buffer");
-			int[] texbuf = _currentVideoProvider.GetVideoBuffer(); // TODO not necessary todo this twice in each frame
-			SharedArray<int> sharedTextureBuffer = new ("unityhawk-texbuf", texbuf.Length+10);
+			SharedArray<int> sharedTextureBuffer = null;
+			if (_argParser.textureSharedMemoryName != null) {
+				// Init shared texture buffer for passing to unity
+				Console.WriteLine($"Init texture buffer");
+				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
+				sharedTextureBuffer = new (_argParser.textureSharedMemoryName, texbuf.Length+10);
+			}
 
 			for (; ; )
 			{
@@ -816,16 +819,17 @@ namespace BizHawk.Client.EmuHawk
 
 				Render();
 
-				int[] texbuf2 = _currentVideoProvider.GetVideoBuffer();
-				int width =  _currentVideoProvider.BufferWidth;
-				int height =  _currentVideoProvider.BufferHeight;
+				if (sharedTextureBuffer != null) {
+					int[] texbuf2 = _currentVideoProvider.GetVideoBuffer();
+					int width =  _currentVideoProvider.BufferWidth;
+					int height =  _currentVideoProvider.BufferHeight;
+					
+					sharedTextureBuffer.Write(texbuf2, 0);
+					sharedTextureBuffer[sharedTextureBuffer.Length - 2] = width;
+					sharedTextureBuffer[sharedTextureBuffer.Length - 1] = height;
+					// ^ don't even need to do this every frame if running faster than unity, but maybe it's easier this way
+				}
 				
-				sharedTextureBuffer.Write(texbuf2, 0);
-				sharedTextureBuffer[sharedTextureBuffer.Length - 2] = width;
-				sharedTextureBuffer[sharedTextureBuffer.Length - 1] = height;
-				// Console.WriteLine($"writing {width*height} pixels; bufsize = {texbuf2.Length}");
-				// ^ don't even need to do this every frame if running faster than unity, but maybe it's easier this way
-
 				// HACK: RAIntegration might peek at memory during messages
 				// we need this to allow memory access here, otherwise it will deadlock
 				var raMemHack = (RA as RAIntegration)?.ThisIsTheRAMemHack();

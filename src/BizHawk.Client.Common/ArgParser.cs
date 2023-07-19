@@ -45,6 +45,7 @@ namespace BizHawk.Client.Common
 			string? cmdRom = null;
 			string? customWindowTitle = null;
 			bool? headless = null;
+			string? textureSharedMemoryName = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -168,6 +169,10 @@ namespace BizHawk.Client.Common
 				{
 					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
 				}
+				else if (argDowncased.StartsWith("--share-texture="))
+				{
+					textureSharedMemoryName = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else
 				{
 					cmdRom = arg;
@@ -213,7 +218,8 @@ namespace BizHawk.Client.Common
 				openExtToolDll: openExtToolDll,
 				customWindowTitle: customWindowTitle,
 				cmdRom: cmdRom,
-				headless: headless ?? false
+				headless: headless ?? false,
+				textureSharedMemoryName: textureSharedMemoryName
 			);
 		}
 

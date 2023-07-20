@@ -44,6 +44,8 @@ namespace BizHawk.Client.Common
 			string? openExtToolDll = null;
 			string? cmdRom = null;
 			string? customWindowTitle = null;
+			bool? headless = null;
+			string? textureSharedMemoryName = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -113,6 +115,11 @@ namespace BizHawk.Client.Common
 					// chrome is never shown, even in windowed mode
 					chromeless = true;
 				}
+				else if (argDowncased.StartsWith("--headless"))
+				{
+					// don't open any gui at all
+					headless = true;
+				}
 				else if (argDowncased.StartsWith("--fullscreen"))
 				{
 					startFullscreen = true;
@@ -162,6 +169,10 @@ namespace BizHawk.Client.Common
 				{
 					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
 				}
+				else if (argDowncased.StartsWith("--share-texture="))
+				{
+					textureSharedMemoryName = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else
 				{
 					cmdRom = arg;
@@ -206,7 +217,9 @@ namespace BizHawk.Client.Common
 				audiosync: audiosync,
 				openExtToolDll: openExtToolDll,
 				customWindowTitle: customWindowTitle,
-				cmdRom: cmdRom
+				cmdRom: cmdRom,
+				headless: headless ?? false,
+				textureSharedMemoryName: textureSharedMemoryName
 			);
 		}
 

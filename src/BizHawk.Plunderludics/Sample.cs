@@ -9,10 +9,9 @@ using Microsoft.Extensions.FileSystemGlobbing;
 // Represents a 'sample', ie a set of pathnames for each of:
 //  rom, config, savestate, lua script(s)
 
-// [ this should probably be in a different namespace or something, idk ]
-namespace BizHawk.Client.Common
+namespace BizHawk.Plunderludics
 {
-	public class PlunderludicSample
+	public class Sample
 	{
 		public readonly string romPath;
 		public readonly string? configPath;
@@ -21,7 +20,7 @@ namespace BizHawk.Client.Common
 
 		private static readonly string rompathTxtFileName = "rompath.txt";
 
-		public PlunderludicSample(string romPath, string? configPath, string? saveStatePath, string[] luaScriptPaths) {
+		public Sample(string romPath, string? configPath, string? saveStatePath, string[] luaScriptPaths) {
 			this.romPath = romPath;
 			this.configPath = configPath;
 			this.saveStatePath = saveStatePath;
@@ -31,7 +30,7 @@ namespace BizHawk.Client.Common
 		// Search the provided directory for files based on file extension
 		// (this has a lot of issues, we should improve this format)
 		// [ie maybe just a json that points to all the necessary files]
-		public static PlunderludicSample LoadFromDir(string sampleFilePath) {
+		public static Sample LoadFromDir(string sampleFilePath) {
 			string sampleDirPath = Path.GetDirectoryName(sampleFilePath); // workaround for the fact that we don't have an easy way to open a 'select directory' dialog
 
 			// Assume there's a file called rompath.txt that provides a path to the rom (on the first line)
@@ -64,7 +63,7 @@ namespace BizHawk.Client.Common
 			}
 			string? saveStatePath = saveFiles.Count > 0 ? saveFiles[0] : null;
 
-			return new PlunderludicSample(
+			return new Sample(
 				romPathFull,
 				configPath,
 				saveStatePath,

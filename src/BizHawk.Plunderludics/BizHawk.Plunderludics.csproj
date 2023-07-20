@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+	</PropertyGroup>
+	<Import Project="../MainSlnCommon.props" />
+	<PropertyGroup>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Nullable>disable</Nullable>
+	</PropertyGroup>
+	<ItemGroup>
+		<Analyzer Remove="@(Analyzer)" />  <!-- disable ReflectionCache to avoid the Bizhawk.Common dependency -->
+		<Reference Include="ISOParser" HintPath="$(ProjectDir)../../References/ISOParser.dll" Private="true" />
+		<PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="7.0.0" />
+	</ItemGroup>
+</Project>

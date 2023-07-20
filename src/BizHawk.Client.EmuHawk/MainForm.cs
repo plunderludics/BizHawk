@@ -45,6 +45,9 @@ using BizHawk.Client.EmuHawk.CoreExtensions;
 using BizHawk.Client.EmuHawk.CustomControls;
 using BizHawk.Common.CollectionExtensions;
 using BizHawk.WinForms.Controls;
+using BizHawk.Plunderludics;
+
+using SharedMemory;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -676,7 +679,7 @@ namespace BizHawk.Client.EmuHawk
 			//start Lua Console if requested in the command line arguments
 			if (_argParser.luaConsole)
 			{
-				Tools.Load<LuaConsole>();
+				Tools.Load<LuaConsole>(show: !_argParser.headless);
 			}
 			//load Lua Script if requested in the command line arguments
 			if (_argParser.luaScript != null)
@@ -764,6 +767,14 @@ namespace BizHawk.Client.EmuHawk
 
 			InitializeFpsData();
 
+			SharedArray<int> sharedTextureBuffer = null;
+			if (_argParser.textureSharedMemoryName != null) {
+				// Init shared texture buffer for passing to unity
+				Console.WriteLine($"Init texture buffer");
+				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
+				sharedTextureBuffer = new (_argParser.textureSharedMemoryName, texbuf.Length+10);
+			}
+
 			for (; ; )
 			{
 				Input.Instance.Update();
@@ -809,6 +820,17 @@ namespace BizHawk.Client.EmuHawk
 
 				Render();
 
+				if (sharedTextureBuffer != null) {
+					int[] texbuf2 = _currentVideoProvider.GetVideoBuffer();
+					int width =  _currentVideoProvider.BufferWidth;
+					int height =  _currentVideoProvider.BufferHeight;
+					
+					sharedTextureBuffer.Write(texbuf2, 0);
+					sharedTextureBuffer[sharedTextureBuffer.Length - 2] = width;
+					sharedTextureBuffer[sharedTextureBuffer.Length - 1] = height;
+					// ^ don't even need to do this every frame if running faster than unity, but maybe it's easier this way
+				}
+				
 				// HACK: RAIntegration might peek at memory during messages
 				// we need this to allow memory access here, otherwise it will deadlock
 				var raMemHack = (RA as RAIntegration)?.ThisIsTheRAMemHack();
@@ -4295,7 +4317,7 @@ namespace BizHawk.Client.EmuHawk
 			if (samplePath is null || !File.Exists(samplePath)) return false;
 
 			// Read the sample dir to get the necessary filenames (rom, config, etc)
-			PlunderludicSample s = PlunderludicSample.LoadFromDir(samplePath);
+			Sample s = Sample.LoadFromDir(samplePath);
 
 			// Actually load the files into bizhawk
 			// Load the rom using the same logic as when it's provided on the command line

@@ -287,7 +287,9 @@ namespace BizHawk.Client.EmuHawk
 					mf.Config = initialConfig;
 				};
 //				var title = mf.Text;
-				mf.Show();
+				if (!cliFlags.headless) {
+					mf.Show();
+				}
 //				mf.Text = title;
 				try
 				{

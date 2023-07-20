@@ -47,6 +47,8 @@ namespace BizHawk.Client.Common
 		public readonly string? customWindowTitle;
 
 		public readonly string? cmdRom;
+		public readonly bool headless;
+		public readonly string? textureSharedMemoryName;
 
 		public ParsedCLIFlags(
 			int? cmdLoadSlot,
@@ -69,7 +71,9 @@ namespace BizHawk.Client.Common
 			bool? audiosync,
 			string? openExtToolDll,
 			string? customWindowTitle,
-			string? cmdRom)
+			string? cmdRom,
+			bool headless,
+			string? textureSharedMemoryName)
 		{
 			this.cmdLoadSlot = cmdLoadSlot;
 			this.cmdLoadState = cmdLoadState;
@@ -92,6 +96,8 @@ namespace BizHawk.Client.Common
 			this.openExtToolDll = openExtToolDll;
 			this.customWindowTitle = customWindowTitle;
 			this.cmdRom = cmdRom;
+			this.headless = headless;
+			this.textureSharedMemoryName = textureSharedMemoryName;
 		}
 	}
 }

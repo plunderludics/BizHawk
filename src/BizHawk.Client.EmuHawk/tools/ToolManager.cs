@@ -98,17 +98,18 @@ namespace BizHawk.Client.EmuHawk
 		/// <param name="toolPath">Path to the .dll of the external tool</param>
 		/// <typeparam name="T">Type of tool you want to load</typeparam>
 		/// <returns>An instantiated <see cref="IToolForm"/></returns>
-		public T Load<T>(bool focus = true, string toolPath = "")
+		public T Load<T>(bool show = true, bool focus = true, string toolPath = "")
 			where T : class, IToolForm
 		{
 			if (!IsAvailable<T>()) return null;
+			Console.WriteLine($"focus = {focus}");
 
 			var existingTool = _tools.OfType<T>().FirstOrDefault();
 			if (existingTool != null)
 			{
 				if (existingTool.IsLoaded)
 				{
-					if (focus)
+					if (show && focus)
 					{
 						existingTool.Show();
 						existingTool.Focus();
@@ -148,7 +149,9 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			newTool.Restart();
-			newTool.Show();
+			if (show) {
+				newTool.Show();
+			}
 			return newTool;
 		}
 
@@ -727,12 +730,15 @@ namespace BizHawk.Client.EmuHawk
 			T tool = _tools.OfType<T>().FirstOrDefault();
 			if (tool != null)
 			{
-				if (tool.IsActive)
-				{
-					return tool;
-				}
+				return tool;
+				// hack for unityhawk - ignore IsActive
+				// since its not true when the window (e.g. lua console) is not shown
+				// if (tool.IsActive)
+				// {
+				// 	return tool;
+				// }
 
-				_tools.Remove(tool);
+				// _tools.Remove(tool);
 			}
 			tool = new T();
 			_tools.Add(tool);

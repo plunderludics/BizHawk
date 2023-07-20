@@ -21,6 +21,7 @@
 		<Reference Include="NLua, Version=1.4.1.0, Culture=neutral, PublicKeyToken=null, processorArchitecture=MSIL" SpecificVersion="false" HintPath="$(ProjectDir)../../References/NLua.dll" Private="true" />
 	</ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="$(ProjectDir)../BizHawk.Plunderludics/BizHawk.Plunderludics.csproj" />
 		<ProjectReference Include="$(ProjectDir)../BizHawk.Bizware.DirectX/BizHawk.Bizware.DirectX.csproj" />
 		<ProjectReference Include="$(ProjectDir)../BizHawk.WinForms.Controls/BizHawk.WinForms.Controls.csproj" />
 		<Compile Remove="Properties/Settings.Designer.cs" />

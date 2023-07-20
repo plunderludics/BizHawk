@@ -45,6 +45,7 @@ using BizHawk.Client.EmuHawk.CoreExtensions;
 using BizHawk.Client.EmuHawk.CustomControls;
 using BizHawk.Common.CollectionExtensions;
 using BizHawk.WinForms.Controls;
+using BizHawk.Plunderludics;
 
 using SharedMemory;
 
@@ -4316,7 +4317,7 @@ namespace BizHawk.Client.EmuHawk
 			if (samplePath is null || !File.Exists(samplePath)) return false;
 
 			// Read the sample dir to get the necessary filenames (rom, config, etc)
-			PlunderludicSample s = PlunderludicSample.LoadFromDir(samplePath);
+			Sample s = Sample.LoadFromDir(samplePath);
 
 			// Actually load the files into bizhawk
 			// Load the rom using the same logic as when it's provided on the command line

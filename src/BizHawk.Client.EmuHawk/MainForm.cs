@@ -678,7 +678,7 @@ namespace BizHawk.Client.EmuHawk
 			//start Lua Console if requested in the command line arguments
 			if (_argParser.luaConsole)
 			{
-				Tools.Load<LuaConsole>();
+				Tools.Load<LuaConsole>(show: !_argParser.headless);
 			}
 			//load Lua Script if requested in the command line arguments
 			if (_argParser.luaScript != null)

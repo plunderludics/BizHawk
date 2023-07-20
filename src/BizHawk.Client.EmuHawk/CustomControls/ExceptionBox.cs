@@ -9,6 +9,7 @@ namespace BizHawk.Client.EmuHawk
 		public ExceptionBox(string str)
 		{
 			InitializeComponent();
+			Console.WriteLine($"Exception: {str}");
 			txtException.Text = str;
 			timer1.Start();
 		}

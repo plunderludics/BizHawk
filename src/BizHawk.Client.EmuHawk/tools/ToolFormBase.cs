@@ -29,7 +29,7 @@ namespace BizHawk.Client.EmuHawk
 
 		public virtual bool AskSaveChanges() => true;
 
-		public virtual bool IsActive => IsHandleCreated && !IsDisposed;
+		public virtual bool IsActive => true; /*IsHandleCreated && !IsDisposed;*/ // hack for UnityHawk - tool counts as active even if gui window is not open
 		public virtual bool IsLoaded => IsActive;
 
 		public virtual void Restart() {}

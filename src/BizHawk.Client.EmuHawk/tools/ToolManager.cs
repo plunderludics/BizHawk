@@ -102,7 +102,6 @@ namespace BizHawk.Client.EmuHawk
 			where T : class, IToolForm
 		{
 			if (!IsAvailable<T>()) return null;
-			Console.WriteLine($"focus = {focus}");
 
 			var existingTool = _tools.OfType<T>().FirstOrDefault();
 			if (existingTool != null)

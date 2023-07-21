@@ -770,7 +770,7 @@ namespace BizHawk.Client.EmuHawk
 			SharedArray<int> sharedTextureBuffer = null;
 			if (_argParser.textureSharedMemoryName != null) {
 				// Init shared texture buffer for passing to unity
-				Console.WriteLine($"Init texture buffer");
+				Console.WriteLine($"Init texture buffer {_argParser.textureSharedMemoryName}");
 				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
 				sharedTextureBuffer = new (_argParser.textureSharedMemoryName, texbuf.Length+10);
 			}

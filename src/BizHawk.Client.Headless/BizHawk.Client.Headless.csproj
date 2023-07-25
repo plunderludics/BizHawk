@@ -11,7 +11,17 @@
 		<TargetName>EmuHawk-Headless</TargetName>
 	</PropertyGroup>
 	<ItemGroup>
-		<ProjectReference Include="$(ProjectDir)../BizHawk.Plunderludics/BizHawk.Plunderludics.csproj" />
 		<ProjectReference Include="$(ProjectDir)../BizHawk.Client.Common/BizHawk.Client.Common.csproj" />
+		<None Include="$(ProjectDir)../../Assets/**/*.*" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<ItemGroup>
+			<NotExecFilesFromExecProj Include="$(OutputPath)*.deps.json" />
+			<NotExecFilesFromExecProj Include="$(OutputPath)*.dll" />
+			<NotExecFilesFromExecProj Include="$(OutputPath)*.so" />
+			<NotExecFilesFromExecProj Include="$(OutputPath)*.pdb" Exclude="EmuHawk-Headless.pdb" />
+			<NotExecFilesFromExecProj Include="$(OutputPath)*.xml" />
+		</ItemGroup>
+		<Move SourceFiles="@(NotExecFilesFromExecProj)" DestinationFolder="$(OutputPath)dll/" />
+	</Target>
 </Project>

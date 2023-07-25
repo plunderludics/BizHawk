@@ -1,6 +1,7 @@
-targetDir="../unity-hawk/Packages/org.plunderludics.UnityHawk/BizHawk"
+targetDir="../unity-hawk/Packages/org.plunderludics.UnityHawk/BizHawk~"
+mkdir -p $targetDir/dll
 
-dotnet build . -c Release -p:UnityHawk=true &&
-cp output/EmuHawk.exe $targetDir/EmuHawk.exe &&
+dotnet build src/BizHawk.Client.Headless -p:UnityHawk=true &&
+cp output/EmuHawk-Headless.exe $targetDir/EmuHawk-Headless.exe &&
 cp output/dll/* $targetDir/dll
 

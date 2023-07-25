@@ -97,16 +97,16 @@ namespace BizHawk.Common
 
 		private class UnixMonoLLManager : ILinkedLibManager
 		{
-			[DllImport("libdl.so.2")]
+			[DllImport("libdl.dylib")]
 			private static extern int dlclose(IntPtr handle);
 
-			[DllImport("libdl.so.2")]
+			[DllImport("libdl.dylib")]
 			private static extern IntPtr dlerror();
 
-			[DllImport("libdl.so.2")]
+			[DllImport("libdl.dylib")]
 			private static extern IntPtr dlopen(string fileName, int flags);
 
-			[DllImport("libdl.so.2")]
+			[DllImport("libdl.dylib")]
 			private static extern IntPtr dlsym(IntPtr handle, string symbol);
 
 			public int FreeByPtr(IntPtr hModule) => dlclose(hModule);

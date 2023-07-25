@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>9.0</LangVersion>
+	</PropertyGroup>
+	<PropertyGroup>
+		<DefineConstants>$(DefineConstants);EXE_PROJECT</DefineConstants>
+		<OutputPath>$(ProjectDir)../../output</OutputPath>
+		<TargetName>EmuHawk-Headless</TargetName>
+	</PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="$(ProjectDir)../BizHawk.Plunderludics/BizHawk.Plunderludics.csproj" />
+		<ProjectReference Include="$(ProjectDir)../BizHawk.Client.Common/BizHawk.Client.Common.csproj" />
+	</ItemGroup>
+</Project>

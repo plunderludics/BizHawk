@@ -47,8 +47,10 @@ namespace BizHawk.Client.Common
 		public readonly string? customWindowTitle;
 
 		public readonly string? cmdRom;
+		public readonly string? firmwareDir;
 		public readonly bool headless;
-		public readonly string? textureSharedMemoryName;
+		public readonly string? writeTextureToSharedBuffer;
+		public readonly string? readInputFromSharedBuffer;
 
 		public ParsedCLIFlags(
 			int? cmdLoadSlot,
@@ -72,9 +74,11 @@ namespace BizHawk.Client.Common
 			string? openExtToolDll,
 			string? customWindowTitle,
 			string? cmdRom,
+			string? firmwareDir,
 			bool headless,
-			string? textureSharedMemoryName)
-		{
+			string? writeTextureToSharedBuffer,
+			string? readInputFromSharedBuffer
+		) {
 			this.cmdLoadSlot = cmdLoadSlot;
 			this.cmdLoadState = cmdLoadState;
 			this.cmdConfigFile = cmdConfigFile;
@@ -96,8 +100,10 @@ namespace BizHawk.Client.Common
 			this.openExtToolDll = openExtToolDll;
 			this.customWindowTitle = customWindowTitle;
 			this.cmdRom = cmdRom;
+			this.firmwareDir = firmwareDir;
 			this.headless = headless;
-			this.textureSharedMemoryName = textureSharedMemoryName;
+			this.writeTextureToSharedBuffer = writeTextureToSharedBuffer;
+			this.readInputFromSharedBuffer = readInputFromSharedBuffer;
 		}
 	}
 }

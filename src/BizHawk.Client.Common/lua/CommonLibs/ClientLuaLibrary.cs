@@ -151,7 +151,7 @@ namespace BizHawk.Client.Common
 		public void SetSoundOn(bool enable)
 			=> APIs.EmuClient.SetSoundOn(enable);
 
-		[LuaMethodExample("client.SetSoundVolume( 69 );")]
+		[LuaMethodExample("client.SetVolume( 69 );")]
 		[LuaMethod("SetVolume", "Sets the volume of the sound")]
 		public void SetVolume(int value)
 			=> APIs.EmuClient.SetVolume(value);

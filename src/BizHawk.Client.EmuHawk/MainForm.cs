@@ -367,6 +367,11 @@ namespace BizHawk.Client.EmuHawk
 			GL = gl;
 			_updateGlobalSound = updateGlobalSound;
 
+			// hack for UnityHawk - override firmware dir from command line
+			if (_argParser.firmwareDir != null) {
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
+			}
+
 			InputManager = new InputManager
 			{
 				GetMainFormMouseInfo = () =>
@@ -768,16 +773,26 @@ namespace BizHawk.Client.EmuHawk
 			InitializeFpsData();
 
 			SharedArray<int> sharedTextureBuffer = null;
-			if (_argParser.textureSharedMemoryName != null) {
+			var texBufName = _argParser.writeTextureToSharedBuffer;
+			if (texBufName != null) {
 				// Init shared texture buffer for passing to unity
-				Console.WriteLine($"Init texture buffer {_argParser.textureSharedMemoryName}");
+				Console.WriteLine($"Init texture buffer {texBufName}");
 				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
-				sharedTextureBuffer = new (_argParser.textureSharedMemoryName, texbuf.Length+10);
+				sharedTextureBuffer = new (texBufName, texbuf.Length+10);
+			}
+
+			string inputBufferName = _argParser.readInputFromSharedBuffer;
+			if (inputBufferName != null) {
+				// Get input from Unity via shared buffer
+				inputProvider = new UnityHawkInput(inputBufferName);
+			} else {
+				// Use native OS input
+				inputProvider = Input.Instance;
 			}
 
 			for (; ; )
 			{
-				Input.Instance.Update();
+				inputProvider.Update();
 
 				// handle events and dispatch as a hotkey action, or a hotkey button, or an input button
 				// ...but prepare haptics first, those get read in ProcessInput
@@ -1018,6 +1033,8 @@ namespace BizHawk.Client.EmuHawk
 
 		private new Config Config => _getGlobalConfig();
 
+		private IInput inputProvider; // a bit messy, but can be either Input or UnityHawkInput
+
 		public Action<string> LoadGlobalConfigFromFile { get; set; }
 
 		private readonly Func<string> _getConfigPath;
@@ -1088,7 +1105,7 @@ namespace BizHawk.Client.EmuHawk
 
 			// loop through all available events
 			InputEvent ie;
-			while ((ie = Input.Instance.DequeueEvent()) != null)
+			while ((ie = inputProvider.DequeueEvent()) != null)
 			{
 				// useful debugging:
 				// Console.WriteLine(ie);

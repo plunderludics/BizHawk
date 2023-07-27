@@ -43,6 +43,7 @@ namespace BizHawk.Client.Common
 			bool? audiosync = null;
 			string? openExtToolDll = null;
 			string? cmdRom = null;
+			string? firmwareDir = null;
 			string? customWindowTitle = null;
 			bool? headless = null;
 			string? writeTextureToSharedBuffer = null;
@@ -166,6 +167,10 @@ namespace BizHawk.Client.Common
 					// - dll path matches given string; or dll filename matches given string with or without `.dll`
 					openExtToolDll = arg.Substring(20);
 				}
+				else if (argDowncased.StartsWith("--firmware="))
+				{
+					firmwareDir = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else if (argDowncased.StartsWith("--windowtitle="))
 				{
 					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
@@ -223,6 +228,7 @@ namespace BizHawk.Client.Common
 				openExtToolDll: openExtToolDll,
 				customWindowTitle: customWindowTitle,
 				cmdRom: cmdRom,
+				firmwareDir: firmwareDir,
 				headless: headless ?? false,
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
 				readInputFromSharedBuffer: readInputFromSharedBuffer

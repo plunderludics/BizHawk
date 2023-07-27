@@ -367,6 +367,11 @@ namespace BizHawk.Client.EmuHawk
 			GL = gl;
 			_updateGlobalSound = updateGlobalSound;
 
+			// hack for UnityHawk - override firmware dir from command line
+			if (_argParser.firmwareDir != null) {
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
+			}
+
 			InputManager = new InputManager
 			{
 				GetMainFormMouseInfo = () =>

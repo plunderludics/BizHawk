@@ -45,7 +45,8 @@ namespace BizHawk.Client.Common
 			string? cmdRom = null;
 			string? customWindowTitle = null;
 			bool? headless = null;
-			string? textureSharedMemoryName = null;
+			string? writeTextureToSharedBuffer = null;
+			string? readInputFromSharedBuffer = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -169,9 +170,13 @@ namespace BizHawk.Client.Common
 				{
 					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
 				}
-				else if (argDowncased.StartsWith("--share-texture="))
+				else if (argDowncased.StartsWith("--write-texture-to-shared-buffer="))
 				{
-					textureSharedMemoryName = arg.Substring(arg.IndexOf('=') + 1);
+					writeTextureToSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
+				}
+				else if (argDowncased.StartsWith("--read-input-from-shared-buffer="))
+				{
+					readInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
 				}
 				else
 				{
@@ -219,7 +224,8 @@ namespace BizHawk.Client.Common
 				customWindowTitle: customWindowTitle,
 				cmdRom: cmdRom,
 				headless: headless ?? false,
-				textureSharedMemoryName: textureSharedMemoryName
+				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
+				readInputFromSharedBuffer: readInputFromSharedBuffer
 			);
 		}
 

@@ -8,6 +8,8 @@
 		<Nullable>disable</Nullable>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="SharedMemory" Version="2.3.2" />
+		<ProjectReference Include="$(ProjectDir)../BizHawk.UnityHawk/BizHawk.UnityHawk.csproj" />
 		<Reference Include="System.Data.SQLite, Version=1.0.105.2, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=AMD64" SpecificVersion="False" HintPath="$(ProjectDir)../../References/x64/SQLite/System.Data.SQLite.dll" Private="true" />
 		<Reference Include="NLua, Version=1.4.1.0, Culture=neutral, PublicKeyToken=null, processorArchitecture=MSIL" SpecificVersion="false" HintPath="$(ProjectDir)../../References/NLua.dll" Private="true" />
 		<PackageReference Include="SharpCompress" Version="0.30.1" />

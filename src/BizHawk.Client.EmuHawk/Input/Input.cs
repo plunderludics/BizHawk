@@ -12,7 +12,7 @@ using BizHawk.Common.CollectionExtensions;
 
 namespace BizHawk.Client.EmuHawk
 {
-	public class Input
+	public class Input : IInput
 	{
 		/// <summary>
 		/// If your form needs this kind of input focus, be sure to say so.
@@ -38,8 +38,11 @@ namespace BizHawk.Client.EmuHawk
 
 		private readonly Func<Config> _getConfigCallback;
 
-		internal Input(IntPtr mainFormHandle, Func<Config> getConfigCallback, Func<bool, AllowInput> mainFormInputAllowedCallback)
-		{
+		internal Input(
+			IntPtr mainFormHandle,
+			Func<Config> getConfigCallback,
+			Func<bool, AllowInput> mainFormInputAllowedCallback
+		) {
 			_getConfigCallback = getConfigCallback;
 			_currentConfig = _getConfigCallback();
 			UpdateModifierKeysEffective();
@@ -53,6 +56,7 @@ namespace BizHawk.Client.EmuHawk
 				EHostInputMethod.DirectInput => new DirectInputAdapter(),
 				_ => throw new InvalidOperationException()
 			};
+
 			Console.WriteLine($"Using {Adapter.Desc} for host input (keyboard + gamepads)");
 			Adapter.UpdateConfig(_currentConfig);
 			Adapter.FirstInitAll(mainFormHandle);

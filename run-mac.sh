@@ -1,1 +1,1 @@
-LD_LIBRARY_PATH="./output/dll" MONO_PATH="./output/dll" mono ./output/EmuHawk-Headless.exe
+LD_LIBRARY_PATH="./output/dll" MONO_PATH="./output/dll" mono ./output/EmuHawk-Headless.exe "$@"

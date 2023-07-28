@@ -9,7 +9,7 @@ using Microsoft.Extensions.FileSystemGlobbing;
 // Represents a 'sample', ie a set of pathnames for each of:
 //  rom, config, savestate, lua script(s)
 
-namespace BizHawk.Plunderludics
+namespace Plunderludics
 {
 	public class Sample
 	{

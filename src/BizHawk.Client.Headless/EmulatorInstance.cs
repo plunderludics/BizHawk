@@ -11,11 +11,6 @@ using BizHawk.Emulation.Cores.Arcades.MAME;
 
 namespace BizHawk.Client.Headless {
 
-// This is our abstraction of the main functionality of the Input singleton class in BizHawk
-public interface IInputProvider {
-    InputEvent DequeueEvent();
-}
-
 internal class EmulatorInstance {
     public double DefaultFrameRate => emulator.VsyncRate();
     public bool IsLoaded => (emulator != null);
@@ -111,7 +106,7 @@ internal class EmulatorInstance {
         return loaded;
     }
 
-    public void FrameAdvance(IInputProvider inputProvider)
+    public void FrameAdvance(IInput inputProvider)
     {
         if (emulator != null) {
             var finalHostController = inputManager.ControllerInputCoalescer;
@@ -165,7 +160,7 @@ internal class EmulatorInstance {
     // Based on MainForm:ProcessInput, but with a lot of stuff missing
     void ProcessInput(
         ControllerInputCoalescer finalHostController,
-        IInputProvider inputProvider // [not in BizHawk, this is our abstraction of BizHawk's Input class]
+        IInput inputProvider // [not in BizHawk, this is our abstraction of BizHawk's Input class]
     ) {
         // loop through all available events
         InputEvent ie;

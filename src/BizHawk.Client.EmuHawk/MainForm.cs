@@ -45,9 +45,9 @@ using BizHawk.Client.EmuHawk.CoreExtensions;
 using BizHawk.Client.EmuHawk.CustomControls;
 using BizHawk.Common.CollectionExtensions;
 using BizHawk.WinForms.Controls;
-using BizHawk.Plunderludics;
 
-using SharedMemory;
+using Plunderludics;
+using Plunderludics.UnityHawk.SharedBuffers;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -772,13 +772,13 @@ namespace BizHawk.Client.EmuHawk
 
 			InitializeFpsData();
 
-			SharedArray<int> sharedTextureBuffer = null;
+			SharedTextureBuffer sharedTextureBuffer = null;
 			var texBufName = _argParser.writeTextureToSharedBuffer;
 			if (texBufName != null) {
 				// Init shared texture buffer for passing to unity
 				Console.WriteLine($"Init texture buffer {texBufName}");
 				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
-				sharedTextureBuffer = new (texBufName, texbuf.Length+10);
+				sharedTextureBuffer = new(texBufName, texbuf.Length);
 			}
 
 			string inputBufferName = _argParser.readInputFromSharedBuffer;
@@ -836,13 +836,10 @@ namespace BizHawk.Client.EmuHawk
 				Render();
 
 				if (sharedTextureBuffer != null) {
-					int[] texbuf2 = _currentVideoProvider.GetVideoBuffer();
+					int[] pixels = _currentVideoProvider.GetVideoBuffer();
 					int width =  _currentVideoProvider.BufferWidth;
 					int height =  _currentVideoProvider.BufferHeight;
-					
-					sharedTextureBuffer.Write(texbuf2, 0);
-					sharedTextureBuffer[sharedTextureBuffer.Length - 2] = width;
-					sharedTextureBuffer[sharedTextureBuffer.Length - 1] = height;
+					sharedTextureBuffer.Write(pixels, width, height);
 					// ^ don't even need to do this every frame if running faster than unity, but maybe it's easier this way
 				}
 				

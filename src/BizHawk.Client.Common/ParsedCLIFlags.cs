@@ -51,6 +51,7 @@ namespace BizHawk.Client.Common
 		public readonly bool headless;
 		public readonly string? writeTextureToSharedBuffer;
 		public readonly string? readInputFromSharedBuffer;
+		public readonly string? shareAudioOverRpcBuffer;
 
 		public ParsedCLIFlags(
 			int? cmdLoadSlot,
@@ -77,7 +78,8 @@ namespace BizHawk.Client.Common
 			string? firmwareDir,
 			bool headless,
 			string? writeTextureToSharedBuffer,
-			string? readInputFromSharedBuffer
+			string? readInputFromSharedBuffer,
+			string? shareAudioOverRpcBuffer
 		) {
 			this.cmdLoadSlot = cmdLoadSlot;
 			this.cmdLoadState = cmdLoadState;
@@ -104,6 +106,7 @@ namespace BizHawk.Client.Common
 			this.headless = headless;
 			this.writeTextureToSharedBuffer = writeTextureToSharedBuffer;
 			this.readInputFromSharedBuffer = readInputFromSharedBuffer;
+			this.shareAudioOverRpcBuffer = shareAudioOverRpcBuffer;
 		}
 	}
 }

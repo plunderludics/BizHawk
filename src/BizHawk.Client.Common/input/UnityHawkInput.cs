@@ -7,6 +7,7 @@ using System.Collections.Generic;
 
 using Plunderludics.UnityHawk.SharedBuffers;
 
+// this should probably be in a different namespace/dll actually
 namespace BizHawk.Client.Common
 {
 	public class UnityHawkInput : IInput

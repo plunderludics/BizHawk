@@ -1,10 +1,9 @@
-// Shared memory buffer for sharing live emulator texture from EmuHawk to Unity
+// Read input events from circular buffer in shared memory
+// (shared from Unity to EmuHawk)
 
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.InteropServices;
 
 using SharedMemory;
@@ -13,11 +12,11 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 {
 	public class SharedInputBuffer {
 		private CircularBuffer _inputBuffer;
-		private static int _nodeCount = 2048; // size of input buffer, should be plenty
+		private const int _defaultNodeCount = 2048; // size of input buffer, should be plenty
 		private int _bufferItemSize = Marshal.SizeOf(typeof(Plunderludics.UnityHawk.InputEvent));
-		public SharedInputBuffer(string inputBufferName) {
+		public SharedInputBuffer(string inputBufferName, int nodeCount = _defaultNodeCount) {
 			Console.WriteLine($"Init input buffer {inputBufferName}");
-			_inputBuffer = new CircularBuffer(inputBufferName, _nodeCount, _bufferItemSize);
+			_inputBuffer = new CircularBuffer(inputBufferName, nodeCount, _bufferItemSize);
 		}
 
 		public Plunderludics.UnityHawk.InputEvent? Read() {

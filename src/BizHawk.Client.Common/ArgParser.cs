@@ -48,6 +48,7 @@ namespace BizHawk.Client.Common
 			bool? headless = null;
 			string? writeTextureToSharedBuffer = null;
 			string? readInputFromSharedBuffer = null;
+			string? shareAudioOverRpcBuffer = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -183,6 +184,10 @@ namespace BizHawk.Client.Common
 				{
 					readInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
 				}
+				else if (argDowncased.StartsWith("--share-audio-over-rpc-buffer="))
+				{
+					shareAudioOverRpcBuffer = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else
 				{
 					cmdRom = arg;
@@ -231,7 +236,8 @@ namespace BizHawk.Client.Common
 				firmwareDir: firmwareDir,
 				headless: headless ?? false,
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
-				readInputFromSharedBuffer: readInputFromSharedBuffer
+				readInputFromSharedBuffer: readInputFromSharedBuffer,
+				shareAudioOverRpcBuffer: shareAudioOverRpcBuffer
 			);
 		}
 

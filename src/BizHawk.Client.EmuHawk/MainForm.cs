@@ -776,7 +776,6 @@ namespace BizHawk.Client.EmuHawk
 			var texBufName = _argParser.writeTextureToSharedBuffer;
 			if (texBufName != null) {
 				// Init shared texture buffer for passing to unity
-				Console.WriteLine($"Init texture buffer {texBufName}");
 				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
 				sharedTextureBuffer = new(texBufName, texbuf.Length);
 			}
@@ -3301,7 +3300,7 @@ namespace BizHawk.Client.EmuHawk
 				UpdateToolsAfter();
 			}
 
-			Sound.UpdateSound(atten, DisableSecondaryThrottling);
+			// Sound.UpdateSound(atten, DisableSecondaryThrottling);
 		}
 
 		private void CalcFramerateAndUpdateDisplay(long currentTimestamp, bool isRewinding, bool isFastForwarding)
@@ -4015,6 +4014,11 @@ namespace BizHawk.Client.EmuHawk
 					InputManager.StickyXorAdapter.ClearStickies();
 					InputManager.StickyXorAdapter.ClearStickyAxes();
 					InputManager.AutofireStickyXorAdapter.ClearStickies();
+
+					if (_argParser.shareAudioOverRpcBuffer != null) {
+						// Init rpc buffer for passing audio to unity
+						UnityHawkSound uhSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider, () => Emulator.VsyncRate());
+					}
 
 					RewireSound();
 					Tools.UpdateCheatRelatedTools(null, null);

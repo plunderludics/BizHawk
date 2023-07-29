@@ -48,7 +48,6 @@ namespace BizHawk.Client.Headless
 
 			SharedTextureBuffer sharedTextureBuffer = null;
 			// Init shared texture buffer for passing to unity
-			Console.WriteLine($"Init texture buffer {texBufName}");
 			sharedTextureBuffer = new(texBufName, e.GetVideoBuffer().Length);
 
 			while (true) {

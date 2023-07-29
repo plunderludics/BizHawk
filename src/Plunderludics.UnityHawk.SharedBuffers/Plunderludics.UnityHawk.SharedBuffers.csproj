@@ -10,6 +10,7 @@
 	<ItemGroup>
 		<Analyzer Remove="@(Analyzer)" />  <!-- disable ReflectionCache to avoid the Bizhawk.Common dependency -->
 		<ProjectReference Include="$(ProjectDir)../Plunderludics.UnityHawk/Plunderludics.UnityHawk.csproj" />
+		<ProjectReference Include="$(ProjectDir)../BizHawk.Emulation.Common/BizHawk.Emulation.Common.csproj" />
 		<PackageReference Include="SharedMemory" Version="2.3.2" />
 	</ItemGroup>
 </Project>

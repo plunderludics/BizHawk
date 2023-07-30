@@ -1060,6 +1060,8 @@ namespace BizHawk.Client.EmuHawk
 			set => _updateGlobalSound(_sound = value);
 		}
 
+		private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
+
 		public CheatCollection CheatList { get; }
 
 		public (HttpCommunication HTTP, MemoryMappedFiles MMF, SocketServer Sockets) NetworkingHelpers { get; }
@@ -2038,6 +2040,7 @@ namespace BizHawk.Client.EmuHawk
 				bool useAsyncMode = _currentSoundProvider.CanProvideAsync && !Config.SoundThrottle;
 				_currentSoundProvider.SetSyncMode(useAsyncMode ? SyncSoundMode.Async : SyncSoundMode.Sync);
 				Sound.SetInputPin(_currentSoundProvider);
+				// TODO should probably update UnityHawkSound if necessary too - currently won't support changing the loaded game at runtime though
 			}
 		}
 
@@ -3300,7 +3303,12 @@ namespace BizHawk.Client.EmuHawk
 				UpdateToolsAfter();
 			}
 
-			// Sound.UpdateSound(atten, DisableSecondaryThrottling);
+			if (_unityHawkSound != null) {
+				_unityHawkSound.Update();
+			} else {
+				// Only update native sound if not sharing audio via rpc
+				Sound.UpdateSound(atten, DisableSecondaryThrottling);
+			}
 		}
 
 		private void CalcFramerateAndUpdateDisplay(long currentTimestamp, bool isRewinding, bool isFastForwarding)
@@ -4017,7 +4025,7 @@ namespace BizHawk.Client.EmuHawk
 
 					if (_argParser.shareAudioOverRpcBuffer != null) {
 						// Init rpc buffer for passing audio to unity
-						UnityHawkSound uhSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider, () => Emulator.VsyncRate());
+						_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider, () => Emulator.VsyncRate());
 					}
 
 					RewireSound();

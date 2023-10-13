@@ -780,6 +780,12 @@ namespace BizHawk.Client.EmuHawk
 				sharedTextureBuffer = new(texBufName, texbuf.Length);
 			}
 
+			string callMethodBufferName = _argParser.unityCallMethodBuffer;
+			if (callMethodBufferName != null) {
+				// Init RPC buffer for CallMethod calls to  (from lua)
+				CallMethodRpc.Init(callMethodBufferName);
+			}
+
 			string inputBufferName = _argParser.readInputFromSharedBuffer;
 			if (inputBufferName != null) {
 				// Get input from Unity via shared buffer

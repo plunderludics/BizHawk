@@ -19,7 +19,7 @@ namespace BizHawk.Client.Common
 
 		public override string Name => "unityhawk";
 		[LuaMethodExample("local resultString = unityhawk.callmethod(\"MethodName\", <argString>);")]
-		[LuaMethod("callmethod", "Calls a method registered in Unity and returns the result")]
+		[LuaMethod("callmethod", "Calls a method registered in Unity and returns the result. Supports a single string arg and string return value")]
 		public string CallMethod(string methodName, string arg) {
 			Console.WriteLine($"CallMethod {methodName} {arg}");
 			byte[] argBytes = Encoding.ASCII.GetBytes(arg);

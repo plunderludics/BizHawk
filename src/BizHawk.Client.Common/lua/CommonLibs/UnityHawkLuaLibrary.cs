@@ -24,7 +24,11 @@ namespace BizHawk.Client.Common
 			Console.WriteLine($"CallMethod {methodName} {arg}");
 			byte[] argBytes = Encoding.ASCII.GetBytes(arg);
 			byte[] retBytes = CallMethodRpc.Instance.CallMethod(methodName, argBytes);
-			return Encoding.ASCII.GetString(retBytes);
+			if (retBytes == null) {
+				return null;
+			} else {
+				return Encoding.ASCII.GetString(retBytes);
+			}
 		}
 	}
 }

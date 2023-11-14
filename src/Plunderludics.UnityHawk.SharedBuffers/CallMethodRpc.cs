@@ -33,7 +33,8 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 			// Console.WriteLine("Sending callmethod RPC request to Unity");
 			var response = _callMethodRpc.RemoteRequest(data);
 			if (!response.Success) {
-				throw new Exception($"Unity failed to return a value for callmethod ({methodName})");
+				Console.WriteLine($"Warning: Unity failed to return a value for callmethod ({methodName})");
+				return null;
 			}
 			// no need to deserialize return value?
 			return response.Data;

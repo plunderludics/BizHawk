@@ -50,6 +50,7 @@ namespace BizHawk.Client.Common
 			string? readInputFromSharedBuffer = null;
 			string? shareAudioOverRpcBuffer = null;
 			string? unityCallMethodBuffer = null;
+			string? apiCallMethodBuffer = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -193,6 +194,10 @@ namespace BizHawk.Client.Common
 				{
 					unityCallMethodBuffer = arg.Substring(arg.IndexOf('=') + 1);
 				}
+				else if (argDowncased.StartsWith("--api-call-method-buffer="))
+				{
+					apiCallMethodBuffer = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else
 				{
 					cmdRom = arg;
@@ -243,7 +248,8 @@ namespace BizHawk.Client.Common
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
 				readInputFromSharedBuffer: readInputFromSharedBuffer,
 				shareAudioOverRpcBuffer: shareAudioOverRpcBuffer,
-				unityCallMethodBuffer: unityCallMethodBuffer
+				unityCallMethodBuffer: unityCallMethodBuffer,
+				apiCallMethodBuffer: apiCallMethodBuffer
 			);
 		}
 

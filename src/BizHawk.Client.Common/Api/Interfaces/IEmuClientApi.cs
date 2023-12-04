@@ -68,7 +68,6 @@ namespace BizHawk.Client.Common
 
 		bool GetSoundOn();
 
-
 		int GetTargetScanlineIntensity();
 
 		int GetWindowSize();

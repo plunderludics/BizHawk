@@ -47,6 +47,7 @@ using BizHawk.Common.CollectionExtensions;
 using BizHawk.WinForms.Controls;
 
 using Plunderludics;
+// using Plunderludics.UnityHawk;
 using Plunderludics.UnityHawk.SharedBuffers;
 
 namespace BizHawk.Client.EmuHawk
@@ -782,8 +783,15 @@ namespace BizHawk.Client.EmuHawk
 
 			string callMethodBufferName = _argParser.unityCallMethodBuffer;
 			if (callMethodBufferName != null) {
-				// Init RPC buffer for CallMethod calls to  (from lua)
+				// Init RPC buffer for CallMethod calls to unity (from lua)
 				CallMethodRpc.Init(callMethodBufferName);
+			}
+
+			string apiBufferName = _argParser.apiCallMethodBuffer;
+			ApiCallBuffer apiCallBuffer = null;
+			if (apiBufferName != null) {
+				// Init RPC buffer for Bizhawk API calls from unity
+				apiCallBuffer = new ApiCallBuffer(apiBufferName);
 			}
 
 			string inputBufferName = _argParser.readInputFromSharedBuffer;
@@ -797,6 +805,11 @@ namespace BizHawk.Client.EmuHawk
 
 			for (; ; )
 			{
+				if (apiCallBuffer != null) {
+					// First do any pending api call requests from unity
+					ProcessUnityHawkApiCalls(apiCallBuffer);
+				}
+
 				inputProvider.Update();
 
 				// handle events and dispatch as a hotkey action, or a hotkey button, or an input button
@@ -4954,6 +4967,44 @@ namespace BizHawk.Client.EmuHawk
 			});
 
 			RA?.Restart();
+		}
+
+		// [This should probably go in a new file but whatever]
+		private void ProcessUnityHawkApiCalls(ApiCallBuffer apiCallBuffer) {
+			Plunderludics.UnityHawk.MethodCall? mcq;
+			while ((mcq = apiCallBuffer.Read()).HasValue) {
+				Plunderludics.UnityHawk.MethodCall mc = mcq.Value;
+				// Console.WriteLine($"Unity attempting api call {mc}");
+				switch (mc.MethodName) {
+				// [Mmm these string constants should really go in a file shared between unity and bizhawk]
+				case "LoadRom":
+					LoadRom(mc.Argument, new LoadRomArgs());
+					break;
+				case "LoadState":
+					LoadState(mc.Argument, "placeholderStateName", suppressOSD: true);
+					break;
+				case "SaveState":
+					SaveState(mc.Argument, "placeholderStateName", fromLua: false, suppressOSD: true);
+					break;
+				case "Unpause":
+					UnpauseEmulator();
+					break;
+				case "Pause":
+					PauseEmulator();
+					break;
+				case "FrameAdvance":
+					FrameAdvance();
+					break;
+				default:
+					Console.WriteLine($"Warning: Unity attempting to call unsupported bizhawk api method {mc.MethodName}");
+					break;
+				}
+				// Look up the Api method by name (using reflection) and call with the given arg.
+				// [we could also just manually enumerate the possibilities here: Pause, Unpause, Load, Save, and OpenRom is probably all we really want anyway]
+				// typeof(IMainFormForApi).GetMethod(methodCall.MethodName).Invoke(_api, new object[] {methodCall.Argument});
+				// For now, we ignore the return value if there is one.
+				// [but TODO: return the bool success value for OpenRom()]
+			}
 		}
 	}
 }

@@ -24,6 +24,7 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 
 		public byte[] CallMethod(string methodName, byte[] input) {
 			// serialize (methodName, input) into one byte array (separated by null byte)
+			// TODO use MethodCall struct here instead (although it has limited input length)
 			byte[] methodNameBytes = Encoding.ASCII.GetBytes(methodName);
 			byte[] data = new byte[methodNameBytes.Length + 1 + input.Length];
 			methodNameBytes.CopyTo(data, 0);
@@ -31,6 +32,7 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 			input.CopyTo(data, methodNameBytes.Length + 1);
 
 			// Console.WriteLine("Sending callmethod RPC request to Unity");
+			// TODO this should be async
 			var response = _callMethodRpc.RemoteRequest(data);
 			if (!response.Success) {
 				Console.WriteLine($"Warning: Unity failed to return a value for callmethod ({methodName})");

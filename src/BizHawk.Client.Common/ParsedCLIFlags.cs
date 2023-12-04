@@ -53,6 +53,7 @@ namespace BizHawk.Client.Common
 		public readonly string? readInputFromSharedBuffer;
 		public readonly string? shareAudioOverRpcBuffer;
 		public readonly string? unityCallMethodBuffer;
+		public readonly string? apiCallMethodBuffer;
 
 		public ParsedCLIFlags(
 			int? cmdLoadSlot,
@@ -81,7 +82,8 @@ namespace BizHawk.Client.Common
 			string? writeTextureToSharedBuffer,
 			string? readInputFromSharedBuffer,
 			string? shareAudioOverRpcBuffer,
-			string? unityCallMethodBuffer
+			string? unityCallMethodBuffer,
+			string? apiCallMethodBuffer
 		) {
 			this.cmdLoadSlot = cmdLoadSlot;
 			this.cmdLoadState = cmdLoadState;
@@ -110,6 +112,7 @@ namespace BizHawk.Client.Common
 			this.readInputFromSharedBuffer = readInputFromSharedBuffer;
 			this.shareAudioOverRpcBuffer = shareAudioOverRpcBuffer;
 			this.unityCallMethodBuffer = unityCallMethodBuffer;
+			this.apiCallMethodBuffer = apiCallMethodBuffer;
 		}
 	}
 }

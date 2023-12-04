@@ -8,6 +8,8 @@ using System.Runtime.InteropServices;
 
 using SharedMemory;
 
+using Plunderludics.UnityHawk;
+
 namespace Plunderludics.UnityHawk.SharedBuffers
 {
 	public class SharedInputBuffer {
@@ -24,22 +26,10 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 			byte[] bytes = new byte[_bufferItemSize];
 			int amount = _inputBuffer.Read(bytes, timeout: 0);
 			if (amount > 0) {
-				return RawDeserialize<Plunderludics.UnityHawk.InputEvent>(bytes);
+				return Serialization.RawDeserialize<Plunderludics.UnityHawk.InputEvent>(bytes);
 			} else {
 				return null;
 			}
-		}
-
-		private static T RawDeserialize<T>(byte[] rawData, int position = 0)
-		{
-			int rawsize = Marshal.SizeOf(typeof(T));
-			if (rawsize > rawData.Length - position)
-				throw new ArgumentException("Not enough data to fill struct. Array length from position: "+(rawData.Length-position) + ", Struct length: "+rawsize);
-			IntPtr buffer = Marshal.AllocHGlobal(rawsize);
-			Marshal.Copy(rawData, position, buffer, rawsize);
-			T retobj = (T)Marshal.PtrToStructure(buffer, typeof(T));
-			Marshal.FreeHGlobal(buffer);
-			return retobj;
 		}
 	}
 }

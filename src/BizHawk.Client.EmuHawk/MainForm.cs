@@ -773,13 +773,7 @@ namespace BizHawk.Client.EmuHawk
 
 			InitializeFpsData();
 
-			SharedTextureBuffer sharedTextureBuffer = null;
-			var texBufName = _argParser.writeTextureToSharedBuffer;
-			if (texBufName != null) {
-				// Init shared texture buffer for passing to unity
-				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
-				sharedTextureBuffer = new(texBufName, texbuf.Length);
-			}
+			InitSharedTextureBuffer();
 
 			string callMethodBufferName = _argParser.unityCallMethodBuffer;
 			if (callMethodBufferName != null) {
@@ -853,12 +847,13 @@ namespace BizHawk.Client.EmuHawk
 
 				Render();
 
-				if (sharedTextureBuffer != null) {
+				if (_sharedTextureBuffer != null) {
 					int[] pixels = _currentVideoProvider.GetVideoBuffer();
 					int width =  _currentVideoProvider.BufferWidth;
 					int height =  _currentVideoProvider.BufferHeight;
-					sharedTextureBuffer.Write(pixels, width, height);
-					// ^ don't even need to do this every frame if running faster than unity, but maybe it's easier this way
+					// Pass current frame index along with texture to make it possible to sync with lua rpc calls
+					// (due to small unpredictable lag in the shared buffer write)
+					_sharedTextureBuffer.Write(pixels, width, height, Emulator.Frame);
 				}
 				
 				// HACK: RAIntegration might peek at memory during messages
@@ -1079,6 +1074,7 @@ namespace BizHawk.Client.EmuHawk
 			set => _updateGlobalSound(_sound = value);
 		}
 
+		SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
 
 		public CheatCollection CheatList { get; }
@@ -4969,6 +4965,19 @@ namespace BizHawk.Client.EmuHawk
 			RA?.Restart();
 		}
 
+		private void InitSharedTextureBuffer() {
+			string texBufName = _argParser.writeTextureToSharedBuffer;
+			if (texBufName != null) {
+				// Init shared texture buffer for passing to unity
+				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
+				if (_sharedTextureBuffer == null) {
+					_sharedTextureBuffer = new(texBufName, texbuf.Length);
+				} else {
+					_sharedTextureBuffer.SetSize(texbuf.Length);
+				}
+			}
+		}
+
 		// [This should probably go in a new file but whatever]
 		private void ProcessUnityHawkApiCalls(ApiCallBuffer apiCallBuffer) {
 			Plunderludics.UnityHawk.MethodCall? mcq;
@@ -4978,7 +4987,18 @@ namespace BizHawk.Client.EmuHawk
 				switch (mc.MethodName) {
 				// [Mmm these string constants should really go in a file shared between unity and bizhawk]
 				case "LoadRom":
-					LoadRom(mc.Argument, new LoadRomArgs());
+					string romPath = mc.Argument;
+					// Load the rom using the same logic as when it's provided on the command line
+					// [This code is copied 3 times rn :/ TODO refactor]
+					Console.WriteLine($"LoadSample: Looking for rom in {romPath}");
+					var ioa = OpenAdvancedSerializer.ParseWithLegacy(romPath);
+					if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
+					_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
+					if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {romPath}");
+					
+					// Need to reinit texture buffer here in case platform has changed
+					InitSharedTextureBuffer();
+
 					break;
 				case "LoadState":
 					LoadState(mc.Argument, "placeholderStateName", suppressOSD: true);

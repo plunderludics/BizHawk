@@ -773,6 +773,13 @@ namespace BizHawk.Client.EmuHawk
 
 			InitializeFpsData();
 
+			// [UnityHawk stuff]
+
+			if (_argParser.savestateDir != null) {
+				// Set savestate directory for current platform (won't persist if platform changes but who cares)
+				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateDir;
+			}
+
 			InitSharedTextureBuffer();
 
 			string callMethodBufferName = _argParser.unityCallMethodBuffer;
@@ -788,6 +795,9 @@ namespace BizHawk.Client.EmuHawk
 				apiCallBuffer = new ApiCallBuffer(apiBufferName);
 			}
 
+			// Ignore whatever is in the config and set AcceptBackgroundInput based on cli arg
+			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput;
+
 			string inputBufferName = _argParser.readInputFromSharedBuffer;
 			if (inputBufferName != null) {
 				// Get input from Unity via shared buffer
@@ -796,6 +806,7 @@ namespace BizHawk.Client.EmuHawk
 				// Use native OS input
 				inputProvider = Input.Instance;
 			}
+			// [end UnityHawk stuff]
 
 			for (; ; )
 			{

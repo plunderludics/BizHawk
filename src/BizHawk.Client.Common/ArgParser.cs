@@ -44,8 +44,10 @@ namespace BizHawk.Client.Common
 			string? openExtToolDll = null;
 			string? cmdRom = null;
 			string? firmwareDir = null;
+			string? savestateDir = null;
 			string? customWindowTitle = null;
 			bool? headless = null;
+			bool? acceptBackgroundInput = null;
 			string? writeTextureToSharedBuffer = null;
 			string? readInputFromSharedBuffer = null;
 			string? shareAudioOverRpcBuffer = null;
@@ -125,6 +127,10 @@ namespace BizHawk.Client.Common
 					// don't open any gui at all
 					headless = true;
 				}
+				else if (argDowncased.StartsWith("--accept-background-input"))
+				{
+					acceptBackgroundInput = true;
+				}
 				else if (argDowncased.StartsWith("--fullscreen"))
 				{
 					startFullscreen = true;
@@ -173,6 +179,10 @@ namespace BizHawk.Client.Common
 				else if (argDowncased.StartsWith("--firmware="))
 				{
 					firmwareDir = arg.Substring(arg.IndexOf('=') + 1);
+				}
+				else if (argDowncased.StartsWith("--savestates="))
+				{
+					savestateDir = arg.Substring(arg.IndexOf('=') + 1);
 				}
 				else if (argDowncased.StartsWith("--windowtitle="))
 				{
@@ -244,7 +254,9 @@ namespace BizHawk.Client.Common
 				customWindowTitle: customWindowTitle,
 				cmdRom: cmdRom,
 				firmwareDir: firmwareDir,
+				savestateDir: savestateDir,
 				headless: headless ?? false,
+				acceptBackgroundInput: acceptBackgroundInput ?? false,
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
 				readInputFromSharedBuffer: readInputFromSharedBuffer,
 				shareAudioOverRpcBuffer: shareAudioOverRpcBuffer,

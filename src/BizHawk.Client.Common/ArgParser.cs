@@ -49,7 +49,8 @@ namespace BizHawk.Client.Common
 			bool? headless = null;
 			bool? acceptBackgroundInput = null;
 			string? writeTextureToSharedBuffer = null;
-			string? readInputFromSharedBuffer = null;
+			string? readKeyInputFromSharedBuffer = null;
+			string? readAnalogInputFromSharedBuffer = null;
 			string? shareAudioOverRpcBuffer = null;
 			string? unityCallMethodBuffer = null;
 			string? apiCallMethodBuffer = null;
@@ -192,9 +193,13 @@ namespace BizHawk.Client.Common
 				{
 					writeTextureToSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
 				}
-				else if (argDowncased.StartsWith("--read-input-from-shared-buffer="))
+				else if (argDowncased.StartsWith("--read-key-input-from-shared-buffer="))
 				{
-					readInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
+					readKeyInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
+				}
+				else if (argDowncased.StartsWith("--read-analog-input-from-shared-buffer="))
+				{
+					readAnalogInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
 				}
 				else if (argDowncased.StartsWith("--share-audio-over-rpc-buffer="))
 				{
@@ -258,7 +263,8 @@ namespace BizHawk.Client.Common
 				headless: headless ?? false,
 				acceptBackgroundInput: acceptBackgroundInput ?? false,
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
-				readInputFromSharedBuffer: readInputFromSharedBuffer,
+				readKeyInputFromSharedBuffer: readKeyInputFromSharedBuffer,
+				readAnalogInputFromSharedBuffer: readAnalogInputFromSharedBuffer,
 				shareAudioOverRpcBuffer: shareAudioOverRpcBuffer,
 				unityCallMethodBuffer: unityCallMethodBuffer,
 				apiCallMethodBuffer: apiCallMethodBuffer

@@ -798,10 +798,11 @@ namespace BizHawk.Client.EmuHawk
 			// Ignore whatever is in the config and set AcceptBackgroundInput based on cli arg
 			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput;
 
-			string inputBufferName = _argParser.readInputFromSharedBuffer;
-			if (inputBufferName != null) {
-				// Get input from Unity via shared buffer
-				inputProvider = new UnityHawkInput(inputBufferName);
+			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
+			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
+			if (keyInputBufferName != null || analogInputBufferName != null) {
+				// Get key presses from Unity via shared buffer
+				inputProvider = new UnityHawkInput(keyInputBufferName, analogInputBufferName);
 			} else {
 				// Use native OS input
 				inputProvider = Input.Instance;
@@ -1227,7 +1228,7 @@ namespace BizHawk.Client.EmuHawk
 			//also handle axes
 			//we'll need to isolate the mouse coordinates so we can translate them
 			KeyValuePair<string, int>? mouseX = null, mouseY = null;
-			foreach (var f in Input.Instance.GetAxisValues())
+			foreach (var f in inputProvider.GetAxisValues())
 			{
 				if (f.Key == "WMouse X")
 					mouseX = f;

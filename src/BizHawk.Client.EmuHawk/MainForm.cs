@@ -369,40 +369,6 @@ namespace BizHawk.Client.EmuHawk
 			GL = gl;
 			_updateGlobalSound = updateGlobalSound;
 
-			// [UnityHawk]
-			// Process cli args and set up shared buffers
-
-			if (_argParser.firmwareDir != null) {
-				// Override firmware directory
-				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
-			}
-
-			// Ignore whatever is in the config and set AcceptBackgroundInput based on cli arg
-			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput;
-
-			string callMethodBufferName = _argParser.unityCallMethodBuffer;
-			if (callMethodBufferName != null) {
-				// Init RPC buffer for CallMethod calls to unity (from lua)
-				CallMethodRpc.Init(callMethodBufferName);
-			}
-
-			string apiBufferName = _argParser.apiCallMethodBuffer;
-			if (apiBufferName != null) {
-				// Init RPC buffer for Bizhawk API calls from unity
-				_apiCallBuffer = new ApiCallBuffer(apiBufferName);
-			}
-
-			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
-			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
-			if (keyInputBufferName != null || analogInputBufferName != null) {
-				// Get key presses from Unity via shared buffer
-				inputProvider = new UnityHawkInput(keyInputBufferName, analogInputBufferName);
-			} else {
-				// Use native OS input
-				inputProvider = Input.Instance;
-			}
-			// [end UnityHawk]
-
 			InputManager = new InputManager
 			{
 				GetMainFormMouseInfo = () =>
@@ -611,6 +577,44 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			if (Config.MainFormStayOnTop) TopMost = true;
+
+
+
+			// [UnityHawk]
+			// Process cli args and set up shared buffers
+
+			if (_argParser.firmwareDir != null) {
+				// Override firmware directory
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
+			}
+
+			// Ignore whatever is in the config and set AcceptBackgroundInput based on cli arg
+			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput;
+
+			string callMethodBufferName = _argParser.unityCallMethodBuffer;
+			if (callMethodBufferName != null) {
+				// Init RPC buffer for CallMethod calls to unity (from lua)
+				CallMethodRpc.Init(callMethodBufferName);
+			}
+
+			string apiBufferName = _argParser.apiCallMethodBuffer;
+			if (apiBufferName != null) {
+				// Init RPC buffer for Bizhawk API calls from unity
+				_apiCallBuffer = new ApiCallBuffer(apiBufferName);
+			}
+
+			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
+			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
+			if (keyInputBufferName != null || analogInputBufferName != null) {
+				// Get key presses from Unity via shared buffer
+				inputProvider = new UnityHawkInput(keyInputBufferName, analogInputBufferName);
+			} else {
+				// Use native OS input
+				inputProvider = Input.Instance;
+			}
+			// [end UnityHawk]
+
+
 
 			if (_argParser.cmdRom != null)
 			{

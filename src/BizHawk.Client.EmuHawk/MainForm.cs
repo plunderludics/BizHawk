@@ -54,7 +54,10 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class MainForm : FormBase, IDialogParent, IMainFormForApi, IMainFormForTools, IMainFormForRetroAchievements
 	{
-		private static readonly FilesystemFilterSet EmuHawkSaveStatesFSFilterSet = new(FilesystemFilter.EmuHawkSaveStates);
+		private FilesystemFilterSet GetEmuHawkSaveStatesFSFilterSet() {
+			// [hacked for UnityHawk - need to generate this set based on the savestateExtension cli arg]
+			return new(new FilesystemFilter("Save States", new[] { SaveStateExtension() }));
+		}
 
 		private static readonly FilesystemFilterSet LibretroCoresFSFilterSet = new(new FilesystemFilter("Libretro Cores", new[] { OSTailoredCode.IsUnixHost ? "so" : "dll" }))
 		{
@@ -4364,10 +4367,10 @@ namespace BizHawk.Client.EmuHawk
 
 			if (IsSavestateSlave) return Master.LoadQuickSave(SlotToInt(quickSlotName));
 
-			var path = $"{SaveStatePrefix()}.{quickSlotName}.State";
+			var path = $"{SaveStatePrefix()}.{quickSlotName}.{SaveStateExtension()}";
 			if (!File.Exists(path))
 			{
-				AddOnScreenMessage($"Unable to load {quickSlotName}.State");
+				AddOnScreenMessage($"Unable to load {quickSlotName}.{SaveStateExtension()}");
 				return false;
 			}
 
@@ -4467,7 +4470,7 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			var path = $"{SaveStatePrefix()}.{quickSlotName}.State";
+			var path = $"{SaveStatePrefix()}.{quickSlotName}.{SaveStateExtension()}";
 
 			var file = new FileInfo(path);
 			if (file.Directory != null && !file.Directory.Exists)
@@ -4550,9 +4553,9 @@ namespace BizHawk.Client.EmuHawk
 
 			var result = this.ShowFileSaveDialog(
 				fileExt: "State",
-				filter: EmuHawkSaveStatesFSFilterSet,
+				filter: GetEmuHawkSaveStatesFSFilterSet(),
 				initDir: path,
-				initFileName: $"{SaveStatePrefix()}.QuickSave0.State");
+				initFileName: $"{SaveStatePrefix()}.QuickSave0.{SaveStateExtension()}");
 			if (result is not null) SaveState(path: result, userFriendlyStateName: result);
 
 			if (Tools.IsLoaded<TAStudio>())
@@ -4568,7 +4571,7 @@ namespace BizHawk.Client.EmuHawk
 
 			var result = this.ShowFileOpenDialog(
 				discardCWDChange: true,
-				filter: EmuHawkSaveStatesFSFilterSet,
+				filter: GetEmuHawkSaveStatesFSFilterSet(),
 				initDir: Config.PathEntries.SaveStateAbsolutePath(Game.System));
 			if (result is null || !File.Exists(result)) return false;
 			return LoadState(path: result, userFriendlyStateName: Path.GetFileName(result));
@@ -4990,6 +4993,10 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		// [UnityHawk methods]
+		// Extension for savestates. Defaults to ".State" (as in original Bizhawk) but can be set via --savestate-extension flag
+		private string SaveStateExtension() {
+			return _argParser.savestateExtension ?? "State";
+		}
 		private void InitSharedTextureBuffer() {
 			string texBufName = _argParser.writeTextureToSharedBuffer;
 			if (texBufName != null) {

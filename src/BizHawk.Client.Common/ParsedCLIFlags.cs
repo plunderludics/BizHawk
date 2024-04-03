@@ -49,6 +49,7 @@ namespace BizHawk.Client.Common
 		public readonly string? cmdRom;
 		public readonly string? firmwareDir;
 		public readonly string? savestateDir;
+		public readonly string? savestateExtension;
 		public readonly bool headless;
 		public readonly bool acceptBackgroundInput;
 		public readonly string? writeTextureToSharedBuffer;
@@ -82,6 +83,7 @@ namespace BizHawk.Client.Common
 			string? cmdRom,
 			string? firmwareDir,
 			string? savestateDir,
+			string? savestateExtension,
 			bool headless,
 			bool acceptBackgroundInput,
 			string? writeTextureToSharedBuffer,
@@ -114,6 +116,7 @@ namespace BizHawk.Client.Common
 			this.cmdRom = cmdRom;
 			this.firmwareDir = firmwareDir;
 			this.savestateDir = savestateDir;
+			this.savestateExtension = savestateExtension;
 			this.headless = headless;
 			this.acceptBackgroundInput = acceptBackgroundInput;
 			this.writeTextureToSharedBuffer = writeTextureToSharedBuffer;

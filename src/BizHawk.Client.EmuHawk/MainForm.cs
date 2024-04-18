@@ -4119,7 +4119,7 @@ namespace BizHawk.Client.EmuHawk
 				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateDir;
 			}
 
-			if (_argParser.ramWatchFile != null) {
+			if (!_argParser.headless && _argParser.ramWatchFile != null) {
 				Tools.Load<RamWatch>();
 				Tools.RamWatch.LoadWatchFile(new FileInfo(_argParser.ramWatchFile), true);
 			}

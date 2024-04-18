@@ -50,6 +50,7 @@ namespace BizHawk.Client.Common
 		public readonly string? firmwareDir;
 		public readonly string? savestateDir;
 		public readonly string? savestateExtension;
+		public readonly string? ramWatchFile;
 		public readonly bool headless;
 		public readonly bool acceptBackgroundInput;
 		public readonly string? writeTextureToSharedBuffer;
@@ -84,6 +85,7 @@ namespace BizHawk.Client.Common
 			string? firmwareDir,
 			string? savestateDir,
 			string? savestateExtension,
+			string? ramWatchFile,
 			bool headless,
 			bool acceptBackgroundInput,
 			string? writeTextureToSharedBuffer,
@@ -117,6 +119,7 @@ namespace BizHawk.Client.Common
 			this.firmwareDir = firmwareDir;
 			this.savestateDir = savestateDir;
 			this.savestateExtension = savestateExtension;
+			this.ramWatchFile = ramWatchFile;
 			this.headless = headless;
 			this.acceptBackgroundInput = acceptBackgroundInput;
 			this.writeTextureToSharedBuffer = writeTextureToSharedBuffer;

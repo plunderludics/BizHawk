@@ -46,6 +46,7 @@ namespace BizHawk.Client.Common
 			string? firmwareDir = null;
 			string? savestateDir = null;
 			string? savestateExtension = null;
+			string? ramWatchFile = null;
 			string? customWindowTitle = null;
 			bool? headless = null;
 			bool? acceptBackgroundInput = null;
@@ -190,6 +191,10 @@ namespace BizHawk.Client.Common
 				{
 					savestateExtension = arg.Substring(arg.IndexOf('=') + 1);
 				}
+				else if (argDowncased.StartsWith("--ram-watch-file="))
+				{
+					ramWatchFile = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else if (argDowncased.StartsWith("--windowtitle="))
 				{
 					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
@@ -266,6 +271,7 @@ namespace BizHawk.Client.Common
 				firmwareDir: firmwareDir,
 				savestateDir: savestateDir,
 				savestateExtension: savestateExtension,
+				ramWatchFile: ramWatchFile,
 				headless: headless ?? false,
 				acceptBackgroundInput: acceptBackgroundInput ?? false,
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,

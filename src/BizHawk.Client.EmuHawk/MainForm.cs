@@ -615,6 +615,7 @@ namespace BizHawk.Client.EmuHawk
 				// Use native OS input
 				inputProvider = Input.Instance;
 			}
+
 			// [end UnityHawk]
 
 
@@ -4117,6 +4118,12 @@ namespace BizHawk.Client.EmuHawk
 				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
 				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateDir;
 			}
+
+			if (_argParser.ramWatchFile != null) {
+				Tools.Load<RamWatch>();
+				Tools.RamWatch.LoadWatchFile(new FileInfo(_argParser.ramWatchFile), true);
+			}
+
 			// [end UnityHawk]
 
 			OSD.Fps = "0 fps";

@@ -48,9 +48,14 @@ namespace BizHawk.Client.Common
 
 		public readonly string? cmdRom;
 		public readonly string? firmwareDir;
+		public readonly string? savestateDir;
+		public readonly string? savestateExtension;
+		public readonly string? ramWatchFile;
 		public readonly bool headless;
+		public readonly bool acceptBackgroundInput;
 		public readonly string? writeTextureToSharedBuffer;
-		public readonly string? readInputFromSharedBuffer;
+		public readonly string? readKeyInputFromSharedBuffer;
+		public readonly string? readAnalogInputFromSharedBuffer;
 		public readonly string? shareAudioOverRpcBuffer;
 		public readonly string? unityCallMethodBuffer;
 		public readonly string? apiCallMethodBuffer;
@@ -78,9 +83,14 @@ namespace BizHawk.Client.Common
 			string? customWindowTitle,
 			string? cmdRom,
 			string? firmwareDir,
+			string? savestateDir,
+			string? savestateExtension,
+			string? ramWatchFile,
 			bool headless,
+			bool acceptBackgroundInput,
 			string? writeTextureToSharedBuffer,
-			string? readInputFromSharedBuffer,
+			string? readKeyInputFromSharedBuffer,
+			string? readAnalogInputFromSharedBuffer,
 			string? shareAudioOverRpcBuffer,
 			string? unityCallMethodBuffer,
 			string? apiCallMethodBuffer
@@ -107,9 +117,14 @@ namespace BizHawk.Client.Common
 			this.customWindowTitle = customWindowTitle;
 			this.cmdRom = cmdRom;
 			this.firmwareDir = firmwareDir;
+			this.savestateDir = savestateDir;
+			this.savestateExtension = savestateExtension;
+			this.ramWatchFile = ramWatchFile;
 			this.headless = headless;
+			this.acceptBackgroundInput = acceptBackgroundInput;
 			this.writeTextureToSharedBuffer = writeTextureToSharedBuffer;
-			this.readInputFromSharedBuffer = readInputFromSharedBuffer;
+			this.readKeyInputFromSharedBuffer = readKeyInputFromSharedBuffer;
+			this.readAnalogInputFromSharedBuffer = readAnalogInputFromSharedBuffer;
 			this.shareAudioOverRpcBuffer = shareAudioOverRpcBuffer;
 			this.unityCallMethodBuffer = unityCallMethodBuffer;
 			this.apiCallMethodBuffer = apiCallMethodBuffer;

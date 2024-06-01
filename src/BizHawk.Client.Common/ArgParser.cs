@@ -44,10 +44,15 @@ namespace BizHawk.Client.Common
 			string? openExtToolDll = null;
 			string? cmdRom = null;
 			string? firmwareDir = null;
+			string? savestateDir = null;
+			string? savestateExtension = null;
+			string? ramWatchFile = null;
 			string? customWindowTitle = null;
 			bool? headless = null;
+			bool? acceptBackgroundInput = null;
 			string? writeTextureToSharedBuffer = null;
-			string? readInputFromSharedBuffer = null;
+			string? readKeyInputFromSharedBuffer = null;
+			string? readAnalogInputFromSharedBuffer = null;
 			string? shareAudioOverRpcBuffer = null;
 			string? unityCallMethodBuffer = null;
 			string? apiCallMethodBuffer = null;
@@ -125,6 +130,10 @@ namespace BizHawk.Client.Common
 					// don't open any gui at all
 					headless = true;
 				}
+				else if (argDowncased.StartsWith("--accept-background-input"))
+				{
+					acceptBackgroundInput = true;
+				}
 				else if (argDowncased.StartsWith("--fullscreen"))
 				{
 					startFullscreen = true;
@@ -174,6 +183,18 @@ namespace BizHawk.Client.Common
 				{
 					firmwareDir = arg.Substring(arg.IndexOf('=') + 1);
 				}
+				else if (argDowncased.StartsWith("--savestates="))
+				{
+					savestateDir = arg.Substring(arg.IndexOf('=') + 1);
+				}
+				else if (argDowncased.StartsWith("--savestate-extension="))
+				{
+					savestateExtension = arg.Substring(arg.IndexOf('=') + 1);
+				}
+				else if (argDowncased.StartsWith("--ram-watch-file="))
+				{
+					ramWatchFile = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else if (argDowncased.StartsWith("--windowtitle="))
 				{
 					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
@@ -182,9 +203,13 @@ namespace BizHawk.Client.Common
 				{
 					writeTextureToSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
 				}
-				else if (argDowncased.StartsWith("--read-input-from-shared-buffer="))
+				else if (argDowncased.StartsWith("--read-key-input-from-shared-buffer="))
 				{
-					readInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
+					readKeyInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
+				}
+				else if (argDowncased.StartsWith("--read-analog-input-from-shared-buffer="))
+				{
+					readAnalogInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
 				}
 				else if (argDowncased.StartsWith("--share-audio-over-rpc-buffer="))
 				{
@@ -244,9 +269,14 @@ namespace BizHawk.Client.Common
 				customWindowTitle: customWindowTitle,
 				cmdRom: cmdRom,
 				firmwareDir: firmwareDir,
+				savestateDir: savestateDir,
+				savestateExtension: savestateExtension,
+				ramWatchFile: ramWatchFile,
 				headless: headless ?? false,
+				acceptBackgroundInput: acceptBackgroundInput ?? false,
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
-				readInputFromSharedBuffer: readInputFromSharedBuffer,
+				readKeyInputFromSharedBuffer: readKeyInputFromSharedBuffer,
+				readAnalogInputFromSharedBuffer: readAnalogInputFromSharedBuffer,
 				shareAudioOverRpcBuffer: shareAudioOverRpcBuffer,
 				unityCallMethodBuffer: unityCallMethodBuffer,
 				apiCallMethodBuffer: apiCallMethodBuffer

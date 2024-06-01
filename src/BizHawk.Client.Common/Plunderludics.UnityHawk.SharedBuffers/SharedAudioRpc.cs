@@ -30,7 +30,8 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 		public int GetSamplesNeeded() {
 			var response = _nSamplesRpc.RemoteRequest();
 			if (!response.Success) {
-				throw new Exception("Unity failed to return a value for n samples needed");
+				Console.WriteLine("Warning: Unity failed to return a value for n samples needed");
+				return 0;
 			}
 
 			byte[] bytes = response.Data;

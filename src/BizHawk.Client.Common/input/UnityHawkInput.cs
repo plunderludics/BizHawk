@@ -1,8 +1,4 @@
-﻿// Added for UnityHawk support
-// implemented by Input.cs (original OS input)
-// and UnityHawkInput (get input from Unity via shared memory)
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using Plunderludics.UnityHawk.SharedBuffers;
@@ -13,15 +9,18 @@ namespace BizHawk.Client.Common
 	public class UnityHawkInput : IInput
 	{
 		private Queue<InputEvent> _inputEvents;
-		private SharedInputBuffer _inputBuffer;
-		public UnityHawkInput(string inputBufferName) {
-			_inputBuffer = new(inputBufferName);
+		private SharedKeyInputBuffer _keyInputBuffer;
+		private SharedAnalogInputBuffer _analogInputBuffer;
+		public UnityHawkInput(string keyInputBufferName, string analogInputBufferName) {
+			// TODO: this should not crash if either of the strings given is null
+			_keyInputBuffer = new(keyInputBufferName);
+			_analogInputBuffer = new(analogInputBufferName);
 			_inputEvents = new();
 		}
 
 		public void Update() {	
 			Plunderludics.UnityHawk.InputEvent? uie;
-			while ((uie = _inputBuffer.Read()).HasValue) {
+			while ((uie = _keyInputBuffer.Read()).HasValue) {
 				// convert Plunderludics.UnityHawk.InputEvent to BizHawk.Client.Common.InputEvent
 				uint mods = 0; // ignore modifier keys for now
 				List<string> emptyList = new();
@@ -38,8 +37,8 @@ namespace BizHawk.Client.Common
 			return _inputEvents.Count == 0 ? null : _inputEvents.Dequeue();
 		}
 		public IDictionary<string, int> GetAxisValues() {
-			// TODO: for gamepad & mouse support
-			return new Dictionary<string, int>();
+			// For analog inputs (gamepad & mouse)
+			return _analogInputBuffer.Read();
 		}
 	}
 }

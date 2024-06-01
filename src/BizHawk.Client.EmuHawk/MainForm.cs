@@ -53,7 +53,10 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class MainForm : FormBase, IDialogParent, IMainFormForApi, IMainFormForTools, IMainFormForRetroAchievements
 	{
-		private static readonly FilesystemFilterSet EmuHawkSaveStatesFSFilterSet = new(FilesystemFilter.EmuHawkSaveStates);
+		private FilesystemFilterSet GetEmuHawkSaveStatesFSFilterSet() {
+			// [hacked for UnityHawk - need to generate this set based on the savestateExtension cli arg]
+			return new(new FilesystemFilter("Save States", new[] { SaveStateExtension() }));
+		}
 
 		private static readonly FilesystemFilterSet LibretroCoresFSFilterSet = new(new FilesystemFilter("Libretro Cores", new[] { OSTailoredCode.IsUnixHost ? "so" : "dll" }))
 		{
@@ -340,6 +343,7 @@ namespace BizHawk.Client.EmuHawk
 			out IMovieSession movieSession,
 			out bool exitEarly)
 		{
+			Console.WriteLine("MainForm()");
 			movieSession = null;
 			exitEarly = false;
 
@@ -366,11 +370,6 @@ namespace BizHawk.Client.EmuHawk
 			_getConfigPath = getConfigPath;
 			GL = gl;
 			_updateGlobalSound = updateGlobalSound;
-
-			// hack for UnityHawk - override firmware dir from command line
-			if (_argParser.firmwareDir != null) {
-				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
-			}
 
 			InputManager = new InputManager
 			{
@@ -581,6 +580,45 @@ namespace BizHawk.Client.EmuHawk
 
 			if (Config.MainFormStayOnTop) TopMost = true;
 
+
+
+			// [UnityHawk]
+			// Process cli args and set up shared buffers
+
+			if (_argParser.firmwareDir != null) {
+				// Override firmware directory
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
+			}
+
+			// Ignore whatever is in the config and set AcceptBackgroundInput based on cli arg
+			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput;
+
+			string callMethodBufferName = _argParser.unityCallMethodBuffer;
+			if (callMethodBufferName != null) {
+				// Init RPC buffer for CallMethod calls to unity (from lua)
+				CallMethodRpc.Init(callMethodBufferName);
+			}
+
+			string apiBufferName = _argParser.apiCallMethodBuffer;
+			if (apiBufferName != null) {
+				// Init RPC buffer for Bizhawk API calls from unity
+				_apiCallBuffer = new ApiCallBuffer(apiBufferName);
+			}
+
+			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
+			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
+			if (keyInputBufferName != null || analogInputBufferName != null) {
+				// Get key presses from Unity via shared buffer
+				inputProvider = new UnityHawkInput(keyInputBufferName, analogInputBufferName);
+			} else {
+				// Use native OS input
+				inputProvider = Input.Instance;
+			}
+
+			// [end UnityHawk]
+
+
+
 			if (_argParser.cmdRom != null)
 			{
 				// Commandline should always override auto-load
@@ -772,35 +810,11 @@ namespace BizHawk.Client.EmuHawk
 
 			InitializeFpsData();
 
-			InitSharedTextureBuffer();
-
-			string callMethodBufferName = _argParser.unityCallMethodBuffer;
-			if (callMethodBufferName != null) {
-				// Init RPC buffer for CallMethod calls to unity (from lua)
-				CallMethodRpc.Init(callMethodBufferName);
-			}
-
-			string apiBufferName = _argParser.apiCallMethodBuffer;
-			ApiCallBuffer apiCallBuffer = null;
-			if (apiBufferName != null) {
-				// Init RPC buffer for Bizhawk API calls from unity
-				apiCallBuffer = new ApiCallBuffer(apiBufferName);
-			}
-
-			string inputBufferName = _argParser.readInputFromSharedBuffer;
-			if (inputBufferName != null) {
-				// Get input from Unity via shared buffer
-				inputProvider = new UnityHawkInput(inputBufferName);
-			} else {
-				// Use native OS input
-				inputProvider = Input.Instance;
-			}
-
 			for (; ; )
 			{
-				if (apiCallBuffer != null) {
+				if (_apiCallBuffer != null) {
 					// First do any pending api call requests from unity
-					ProcessUnityHawkApiCalls(apiCallBuffer);
+					ProcessUnityHawkApiCalls(_apiCallBuffer);
 				}
 
 				inputProvider.Update();
@@ -1073,6 +1087,9 @@ namespace BizHawk.Client.EmuHawk
 			set => _updateGlobalSound(_sound = value);
 		}
 
+		// [UnityHawk]
+		// Buffers for communication with Unity process via shared memory
+		ApiCallBuffer _apiCallBuffer = null;
 		SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
 
@@ -1215,7 +1232,7 @@ namespace BizHawk.Client.EmuHawk
 			//also handle axes
 			//we'll need to isolate the mouse coordinates so we can translate them
 			KeyValuePair<string, int>? mouseX = null, mouseY = null;
-			foreach (var f in Input.Instance.GetAxisValues())
+			foreach (var f in inputProvider.GetAxisValues())
 			{
 				if (f.Key == "WMouse X")
 					mouseX = f;
@@ -3317,6 +3334,7 @@ namespace BizHawk.Client.EmuHawk
 				UpdateToolsAfter();
 			}
 
+			// [UnityHawk]
 			if (_unityHawkSound != null) {
 				_unityHawkSound.Update();
 			} else {
@@ -4037,11 +4055,6 @@ namespace BizHawk.Client.EmuHawk
 					InputManager.StickyXorAdapter.ClearStickyAxes();
 					InputManager.AutofireStickyXorAdapter.ClearStickies();
 
-					if (_argParser.shareAudioOverRpcBuffer != null) {
-						// Init rpc buffer for passing audio to unity
-						_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider, () => Emulator.VsyncRate());
-					}
-
 					RewireSound();
 					Tools.UpdateCheatRelatedTools(null, null);
 					if (!MovieSession.NewMovieQueued && Config.AutoLoadLastSaveSlot && HasSlot(Config.SaveSlot))
@@ -4091,6 +4104,27 @@ namespace BizHawk.Client.EmuHawk
 
 		private void OnRomChanged()
 		{
+			// [UnityHawk]
+			// Need to init/re-init texture buffer here because size depends on the video resolution of the platform
+			InitSharedTextureBuffer();
+			// Same w audio buffer, has to be re-initialized for new emulator
+			if (_argParser.shareAudioOverRpcBuffer != null) {
+				// Init rpc buffer for passing audio to unity
+				_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider, () => Emulator.VsyncRate());
+			}
+			// Override the savestate directory in the config (needs to be here since the key depends on the platform)
+			if (_argParser.savestateDir != null) {
+				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateDir;
+			}
+
+			if (!_argParser.headless && _argParser.ramWatchFile != null) {
+				Tools.Load<RamWatch>();
+				Tools.RamWatch.LoadWatchFile(new FileInfo(_argParser.ramWatchFile), true);
+			}
+
+			// [end UnityHawk]
+
 			OSD.Fps = "0 fps";
 			UpdateWindowTitle();
 			HandlePlatformMenus();
@@ -4339,10 +4373,10 @@ namespace BizHawk.Client.EmuHawk
 
 			if (IsSavestateSlave) return Master.LoadQuickSave(SlotToInt(quickSlotName));
 
-			var path = $"{SaveStatePrefix()}.{quickSlotName}.State";
+			var path = $"{SaveStatePrefix()}.{quickSlotName}.{SaveStateExtension()}";
 			if (!File.Exists(path))
 			{
-				AddOnScreenMessage($"Unable to load {quickSlotName}.State");
+				AddOnScreenMessage($"Unable to load {quickSlotName}.{SaveStateExtension()}");
 				return false;
 			}
 
@@ -4444,7 +4478,7 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			var path = $"{SaveStatePrefix()}.{quickSlotName}.State";
+			var path = $"{SaveStatePrefix()}.{quickSlotName}.{SaveStateExtension()}";
 
 			var file = new FileInfo(path);
 			if (file.Directory != null && !file.Directory.Exists)
@@ -4527,9 +4561,9 @@ namespace BizHawk.Client.EmuHawk
 
 			var result = this.ShowFileSaveDialog(
 				fileExt: "State",
-				filter: EmuHawkSaveStatesFSFilterSet,
+				filter: GetEmuHawkSaveStatesFSFilterSet(),
 				initDir: path,
-				initFileName: $"{SaveStatePrefix()}.QuickSave0.State");
+				initFileName: $"{SaveStatePrefix()}.QuickSave0.{SaveStateExtension()}");
 			if (result is not null) SaveState(path: result, userFriendlyStateName: result);
 
 			if (Tools.IsLoaded<TAStudio>())
@@ -4545,7 +4579,7 @@ namespace BizHawk.Client.EmuHawk
 
 			var result = this.ShowFileOpenDialog(
 				discardCWDChange: true,
-				filter: EmuHawkSaveStatesFSFilterSet,
+				filter: GetEmuHawkSaveStatesFSFilterSet(),
 				initDir: Config.PathEntries.SaveStateAbsolutePath(Game.System));
 			if (result is null || !File.Exists(result)) return false;
 			return LoadState(path: result, userFriendlyStateName: Path.GetFileName(result));
@@ -4966,6 +5000,11 @@ namespace BizHawk.Client.EmuHawk
 			RA?.Restart();
 		}
 
+		// [UnityHawk methods]
+		// Extension for savestates. Defaults to ".State" (as in original Bizhawk) but can be set via --savestate-extension flag
+		private string SaveStateExtension() {
+			return _argParser.savestateExtension ?? "State";
+		}
 		private void InitSharedTextureBuffer() {
 			string texBufName = _argParser.writeTextureToSharedBuffer;
 			if (texBufName != null) {
@@ -4974,6 +5013,7 @@ namespace BizHawk.Client.EmuHawk
 				if (_sharedTextureBuffer == null) {
 					_sharedTextureBuffer = new(texBufName, texbuf.Length);
 				} else {
+					// If buffer already exists, resize it to fit new emulator
 					_sharedTextureBuffer.SetSize(texbuf.Length);
 				}
 			}
@@ -4996,9 +5036,6 @@ namespace BizHawk.Client.EmuHawk
 					if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
 					_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
 					if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {romPath}");
-					
-					// Need to reinit texture buffer here in case platform has changed
-					InitSharedTextureBuffer();
 
 					break;
 				case "LoadState":
@@ -5020,12 +5057,11 @@ namespace BizHawk.Client.EmuHawk
 					Console.WriteLine($"Warning: Unity attempting to call unsupported bizhawk api method {mc.MethodName}");
 					break;
 				}
-				// Look up the Api method by name (using reflection) and call with the given arg.
-				// [we could also just manually enumerate the possibilities here: Pause, Unpause, Load, Save, and OpenRom is probably all we really want anyway]
+				// [TODO: would be good to return the bool success value for OpenRom()]
+				// Previous implementation using reflection:
 				// typeof(IMainFormForApi).GetMethod(methodCall.MethodName).Invoke(_api, new object[] {methodCall.Argument});
-				// For now, we ignore the return value if there is one.
-				// [but TODO: return the bool success value for OpenRom()]
 			}
 		}
+		// [end UnityHawk methods]
 	}
 }

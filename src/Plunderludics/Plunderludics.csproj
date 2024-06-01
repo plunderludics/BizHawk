@@ -11,4 +11,9 @@
 		<Analyzer Remove="@(Analyzer)" />  <!-- disable ReflectionCache to avoid the Bizhawk.Common dependency -->
 		<PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="7.0.0" />
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\BizHawk.Client.Common\BizHawk.Client.Common.csproj" />
+	  <ProjectReference Include="..\BizHawk.Common\BizHawk.Common.csproj" />
+	  <ProjectReference Include="..\BizHawk.Emulation.Common\BizHawk.Emulation.Common.csproj" />
+	</ItemGroup>
 </Project>

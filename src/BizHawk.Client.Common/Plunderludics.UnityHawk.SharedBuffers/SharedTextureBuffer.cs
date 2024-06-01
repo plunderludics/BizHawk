@@ -13,15 +13,21 @@ using SharedMemory;
 namespace Plunderludics.UnityHawk.SharedBuffers
 {
 	public class SharedTextureBuffer {
-		private SharedArray<int> sharedArray;
-		int _index;
-		string _name;
-		public SharedTextureBuffer(string name, int bufferSize) {
+
+		private SharedArray<int>? sharedArray;
+		private int _index;
+		private string _name;
+
+		public SharedTextureBuffer(string name, int bufferSize)
+		{
 			_index = 0;
 			_name = name;
 			SetSize(bufferSize);
 		}
+
 		public void Write(int[] pixels, int width, int height, int frame) {
+			if (sharedArray == null) return;
+
 			sharedArray.Write(pixels, 0);
 			sharedArray[sharedArray.Length - 3] = width;
 			sharedArray[sharedArray.Length - 2] = height;

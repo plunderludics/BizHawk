@@ -47,7 +47,6 @@ using BizHawk.Common.CollectionExtensions;
 using BizHawk.WinForms.Controls;
 
 using Plunderludics;
-// using Plunderludics.UnityHawk;
 using Plunderludics.UnityHawk.SharedBuffers;
 
 namespace BizHawk.Client.EmuHawk
@@ -4350,10 +4349,16 @@ namespace BizHawk.Client.EmuHawk
 			return LoadState(path: path, userFriendlyStateName: quickSlotName, suppressOSD: suppressOSD);
 		}
 
+		private string GetSamplePath() {
+			var initDir = Config.PathEntries.SaveStateAbsolutePath(Game.System);
+			return this.ShowFileOpenDialog(initDir: initDir); 
+		}
+
 		// Loads a (plunderludics) sample, ie a directory containing savestate, config, lua, and a rom (or a rompath.txt pointing to a rom)
 		// (format will probably change in future)
 		public bool LoadSample() {
-			var samplePath = this.ShowFileOpenDialog(initDir: Config.PathEntries.SaveStateAbsolutePath(Game.System)); // TODO tweak initDir, maybe have a config for it
+			// TODO tweak initDir, maybe have a config for it
+			var samplePath = GetSamplePath();
 	
 			if (samplePath is null || !File.Exists(samplePath)) return false;
 
@@ -4362,29 +4367,25 @@ namespace BizHawk.Client.EmuHawk
 
 			// Actually load the files into bizhawk
 			// Load the rom using the same logic as when it's provided on the command line
-			Console.WriteLine($"LoadSample: Looking for rom in {s.romPath}");
-			var ioa = OpenAdvancedSerializer.ParseWithLegacy(s.romPath);
+			Console.WriteLine($"LoadSample: Looking for rom in {s.RomPath}");
+			var ioa = OpenAdvancedSerializer.ParseWithLegacy(s.RomPath);
 			if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
 			_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
-			if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {s.romPath}");
+			if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {s.RomPath}");
 	
-			if (s.configPath != null) LoadConfigFile(s.configPath);
-			if (s.saveStatePath != null) LoadState(s.saveStatePath, Path.GetFileName(s.saveStatePath));
-			if (s.luaScriptPaths.Length > 0) {
+			if (s.ConfigPath != null) LoadConfigFile(s.ConfigPath);
+			if (s.SaveStatePath != null) LoadState(s.SaveStatePath, Path.GetFileName(s.SaveStatePath));
+
+			if (s.LuaScriptPaths.Length > 0) {
 				Tools.Load<LuaConsole>();
 				Tools.LuaConsole.RemoveAllLuaFiles();
 			}
-			foreach (string luaScriptPath in s.luaScriptPaths) {
+
+			foreach (string luaScriptPath in s.LuaScriptPaths) {
 				Tools.LuaConsole.LoadLuaFile(luaScriptPath);
 			}
 
 			return true;
-		}
-
-		// Saves a sample (see above)
-		public bool SaveSample() {
-			Console.WriteLine("SaveSample not implemented");
-			return false;
 		}
 
 		public void SaveState(string path, string userFriendlyStateName, bool fromLua = false, bool suppressOSD = false)

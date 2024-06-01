@@ -242,5 +242,10 @@ namespace BizHawk.Client.EmuHawk
 				return new RegExMatcher { Matcher = new Regex(searchKey, RegexOptions.IgnoreCase) };
 			}
 		}
+
+		private void lvMembers_SelectedIndexChanged(object sender, EventArgs e)
+		{
+
+		}
 	}
 }

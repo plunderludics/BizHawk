@@ -58,6 +58,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{74391239
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BizHawk.Tests", "src\BizHawk.Tests\BizHawk.Tests.csproj", "{284E19E2-661D-4A7D-864A-AC2FC91E7C25}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plunderludics", "src\Plunderludics\Plunderludics.csproj", "{71A921EB-A846-4A76-885E-343F5BD1CC75}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plunderludics.UnityHawk", "src\Plunderludics.UnityHawk\Plunderludics.UnityHawk.csproj", "{62FF7B32-A9B7-413B-AFF0-F7CA789E0FFC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -120,6 +124,14 @@ Global
 		{284E19E2-661D-4A7D-864A-AC2FC91E7C25}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{284E19E2-661D-4A7D-864A-AC2FC91E7C25}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{284E19E2-661D-4A7D-864A-AC2FC91E7C25}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71A921EB-A846-4A76-885E-343F5BD1CC75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71A921EB-A846-4A76-885E-343F5BD1CC75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71A921EB-A846-4A76-885E-343F5BD1CC75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71A921EB-A846-4A76-885E-343F5BD1CC75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62FF7B32-A9B7-413B-AFF0-F7CA789E0FFC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62FF7B32-A9B7-413B-AFF0-F7CA789E0FFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62FF7B32-A9B7-413B-AFF0-F7CA789E0FFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62FF7B32-A9B7-413B-AFF0-F7CA789E0FFC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

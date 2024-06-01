@@ -3,6 +3,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.FileSystemGlobbing;
+using BizHawk.Client;
+using BizHawk.Client.Common;
 
 #nullable enable
 
@@ -13,18 +15,18 @@ namespace Plunderludics
 {
 	public class Sample
 	{
-		public readonly string romPath;
-		public readonly string? configPath;
-		public readonly string? saveStatePath;
-		public readonly string[] luaScriptPaths;
+		public readonly string RomPath;
+		public readonly string? ConfigPath;
+		public readonly string? SaveStatePath;
+		public readonly string[] LuaScriptPaths;
 
 		private static readonly string rompathTxtFileName = "rompath.txt";
 
 		public Sample(string romPath, string? configPath, string? saveStatePath, string[] luaScriptPaths) {
-			this.romPath = romPath;
-			this.configPath = configPath;
-			this.saveStatePath = saveStatePath;
-			this.luaScriptPaths = luaScriptPaths;
+			this.RomPath = romPath;
+			this.ConfigPath = configPath;
+			this.SaveStatePath = saveStatePath;
+			this.LuaScriptPaths = luaScriptPaths;
 		}
 
 		// Search the provided directory for files based on file extension
@@ -49,6 +51,7 @@ namespace Plunderludics
 			if (configFiles.Count > 1) {
 				Console.WriteLine($"Warn: sample at {sampleDirPath} contains more than one .ini file, will use only {configFiles[0]}");
 			}
+
 			string? configPath = configFiles.Count > 0 ? configFiles[0] : null;
 
 			matcher = new();
@@ -61,6 +64,7 @@ namespace Plunderludics
 			if (saveFiles.Count > 1) {
 				Console.WriteLine($"Warn: sample at {sampleDirPath} contains more than one .State file, will use only {saveFiles[0]}");
 			}
+
 			string? saveStatePath = saveFiles.Count > 0 ? saveFiles[0] : null;
 
 			return new Sample(
@@ -69,10 +73,6 @@ namespace Plunderludics
 				saveStatePath,
 				luaFiles.ToArray()
 			);
-		}
-
-		public void SaveToDir(string sampleDirPath) {
-			// TODO
 		}
 	}
 }

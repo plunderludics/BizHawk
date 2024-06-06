@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 
 namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 {
-	partial class NDS : ISettable<NDS.NDSSettings, NDS.NDSSyncSettings>
+	public partial class NDS : ISettable<NDS.NDSSettings, NDS.NDSSyncSettings>
 	{
 		private NDSSettings _settings;
 		private NDSSyncSettings _syncSettings;
@@ -153,7 +153,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 			public bool UseRealTime { get; set; }
 
 			[DisplayName("DSi Mode")]
-			[Description("If true, DSi mode will be used.")]
+			[Description("If true, DSi mode will be used. Forced true if a DSiWare rom is detected.")]
 			[DefaultValue(false)]
 			public bool UseDSi { get; set; }
 
@@ -164,13 +164,18 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 
 			[DisplayName("Skip Firmware")]
 			[Description("If true, initial firmware boot will be skipped. Forced true if firmware cannot be booted (no real bios or missing firmware).")]
-			[DefaultValue(false)]
+			[DefaultValue(true)]
 			public bool SkipFirmware { get; set; }
 
 			[DisplayName("Firmware Override")]
 			[Description("If true, the firmware settings will be overriden by provided settings. Forced true when recording a movie.")]
-			[DefaultValue(false)]
+			[DefaultValue(true)]
 			public bool FirmwareOverride { get; set; }
+
+			[DisplayName("Clear NAND")]
+			[Description("If true, the DSi NAND will have all its titles cleared. Forced true when recording a movie.")]
+			[DefaultValue(true)]
+			public bool ClearNAND { get; set; }
 
 			public enum StartUp : int
 			{

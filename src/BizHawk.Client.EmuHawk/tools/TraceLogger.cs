@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -13,12 +14,18 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class TraceLogger : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Properties.Resources.PencilIcon;
+
 		private static readonly FilesystemFilterSet LogFilesFSFilterSet = new(
 			new FilesystemFilter("Log Files", new[] { "log" }),
 			FilesystemFilter.TextFiles);
 
 		[RequiredService]
-		private ITraceable Tracer { get; set; }
+		public ITraceable _tracerCore { get; set; }
+
+		private ITraceable Tracer
+			=> _tracerCore!;
 
 		[ConfigPersist]
 		private int MaxLines { get; set; }
@@ -70,7 +77,7 @@ namespace BizHawk.Client.EmuHawk
 		public TraceLogger()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.PencilIcon;
+			Icon = ToolIcon;
 			SaveLogMenuItem.Image = Properties.Resources.SaveAs;
 
 			TraceView.QueryItemText += TraceView_QueryItemText;
@@ -78,11 +85,7 @@ namespace BizHawk.Client.EmuHawk
 			Closing += (o, e) =>
 			{
 				SaveConfigSettings();
-				if (Tracer != null)
-				{
-					Tracer.Sink = null;
-				}
-
+				Tracer.Sink = null;
 				CloseFile();
 			};
 

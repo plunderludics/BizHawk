@@ -1,8 +1,7 @@
 <Project>
 	<Import Project="../Common.props" />
 	<PropertyGroup>
-		<OutputPath>$(ProjectDir)bin/$(Configuration)/</OutputPath>
-		<RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+		<OutputPath>$(MSBuildProjectDirectory)/bin/$(Configuration)/</OutputPath>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="*.sh" />

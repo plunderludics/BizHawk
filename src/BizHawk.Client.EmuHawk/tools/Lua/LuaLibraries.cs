@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -65,7 +66,7 @@ namespace BizHawk.Client.EmuHawk
 					|| lib.GetCustomAttribute<LuaLibraryAttribute>(inherit: false)?.Released is not false)
 				{
 					var instance = (LuaLibraryBase)Activator.CreateInstance(lib, this, _apiContainer, (Action<string>)LogToLuaConsole);
-					ServiceInjector.UpdateServices(serviceProvider, instance);
+					if (!ServiceInjector.UpdateServices(serviceProvider, instance, mayCache: true)) throw new Exception("Lua lib has required service(s) that can't be fulfilled");
 
 					// TODO: make EmuHawk libraries have a base class with common properties such as this
 					// and inject them here
@@ -103,13 +104,24 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			_lua.RegisterFunction("print", this, typeof(LuaLibraries).GetMethod(nameof(Print)));
+
+			var packageTable = (LuaTable) _lua["package"];
+			var luaPath = PathEntries.LuaAbsolutePath();
 			if (OSTailoredCode.IsUnixHost)
 			{
 				// add %exe%/Lua to library resolution pathset (LUA_PATH)
 				// this is done already on windows, but not on linux it seems?
-				var packageTable = (LuaTable) _lua["package"];
-				var luaPath = PathEntries.LuaAbsolutePath();
 				packageTable["path"] = $"{luaPath}/?.lua;{luaPath}?/init.lua;{packageTable["path"]}";
+				// we need to modifiy the cpath so it looks at our lua dir too, and remove the relative pathing
+				// we do this on Windows too, but keep in mind Linux uses .so and Windows use .dll
+				// TODO: Does the relative pathing issue Windows has also affect Linux? I'd assume so...
+				packageTable["cpath"] = $"{luaPath}/?.so;{luaPath}/loadall.so;{packageTable["cpath"]}";
+				packageTable["cpath"] = ((string)packageTable["cpath"]).Replace(";./?.so", "");
+			}
+			else
+			{
+				packageTable["cpath"] = $"{luaPath}\\?.dll;{luaPath}\\loadall.dll;{packageTable["cpath"]}";
+				packageTable["cpath"] = ((string)packageTable["cpath"]).Replace(";.\\?.dll", "");
 			}
 
 			EmulationLuaLibrary.FrameAdvanceCallback = FrameAdvance;
@@ -170,7 +182,7 @@ namespace BizHawk.Client.EmuHawk
 			foreach (var lib in Libraries.Values)
 			{
 				lib.APIs = _apiContainer;
-				ServiceInjector.UpdateServices(newServiceProvider, lib);
+				Debug.Assert(ServiceInjector.UpdateServices(newServiceProvider, lib, mayCache: true));
 				lib.Restarted();
 			}
 		}

@@ -888,25 +888,22 @@ namespace BizHawk.Client.EmuHawk
 			InputManager.SyncControls(Emulator, MovieSession, Config);
 		}
 
+		private void OpenFWConfigRomLoadFailed(RomLoader.RomErrorArgs args)
+		{
+			using FirmwaresConfig configForm = new(
+				this,
+				FirmwareManager,
+				Config.FirmwareUserSpecifications,
+				Config.PathEntries,
+				retryLoadRom: true,
+				reloadRomPath: args.RomPath);
+			args.Retry = this.ShowDialogWithTempMute(configForm) is DialogResult.Retry;
+		}
+
 		private void FirmwaresMenuItem_Click(object sender, EventArgs e)
 		{
-			if (e is RomLoader.RomErrorArgs args)
-			{
-				using var configForm = new FirmwaresConfig(
-					this,
-					FirmwareManager,
-					Config.FirmwareUserSpecifications,
-					Config.PathEntries,
-					retryLoadRom: true,
-					reloadRomPath: args.RomPath);
-				var result = this.ShowDialogWithTempMute(configForm);
-				args.Retry = result == DialogResult.Retry;
-			}
-			else
-			{
-				using var configForm = new FirmwaresConfig(this, FirmwareManager, Config.FirmwareUserSpecifications, Config.PathEntries);
-				this.ShowDialogWithTempMute(configForm);
-			}
+			using var configForm = new FirmwaresConfig(this, FirmwareManager, Config.FirmwareUserSpecifications, Config.PathEntries);
+			this.ShowDialogWithTempMute(configForm);
 		}
 
 		private void MessagesMenuItem_Click(object sender, EventArgs e)
@@ -958,7 +955,12 @@ namespace BizHawk.Client.EmuHawk
 		private void RewindOptionsMenuItem_Click(object sender, EventArgs e)
 		{
 			if (!Emulator.HasSavestates()) return;
-			using RewindConfig form = new(Config, CreateRewinder, () => this.Rewinder, Emulator.AsStatable());
+			using RewindConfig form = new(
+				Config,
+				PlatformFrameRates.GetFrameRate(Emulator.SystemId, Emulator.HasRegions() && Emulator.AsRegionable().Region is DisplayType.PAL), // why isn't there a helper for this
+				Emulator.AsStatable(),
+				CreateRewinder,
+				() => this.Rewinder);
 			if (this.ShowDialogWithTempMute(form).IsOk()) AddOnScreenMessage("Rewind and State settings saved");
 		}
 
@@ -1188,7 +1190,7 @@ namespace BizHawk.Client.EmuHawk
 		private void ExternalToolMenuItem_DropDownOpening(object sender, EventArgs e)
 		{
 			ExternalToolMenuItem.DropDownItems.Clear();
-			ExternalToolMenuItem.DropDownItems.AddRange(ExtToolManager.ToolStripMenu.Cast<ToolStripItem>().ToArray());
+			ExternalToolMenuItem.DropDownItems.AddRange(ExtToolManager.ToolStripItems.ToArray());
 			if (ExternalToolMenuItem.DropDownItems.Count == 0)
 			{
 				ExternalToolMenuItem.DropDownItems.Add("None");
@@ -1846,9 +1848,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private void Ares64SubMenu_DropDownOpened(object sender, EventArgs e)
-		{
-			N64CircularAnalogRangeMenuItem.Checked = Config.N64UseCircularAnalogConstraint;
-		}
+			=> Ares64CircularAnalogRangeMenuItem.Checked = Config.N64UseCircularAnalogConstraint;
 
 		private void Ares64SettingsMenuItem_Click(object sender, EventArgs e)
 			=> OpenGenericCoreConfigFor<Ares64>(CoreNames.Ares64 + " Settings");

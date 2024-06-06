@@ -9,29 +9,42 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class BSNESOptions : Form
 	{
-		private BSNESOptions()
+		private readonly BsnesCore.SnesSettings _settings;
+		private readonly BsnesCore.SnesSyncSettings _syncSettings;
+
+		private BSNESOptions(BsnesCore.SnesSettings s, BsnesCore.SnesSyncSettings ss)
 		{
+			_settings = s;
+			_syncSettings = ss;
 			InitializeComponent();
+		}
+
+		private void OnLoad(object sender, EventArgs e)
+		{
+			EntropyBox.PopulateFromEnum(_syncSettings.Entropy);
+			AspectRatioCorrectionBox.PopulateFromEnum(_settings.AspectRatioCorrection);
+			SatellaviewCartridgeBox.PopulateFromEnum(_syncSettings.SatellaviewCartridge);
+			RegionBox.PopulateFromEnum(_syncSettings.RegionOverride);
 		}
 
 		public static DialogResult DoSettingsDialog(IDialogParent dialogParent, ISettingsAdapter settable)
 		{
 			var s = (BsnesCore.SnesSettings) settable.GetSettings();
 			var ss = (BsnesCore.SnesSyncSettings) settable.GetSyncSettings();
-			using var dlg = new BSNESOptions
+			using var dlg = new BSNESOptions(s, ss)
 			{
 				AlwaysDoubleSize = s.AlwaysDoubleSize,
 				CropSGBFrame = s.CropSGBFrame,
 				NoPPUSpriteLimit = s.NoPPUSpriteLimit,
 				ShowOverscan = s.ShowOverscan,
-				AspectRatioCorrection = s.AspectRatioCorrection,
-				Entropy = ss.Entropy,
-				RegionOverride = ss.RegionOverride,
+				ShowCursor = s.ShowCursor,
 				Hotfixes = ss.Hotfixes,
 				FastPPU = ss.FastPPU,
 				FastDSP = ss.FastDSP,
 				FastCoprocessors = ss.FastCoprocessors,
 				UseSGB2 = ss.UseSGB2,
+				UseRealTime = ss.UseRealTime,
+				InitialTime = ss.InitialTime,
 				ShowObj1 = s.ShowOBJ_0,
 				ShowObj2 = s.ShowOBJ_1,
 				ShowObj3 = s.ShowOBJ_2,
@@ -53,6 +66,7 @@ namespace BizHawk.Client.EmuHawk
 			s.CropSGBFrame = dlg.CropSGBFrame;
 			s.NoPPUSpriteLimit = dlg.NoPPUSpriteLimit;
 			s.ShowOverscan = dlg.ShowOverscan;
+			s.ShowCursor = dlg.ShowCursor;
 			s.AspectRatioCorrection = dlg.AspectRatioCorrection;
 			ss.Entropy = dlg.Entropy;
 			ss.RegionOverride = dlg.RegionOverride;
@@ -61,6 +75,9 @@ namespace BizHawk.Client.EmuHawk
 			ss.FastDSP = dlg.FastDSP;
 			ss.FastCoprocessors = dlg.FastCoprocessors;
 			ss.UseSGB2 = dlg.UseSGB2;
+			ss.SatellaviewCartridge = dlg.SatellaviewCartridge;
+			ss.UseRealTime = dlg.UseRealTime;
+			ss.InitialTime = dlg.InitialTime;
 			s.ShowOBJ_0 = dlg.ShowObj1;
 			s.ShowOBJ_1 = dlg.ShowObj2;
 			s.ShowOBJ_2 = dlg.ShowObj3;
@@ -102,11 +119,13 @@ namespace BizHawk.Client.EmuHawk
 			init => cbShowOverscan.Checked = value;
 		}
 
-		private BsnesApi.ASPECT_RATIO_CORRECTION AspectRatioCorrection
+		private bool ShowCursor
 		{
-			get => (BsnesApi.ASPECT_RATIO_CORRECTION)AspectRatioCorrectionBox.SelectedIndex;
-			init => AspectRatioCorrectionBox.SelectedIndex = (int)value;
+			get => cbShowCursor.Checked;
+			init => cbShowCursor.Checked = value;
 		}
+
+		private BsnesApi.ASPECT_RATIO_CORRECTION AspectRatioCorrection => (BsnesApi.ASPECT_RATIO_CORRECTION)AspectRatioCorrectionBox.SelectedIndex;
 
 		private bool Hotfixes
 		{
@@ -138,17 +157,23 @@ namespace BizHawk.Client.EmuHawk
 			init => cbUseSGB2.Checked = value;
 		}
 
-		private BsnesApi.ENTROPY Entropy
+		private bool UseRealTime
 		{
-			get => (BsnesApi.ENTROPY) EntropyBox.SelectedIndex;
-			init => EntropyBox.SelectedIndex = (int) value;
+			get => cbUseRealTime.Checked;
+			init => cbUseRealTime.Checked = value;
 		}
 
-		private BsnesApi.REGION_OVERRIDE RegionOverride
+		private DateTime InitialTime
 		{
-			get => (BsnesApi.REGION_OVERRIDE)RegionBox.SelectedIndex;
-			init => RegionBox.SelectedIndex = (int)value;
+			get => dtpInitialTime.Value;
+			init => dtpInitialTime.Value = value;
 		}
+
+		private BsnesApi.ENTROPY Entropy => (BsnesApi.ENTROPY) EntropyBox.SelectedIndex;
+
+		private BsnesApi.REGION_OVERRIDE RegionOverride => (BsnesApi.REGION_OVERRIDE)RegionBox.SelectedIndex;
+
+		private BsnesCore.SATELLAVIEW_CARTRIDGE SatellaviewCartridge => (BsnesCore.SATELLAVIEW_CARTRIDGE)SatellaviewCartridgeBox.SelectedIndex;
 
 		private bool ShowObj1 { get => Obj1Checkbox.Checked; init => Obj1Checkbox.Checked = value; }
 		private bool ShowObj2 { get => Obj2Checkbox.Checked; init => Obj2Checkbox.Checked = value; }

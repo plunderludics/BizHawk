@@ -11,6 +11,7 @@ using BizHawk.Emulation.Cores.ColecoVision;
 using BizHawk.Emulation.Cores.Atari.Atari2600;
 using BizHawk.Emulation.Cores.Nintendo.Gameboy;
 using BizHawk.Emulation.Cores.Nintendo.GBA;
+using BizHawk.Emulation.Cores.Consoles.Nintendo.NDS;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -137,6 +138,11 @@ namespace BizHawk.Client.EmuHawk
 			// NES
 			_config.PreferredCores[VSystemID.Raw.NES] = CoreNames.QuickNes;
 
+			// NDS
+			var ssMelonDS = GetSyncSettings<NDS, NDS.NDSSyncSettings>();
+			ssMelonDS.SkipFirmware = true;
+			PutSyncSettings<NDS>(ssMelonDS);
+
 			// GB
 			_config.PreferredCores[VSystemID.Raw.GB] = CoreNames.Gambatte;
 			_config.PreferredCores[VSystemID.Raw.GBC] = CoreNames.Gambatte;
@@ -220,6 +226,12 @@ namespace BizHawk.Client.EmuHawk
 
 			// NES
 			_config.PreferredCores[VSystemID.Raw.NES] = CoreNames.NesHawk;
+
+			// NDS
+			var ssMelonDS = GetSyncSettings<NDS, NDS.NDSSyncSettings>();
+			ssMelonDS.SkipFirmware = false;
+			ssMelonDS.UseRealBIOS = true;
+			PutSyncSettings<NDS>(ssMelonDS);
 
 			// GB
 			_config.PreferredCores[VSystemID.Raw.GB] = CoreNames.Gambatte;

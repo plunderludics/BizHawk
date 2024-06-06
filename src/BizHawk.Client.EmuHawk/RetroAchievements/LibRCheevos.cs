@@ -1,16 +1,16 @@
 using System;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Windows.Forms;
 
 using BizHawk.BizInvoke;
 using BizHawk.Common;
-using BizHawk.Client.Common;
-using BizHawk.Emulation.Common;
 
 #pragma warning disable IDE1006 // Naming Styles
+// ReSharper disable UnusedMember.Global
+// ReSharper disable EnumUnderlyingTypeIsInt
+// not sure about these wrt marshalling, so ignore for now
+// ReSharper disable FieldCanBeMadeReadOnly.Global
+
+// TODO: Make these record structs
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -80,22 +80,6 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct rc_runtime_t
-		{
-			public IntPtr triggers;
-			public int trigger_count;
-			public int trigger_capacity;
-			public IntPtr lboards;
-			public int lboard_count;
-			public int lboard_capacity;
-			public IntPtr richpresence;
-			public IntPtr memrefs;
-			public IntPtr next_memref;
-			public IntPtr variables;
-			public IntPtr next_variable;
-		}
-
-		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_runtime_event_t
 		{
 			public int id;
@@ -104,12 +88,12 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public unsafe struct rc_api_buffer_t
+		public struct rc_api_buffer_t
 		{
 			public IntPtr write;
 			public IntPtr end;
 			public IntPtr next;
-			public fixed byte data[256];
+			public unsafe fixed byte data[256];
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -165,25 +149,31 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_fetch_user_unlocks_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token;
 			public int game_id;
-			public int hardcore;
+			[MarshalAs(UnmanagedType.Bool)]
+			public bool hardcore;
 
 			public rc_api_fetch_user_unlocks_request_t(string username, string api_token, int game_id, bool hardcore)
 			{
 				this.username = username;
 				this.api_token = api_token;
 				this.game_id = game_id;
-				this.hardcore = hardcore ? 1 : 0;
+				this.hardcore = hardcore;
 			}
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_login_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string password;
 
 			public rc_api_login_request_t(string username, string api_token, string password)
@@ -197,7 +187,9 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_start_session_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token;
 			public int game_id;
 
@@ -302,10 +294,14 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_award_achievement_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token;
 			public int achievement_id;
-			public int hardcore;
+			[MarshalAs(UnmanagedType.Bool)]
+			public bool hardcore;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string game_hash;
 
 			public rc_api_award_achievement_request_t(string username, string api_token, int achievement_id, bool hardcore, string game_hash)
@@ -313,7 +309,7 @@ namespace BizHawk.Client.EmuHawk
 				this.username = username;
 				this.api_token = api_token;
 				this.achievement_id = achievement_id;
-				this.hardcore = hardcore ? 1 : 0;
+				this.hardcore = hardcore;
 				this.game_hash = game_hash;
 			}
 		}
@@ -321,7 +317,9 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_fetch_game_data_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token;
 			public int game_id;
 
@@ -336,6 +334,7 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_fetch_image_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string image_name;
 			public rc_api_image_type_t image_type;
 
@@ -349,9 +348,12 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_ping_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token;
 			public int game_id;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string rich_presence;
 
 			public rc_api_ping_request_t(string username, string api_token, int game_id, string rich_presence)
@@ -366,8 +368,11 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_resolve_hash_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username; // note: not actually used
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token; // note: not actually used
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string game_hash;
 
 			public rc_api_resolve_hash_request_t(string username, string api_token, string game_hash)
@@ -381,10 +386,13 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_submit_lboard_entry_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token;
 			public int leaderboard_id;
 			public int score;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string game_hash;
 
 			public rc_api_submit_lboard_entry_request_t(string username, string api_token, int leaderboard_id, int score, string game_hash)
@@ -442,7 +450,9 @@ namespace BizHawk.Client.EmuHawk
 		[StructLayout(LayoutKind.Sequential)]
 		public struct rc_api_fetch_achievement_info_request_t
 		{
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string api_token;
 			public int achievement_id;
 			public int first_entry;
@@ -477,6 +487,7 @@ namespace BizHawk.Client.EmuHawk
 			public int leaderboard_id;
 			public int count;
 			public int first_entry;
+			[MarshalAs(UnmanagedType.LPUTF8Str)]
 			public string username;
 
 			public rc_api_fetch_leaderboard_info_request_t(int leaderboard_id, int count, int first_entry, string username)
@@ -511,65 +522,68 @@ namespace BizHawk.Client.EmuHawk
 		public abstract IntPtr rc_error_str(rc_error_t error_code);
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_init(ref rc_runtime_t runtime);
+		public abstract IntPtr rc_runtime_alloc();
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_destroy(ref rc_runtime_t runtime);
+		public abstract void rc_runtime_init(IntPtr runtime);
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_reset(ref rc_runtime_t runtime);
+		public abstract void rc_runtime_destroy(IntPtr runtime);
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_do_frame(ref rc_runtime_t runtime, rc_runtime_event_handler_t rc_runtime_event_handler_t, rc_peek_t peek, IntPtr ud, IntPtr unused);
+		public abstract void rc_runtime_reset(IntPtr runtime);
 
 		[BizImport(cc)]
-		public abstract rc_error_t rc_runtime_progress_size(ref rc_runtime_t runtime, IntPtr unused);
+		public abstract void rc_runtime_do_frame(IntPtr runtime, rc_runtime_event_handler_t rc_runtime_event_handler_t, rc_peek_t peek, IntPtr ud, IntPtr unused);
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_serialize_progress(byte[] buffer, ref rc_runtime_t runtime, IntPtr unused);
+		public abstract rc_error_t rc_runtime_progress_size(IntPtr runtime, IntPtr unused);
 
 		[BizImport(cc)]
-		public abstract rc_error_t rc_runtime_deserialize_progress(ref rc_runtime_t runtime, byte[] serialized, IntPtr unused);
+		public abstract void rc_runtime_serialize_progress(byte[] buffer, IntPtr runtime, IntPtr unused);
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_invalidate_address(ref rc_runtime_t runtime, int address);
+		public abstract rc_error_t rc_runtime_deserialize_progress(IntPtr runtime, byte[] serialized, IntPtr unused);
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_validate_addresses(ref rc_runtime_t runtime, rc_runtime_event_handler_t event_handler, rc_runtime_validate_address_t validate_handler);
+		public abstract void rc_runtime_invalidate_address(IntPtr runtime, int address);
 
 		[BizImport(cc)]
-		public abstract rc_error_t rc_runtime_activate_achievement(ref rc_runtime_t runtime, int id, string memaddr, IntPtr unused, int unused_idx);
+		public abstract void rc_runtime_validate_addresses(IntPtr runtime, rc_runtime_event_handler_t event_handler, rc_runtime_validate_address_t validate_handler);
 
 		[BizImport(cc)]
-		public abstract rc_error_t rc_runtime_activate_lboard(ref rc_runtime_t runtime, int id, string memaddr, IntPtr unused, int unused_idx);
+		public abstract rc_error_t rc_runtime_activate_achievement(IntPtr runtime, int id, string memaddr, IntPtr unused, int unused_idx);
 
 		[BizImport(cc)]
-		public abstract rc_error_t rc_runtime_activate_richpresence(ref rc_runtime_t runtime, string script, IntPtr unused, int unused_idx);
+		public abstract rc_error_t rc_runtime_activate_lboard(IntPtr runtime, int id, string memaddr, IntPtr unused, int unused_idx);
 
 		[BizImport(cc)]
-		public abstract IntPtr rc_runtime_get_achievement(ref rc_runtime_t runtime, int id);
+		public abstract rc_error_t rc_runtime_activate_richpresence(IntPtr runtime, string script, IntPtr unused, int unused_idx);
 
 		[BizImport(cc)]
-		public abstract IntPtr rc_runtime_get_lboard(ref rc_runtime_t runtime, int id);
+		public abstract IntPtr rc_runtime_get_achievement(IntPtr runtime, int id);
 
 		[BizImport(cc)]
-		public abstract int rc_runtime_get_richpresence(ref rc_runtime_t runtime, byte[] buffer, int buffersize, rc_peek_t peek, IntPtr ud, IntPtr unused);
+		public abstract IntPtr rc_runtime_get_lboard(IntPtr runtime, int id);
+
+		[BizImport(cc)]
+		public abstract int rc_runtime_get_richpresence(IntPtr runtime, byte[] buffer, int buffersize, rc_peek_t peek, IntPtr ud, IntPtr unused);
 
 		[BizImport(cc)]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		public abstract bool rc_runtime_get_achievement_measured(ref rc_runtime_t runtime, int id, out int measured_value, out int measured_target);
+		public abstract bool rc_runtime_get_achievement_measured(IntPtr runtime, int id, out int measured_value, out int measured_target);
 
 		[BizImport(cc)]
-		public abstract int rc_runtime_format_achievement_measured(ref rc_runtime_t runtime, int id, byte[] buffer, long buffer_size);
+		public abstract int rc_runtime_format_achievement_measured(IntPtr runtime, int id, byte[] buffer, long buffer_size);
 
 		[BizImport(cc)]
 		public abstract int rc_runtime_format_lboard_value(byte[] buffer, int size, int value, int format);
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_deactivate_achievement(ref rc_runtime_t runtime, int id);
+		public abstract void rc_runtime_deactivate_achievement(IntPtr runtime, int id);
 
 		[BizImport(cc)]
-		public abstract void rc_runtime_deactivate_lboard(ref rc_runtime_t runtime, int id);
+		public abstract void rc_runtime_deactivate_lboard(IntPtr runtime, int id);
 
 		[BizImport(cc)]
 		public abstract void rc_hash_init_error_message_callback(rc_hash_message_callback callback);

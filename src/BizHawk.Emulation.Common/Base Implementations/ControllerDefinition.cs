@@ -121,7 +121,7 @@ namespace BizHawk.Emulation.Common
 			return this;
 		}
 
-		public int PlayerNumber(string buttonName)
+		public static int PlayerNumber(string buttonName)
 		{
 			var match = PlayerRegex.Match(buttonName);
 			return match.Success
@@ -147,7 +147,7 @@ namespace BizHawk.Emulation.Common
 				}
 
 				// Hack for things like gameboy/ti-83 as opposed to genesis with no controllers plugged in
-				return allNames.Any(b => b.StartsWith("Up")) ? 1 : 0;
+				return allNames.Exists(static b => b.StartsWith("Up")) ? 1 : 0;
 			}
 		}
 

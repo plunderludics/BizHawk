@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -131,6 +132,9 @@ namespace BizHawk.Client.EmuHawk
 				}
 			}
 
+			typeof(Form).GetField(OSTC.IsUnixHost ? "default_icon" : "defaultIcon", BindingFlags.NonPublic | BindingFlags.Static)
+				.SetValue(null, Properties.Resources.Logo);
+
 			TempFileManager.Start();
 
 			HawkFile.DearchivalMethod = SharpCompressDearchivalMethod.Instance;
@@ -244,18 +248,21 @@ namespace BizHawk.Client.EmuHawk
 				_ = SetDllDirectory(dllDir);
 			}
 
-			if (EmuHawkUtil.CLRHostHasElevatedPrivileges)
+			if (OSTC.HostWindowsVersion is null || OSTC.HostWindowsVersion.Value.Version >= OSTC.WindowsVersion._10) // "windows isn't capable of being useful for non-administrators until windows 10" --zeromus
 			{
-				using MsgBox dialog = new(
-					title: "This EmuHawk is privileged",
-					message: $"EmuHawk detected it {(OSTC.IsUnixHost ? "is running as root (Superuser)" : "has Administrator privileges")}.\n"
-						+ "This is a bad idea.",
-					boxIcon: MessageBoxIcon.Warning);
-				dialog.ShowDialog();
-			}
-			else
-			{
-				Util.DebugWriteLine("running as unprivileged user");
+				if (EmuHawkUtil.CLRHostHasElevatedPrivileges)
+				{
+					using MsgBox dialog = new(
+						title: "This EmuHawk is privileged",
+						message: $"EmuHawk detected it {(OSTC.IsUnixHost ? "is running as root (Superuser)" : "has Administrator privileges")}.\n"
+							+ "This is a bad idea.",
+						boxIcon: MessageBoxIcon.Warning);
+					dialog.ShowDialog();
+				}
+				else
+				{
+					Util.DebugWriteLine("running as unprivileged user");
+				}
 			}
 
 			var exitCode = 0;

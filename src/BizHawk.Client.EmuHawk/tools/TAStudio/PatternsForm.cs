@@ -88,6 +88,10 @@ namespace BizHawk.Client.EmuHawk
 
 		private void DeleteButton_Click(object sender, EventArgs e)
 		{
+			if (PatternList.SelectedIndex >= _counts.Count)
+			{
+				return;
+			}
 			_counts.RemoveAt(PatternList.SelectedIndex);
 			_values.RemoveAt(PatternList.SelectedIndex);
 			UpdatePattern();
@@ -130,18 +134,18 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			// repeating zero times is not allowed
-			if ((int)CountNum.Value == 0)
-			{
-				CountNum.Value = 1;
-			}
-
 			if (PatternList.SelectedIndex == _counts.Count)
 			{
 				_loopAt = (int)CountNum.Value;
 			}
 			else
 			{
+				// repeating zero times is not allowed
+				if ((int)CountNum.Value == 0)
+				{
+					CountNum.Value = 1;
+				}
+
 				_counts[PatternList.SelectedIndex] = (int)CountNum.Value;
 			}
 

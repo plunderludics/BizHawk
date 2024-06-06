@@ -18,6 +18,9 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class RamWatch : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Resources.WatchIcon;
+
 		private WatchList _watches;
 
 		private string _sortedColumn;
@@ -81,7 +84,7 @@ namespace BizHawk.Client.EmuHawk
 			MoveDownMenuItem.Image = Resources.MoveDown;
 			MoveTopMenuItem.Image = Resources.MoveTop;
 			MoveBottomMenuItem.Image = Resources.MoveBottom;
-			Icon = Resources.WatchIcon;
+			Icon = ToolIcon;
 
 			Settings = new RamWatchSettings();
 
@@ -1012,12 +1015,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void RamWatch_Load(object sender, EventArgs e)
 		{
-			// Hack for previous config settings
-			if (Settings.Columns.Any(c => string.IsNullOrWhiteSpace(c.Text)))
-			{
-				Settings = new RamWatchSettings();
-			}
-
+			if (Settings.Columns.Exists(static c => string.IsNullOrWhiteSpace(c.Text))) Settings = new(); //HACK for previous config settings
 			_watches = new WatchList(MemoryDomains, Emu.SystemId);
 			LoadConfigSettings();
 			RamWatchMenu.Items.Add(WatchListView.ToColumnsMenu(ColumnToggleCallback));

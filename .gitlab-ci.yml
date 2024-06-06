@@ -49,7 +49,7 @@ build_ext_projs:
   - if: '$CI_PIPELINE_SOURCE == "schedule"'
     when: always
   script:
-  - for d in $CI_PROJECT_DIR/ExternalProjects/*; do if [ -e "$d/build_release.sh" ]; then cd "$d" && ./build_release.sh; fi; done
+  - for d in $CI_PROJECT_DIR/ExternalProjects/*; do if [ -e "$d/build_release.sh" ]; then cd "$d" && file -bi *.csproj && ./build_release.sh; fi; done
   stage: test
 
 build_ext_tools:
@@ -99,9 +99,7 @@ check_style:
     when: always
     allow_failure: false
   script:
-  - cd src/BizHawk.Version
-  - dotnet build -c Release # configuration doesn't really matter as the assembly is empty
-  - ../../Dist/BuildRelease.sh -p:MachineRunAnalyzersDuringBuild=true
+  - Dist/BuildRelease.sh -p:RunAnalyzersDuringBuild=true
   stage: test
 
 .disabled_job_infersharp:

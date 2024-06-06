@@ -52,6 +52,7 @@ namespace BizHawk.Emulation.Common
 			[VSystemID.Raw.PS2] = "PlayStation 2",
 			[VSystemID.Raw.PSX] = "PlayStation",
 			[VSystemID.Raw.SAT] = "Saturn",
+			[VSystemID.Raw.Satellaview] = "Satellaview",
 			[VSystemID.Raw.Sega32X] = "Genesis 32X",
 			[VSystemID.Raw.SG] = "SG-1000",
 			[VSystemID.Raw.SGX] = "SuperGrafx",

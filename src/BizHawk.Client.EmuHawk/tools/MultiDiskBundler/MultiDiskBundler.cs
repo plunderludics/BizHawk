@@ -20,6 +20,9 @@ namespace BizHawk.Client.EmuHawk
 	{
 		private static readonly FilesystemFilterSet BundlesFSFilterSet = new(new FilesystemFilter("XML Files", new[] { "xml" }));
 
+		public static Icon ToolIcon
+			=> Properties.Resources.DualIcon;
+
 		private XElement _currentXml;
 
 		[RequiredService]
@@ -30,7 +33,7 @@ namespace BizHawk.Client.EmuHawk
 		public MultiDiskBundler()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.DualIcon;
+			Icon = ToolIcon;
 			SystemDropDown.Items.AddRange(new[]
 			{
 				VSystemID.Raw.AmstradCPC,
@@ -208,10 +211,7 @@ namespace BizHawk.Client.EmuHawk
 						throw new Exception("Xml Filename can not be blank");
 					}
 
-					if (names.Any(string.IsNullOrWhiteSpace))
-					{
-						throw new Exception("Rom Names can not be blank");
-					}
+					if (names.Exists(string.IsNullOrWhiteSpace)) throw new Exception("Rom Names can not be blank");
 
 					var system = SystemDropDown.SelectedItem?.ToString();
 

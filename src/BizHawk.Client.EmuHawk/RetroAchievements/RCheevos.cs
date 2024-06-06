@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 
 using BizHawk.BizInvoke;
@@ -23,7 +24,7 @@ namespace BizHawk.Client.EmuHawk
 			_lib = BizInvoker.GetInvoker<LibRCheevos>(resolver, CallingConventionAdapters.Native);
 		}
 
-		private LibRCheevos.rc_runtime_t _runtime;
+		private IntPtr _runtime;
 
 		private readonly LibRCheevos.rc_runtime_event_handler_t _eventcb;
 		private readonly LibRCheevos.rc_peek_t _peekcb;
@@ -120,7 +121,6 @@ namespace BizHawk.Client.EmuHawk
 			enableHardcoreItem.CheckedChanged += (_, _) =>
 			{
 				_hardcoreMode ^= true;
-				enableLboardsItem.Enabled = HardcoreMode;
 
 				if (HardcoreMode)
 				{
@@ -130,6 +130,8 @@ namespace BizHawk.Client.EmuHawk
 				{
 					ToSoftcoreMode();
 				}
+
+				enableLboardsItem.Enabled = HardcoreMode;
 			};
 			raDropDownItems.Add(enableHardcoreItem);
 
@@ -173,6 +175,7 @@ namespace BizHawk.Client.EmuHawk
 			};
 			raDropDownItems.Add(viewCheevoListItem);
 
+#if false
 			var viewLboardListItem = new ToolStripMenuItem("View Leaderboard List");
 			viewLboardListItem.Click += (_, _) =>
 			{
@@ -180,6 +183,7 @@ namespace BizHawk.Client.EmuHawk
 				_lboardListForm.Show();
 			};
 			raDropDownItems.Add(viewLboardListItem);
+#endif
 		}
 
 		protected override void HandleHardcoreModeDisable(string reason)
@@ -192,11 +196,16 @@ namespace BizHawk.Client.EmuHawk
 			Func<Config> getConfig, ToolStripItemCollection raDropDownItems, Action shutdownRACallback)
 			: base(mainForm, inputManager, tools, getConfig, raDropDownItems, shutdownRACallback)
 		{
-			_runtime = default;
-			_lib.rc_runtime_init(ref _runtime);
-			InitLoginDone = new(false);
+			_isActive = true;
+			_httpThread = new(HttpRequestThreadProc) { IsBackground = true, Priority = ThreadPriority.BelowNormal };
+			_httpThread.Start();
+
+			_runtime = _lib.rc_runtime_alloc();
+			if (_runtime == IntPtr.Zero)
+			{
+				throw new("rc_runtime_alloc returned NULL!");
+			}
 			Login();
-			InitLoginDone.WaitOne();
 
 			_eventcb = EventHandlerCallback;
 			_peekcb = PeekCallback;
@@ -214,11 +223,22 @@ namespace BizHawk.Client.EmuHawk
 
 		public override void Dispose()
 		{
-			_lib.rc_runtime_destroy(ref _runtime);
+			while (!_inactiveHttpRequests.IsEmpty)
+			{
+				// wait until all pending http requests are enqueued
+			}
+
+			_isActive = false;
+			_httpThread.Join();
+
+			_lib.rc_runtime_destroy(_runtime);
+			_runtime = IntPtr.Zero;
 			Stop();
 			_gameInfoForm.Dispose();
 			_cheevoListForm.Dispose();
+#if false
 			_lboardListForm.Dispose();
+#endif
 			_mainForm.EmuClient.BeforeQuickLoad -= QuickLoadCallback;
 		}
 
@@ -229,11 +249,13 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			var size = _lib.rc_runtime_progress_size(ref _runtime, IntPtr.Zero);
+			OneShotActivateActiveModeCheevos();
+
+			var size = _lib.rc_runtime_progress_size(_runtime, IntPtr.Zero);
 			if (size > 0)
 			{
 				var buffer = new byte[(int)size];
-				_lib.rc_runtime_serialize_progress(buffer, ref _runtime, IntPtr.Zero);
+				_lib.rc_runtime_serialize_progress(buffer, _runtime, IntPtr.Zero);
 				using var file = File.OpenWrite(path + ".rap");
 				file.Write(buffer, 0, buffer.Length);
 			}
@@ -251,13 +273,15 @@ namespace BizHawk.Client.EmuHawk
 				HandleHardcoreModeDisable("Loading savestates is not allowed in hardcore mode.");
 			}
 
-			_lib.rc_runtime_reset(ref _runtime);
+			OneShotActivateActiveModeCheevos();
+
+			_lib.rc_runtime_reset(_runtime);
 
 			if (!File.Exists(path + ".rap")) return;
 
 			using var file = File.OpenRead(path + ".rap");
 			var buffer = file.ReadAllBytes();
-			_lib.rc_runtime_deserialize_progress(ref _runtime, buffer, IntPtr.Zero);
+			_lib.rc_runtime_deserialize_progress(_runtime, buffer, IntPtr.Zero);
 		}
 		
 		private void QuickLoadCallback(object _, BeforeQuickLoadEventArgs e)
@@ -298,15 +322,20 @@ namespace BizHawk.Client.EmuHawk
 				}
 			}
 
+			_activeModeCheevosOnceActivated = false;
+
 			if (!LoggedIn)
 			{
 				return;
 			}
 
 			// reinit the runtime
-			_lib.rc_runtime_destroy(ref _runtime);
-			_runtime = default;
-			_lib.rc_runtime_init(ref _runtime);
+			_lib.rc_runtime_destroy(_runtime);
+			_runtime = _lib.rc_runtime_alloc();
+			if (_runtime == IntPtr.Zero)
+			{
+				throw new("rc_runtime_alloc returned NULL!");
+			}
 
 			// get console id
 			_consoleId = SystemIdToConsoleId();
@@ -323,7 +352,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					if (memFunctions.ReadFunc is not null)
 					{
-						for (int i = 0; i < memFunctions.BankSize; i++)
+						for (var i = 0; i < memFunctions.BankSize; i++)
 						{
 							_readMap.Add(addr + i, (memFunctions.ReadFunc, addr));
 						}
@@ -344,60 +373,46 @@ namespace BizHawk.Client.EmuHawk
 				AllGamesVerified = !ids.Contains(0);
 
 				var gameId = ids.Count > 0 ? ids[0] : 0;
+				_gameData = new();
 
 				if (gameId != 0)
 				{
 					_gameData = _cachedGameDatas.TryGetValue(gameId, out var cachedGameData)
 						? new(cachedGameData, () => AllowUnofficialCheevos)
-						: GetGameData(Username, ApiToken, gameId, () => AllowUnofficialCheevos);
+						: GetGameData(gameId);
+				}
 
-					StartGameSession(Username, ApiToken, gameId);
+				// this check seems redundant, but it covers the case where GetGameData failed somehow
+				if (_gameData.GameID != 0)
+				{
+					StartGameSession();
 
 					_cachedGameDatas.Remove(gameId);
 					_cachedGameDatas.Add(gameId, _gameData);
 
-					InitGameData(_gameData, Username, ApiToken, HardcoreMode);
-
-					foreach (var lboard in _gameData.LBoardEnumerable)
-					{
-						_lib.rc_runtime_activate_lboard(ref _runtime, lboard.ID, lboard.Definition, IntPtr.Zero, 0);
-					}
-
-					if (_gameData.RichPresenseScript is not null)
-					{
-						_lib.rc_runtime_activate_richpresence(ref _runtime, _gameData.RichPresenseScript, IntPtr.Zero, 0);
-					}
-
-					var waitInit = HardcoreMode ? _gameData.HardcoreInitUnlocksReady : _gameData.SoftcoreInitUnlocksReady;
-					// hopefully not too long, given we spent some time doing other work
-					waitInit.WaitOne();
-
-					foreach (var cheevo in _gameData.CheevoEnumerable)
-					{
-						if (cheevo.IsEnabled && !cheevo.IsUnlocked(HardcoreMode))
-						{
-							_lib.rc_runtime_activate_achievement(ref _runtime, cheevo.ID, cheevo.Definition, IntPtr.Zero, 0);
-						}
-					}
+					InitGameData();
 				}
 				else
 				{
-					_gameData = new();
+					_activeModeUnlocksRequest = _inactiveModeUnlocksRequest = FailedRCheevosRequest.Singleton;
 				}
 			}
 			else
 			{
 				_gameData = new();
+				_activeModeUnlocksRequest = _inactiveModeUnlocksRequest = FailedRCheevosRequest.Singleton;
 			}
 
 			// validate addresses now that we have cheevos init
 			// ReSharper disable once ConvertToLocalFunction
 			LibRCheevos.rc_runtime_validate_address_t peekcb = address => _readMap.ContainsKey(address);
-			_lib.rc_runtime_validate_addresses(ref _runtime, _eventcb, peekcb);
+			_lib.rc_runtime_validate_addresses(_runtime, _eventcb, peekcb);
 
 			_gameInfoForm.Restart(_gameData.Title, _gameData.TotalCheevoPoints(HardcoreMode), CurrentRichPresence ?? "N/A");
 			_cheevoListForm.Restart(_gameData.GameID == 0 ? Array.Empty<Cheevo>() : _gameData.CheevoEnumerable, GetCheevoProgress);
+#if false
 			_lboardListForm.Restart(_gameData.GameID == 0 ? Array.Empty<LBoard>() : _gameData.LBoardEnumerable);
+#endif
 
 			Update();
 
@@ -412,13 +427,13 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			if (HardcoreMode)
-			{
-				CheckHardcoreModeConditions();
-			}
-
 			if (_gameData.GameID != 0)
 			{
+				if (HardcoreMode)
+				{
+					CheckHardcoreModeConditions();
+				}
+
 				CheckPing();
 			}
 		}
@@ -435,7 +450,7 @@ namespace BizHawk.Client.EmuHawk
 						var cheevo = _gameData.GetCheevoById(evt->id);
 						if (cheevo.IsEnabled)
 						{
-							_lib.rc_runtime_deactivate_achievement(ref _runtime, evt->id);
+							_lib.rc_runtime_deactivate_achievement(_runtime, evt->id);
 
 							cheevo.SetUnlocked(HardcoreMode, true);
 							var prefix = HardcoreMode ? "[HARDCORE] " : "";
@@ -445,7 +460,7 @@ namespace BizHawk.Client.EmuHawk
 
 							if (cheevo.IsOfficial)
 							{
-								SendUnlockAchievement(Username, ApiToken, evt->id, HardcoreMode, _gameHash);
+								_inactiveHttpRequests.Push(new CheevoUnlockRequest(Username, ApiToken, evt->id, HardcoreMode, _gameHash));
 							}
 						}
 
@@ -530,7 +545,7 @@ namespace BizHawk.Client.EmuHawk
 						var lboard = _gameData.GetLboardById(evt->id);
 						if (!lboard.Invalid)
 						{
-							SendTriggerLeaderboard(Username, ApiToken, evt->id, evt->value, _gameHash);
+							_inactiveHttpRequests.Push(new LboardTriggerRequest(Username, ApiToken, evt->id, evt->value, _gameHash));
 
 							if (!lboard.Hidden)
 							{
@@ -592,15 +607,17 @@ namespace BizHawk.Client.EmuHawk
 
 		public override void OnFrameAdvance()
 		{
-			if (!LoggedIn)
+			if (!LoggedIn || !_activeModeUnlocksRequest.IsCompleted)
 			{
 				return;
 			}
 
+			OneShotActivateActiveModeCheevos();
+
 			var input = _inputManager.ControllerOutput;
 			if (input.Definition.BoolButtons.Any(b => (b.Contains("Power") || b.Contains("Reset")) && input.IsPressed(b)))
 			{
-				_lib.rc_runtime_reset(ref _runtime);
+				_lib.rc_runtime_reset(_runtime);
 			}
 
 			if (Emu.HasMemoryDomains())
@@ -608,12 +625,12 @@ namespace BizHawk.Client.EmuHawk
 				// we want to EnterExit to prevent wbx host spam when peeks are spammed
 				using (Domains.MainMemory.EnterExit())
 				{
-					_lib.rc_runtime_do_frame(ref _runtime, _eventcb, _peekcb, IntPtr.Zero, IntPtr.Zero);
+					_lib.rc_runtime_do_frame(_runtime, _eventcb, _peekcb, IntPtr.Zero, IntPtr.Zero);
 				}
 			}
 			else
 			{
-				_lib.rc_runtime_do_frame(ref _runtime, _eventcb, _peekcb, IntPtr.Zero, IntPtr.Zero);
+				_lib.rc_runtime_do_frame(_runtime, _eventcb, _peekcb, IntPtr.Zero, IntPtr.Zero);
 			}
 
 			if (_gameInfoForm.IsShown)
@@ -628,10 +645,12 @@ namespace BizHawk.Client.EmuHawk
 				_cheevoListForm.OnFrameAdvance(HardcoreMode);
 			}
 
+#if false
 			if (_lboardListForm.IsShown)
 			{
 				_lboardListForm.OnFrameAdvance();
 			}
+#endif
 		}
 	}
 }

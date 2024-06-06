@@ -55,6 +55,7 @@ namespace BizHawk.Emulation.Common
 			public const string PSP = "PSP";
 			public const string PSX = "PSX";
 			public const string SAT = "SAT";
+			public const string Satellaview = "BSX";
 			public const string Sega32X = "32X";
 			public const string SG = "SG";
 			public const string SGB = "SGB";

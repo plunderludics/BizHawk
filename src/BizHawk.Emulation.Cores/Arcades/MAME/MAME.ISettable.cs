@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 
 using BizHawk.Common;
+using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Arcades.MAME
@@ -100,7 +101,10 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 						setting.Options.Add(opt[0], opt[1]);
 					}
 
-					CurrentDriverSettings.Add(setting);
+					if (options.Any())
+					{
+						CurrentDriverSettings.Add(setting);
+					}
 				}
 			}
 		}
@@ -161,6 +165,12 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 					}
 					else
 					{
+						if (hashdata.Contains("^"))
+						{
+							hashdata = hashdata.RemoveSuffix("^");
+							name = name + " (BAD DUMP)";
+						}
+
 						hashdata = hashdata.Replace("R", "CRC:").Replace("S", " SHA:");
 						_romHashes.Add(name, hashdata);
 					}

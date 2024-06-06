@@ -8,6 +8,7 @@ using BizHawk.Emulation.Common;
 using BizHawk.Common.NumberExtensions;
 using BizHawk.Client.Common;
 using BizHawk.Common;
+using BizHawk.Common.CollectionExtensions;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -61,6 +62,8 @@ namespace BizHawk.Client.EmuHawk
 		private bool? _autoRestorePaused;
 		private int? _seekStartFrame;
 		private bool _unpauseAfterSeeking;
+
+		private readonly Dictionary<string, bool> _alternateRowColor = new();
 
 		private ControllerDefinition ControllerType => MovieSession.MovieController.Definition;
 
@@ -247,8 +250,12 @@ namespace BizHawk.Client.EmuHawk
 				color = Palette.AnalogEdit_Col;
 			}
 
-			int player = Emulator.ControllerDefinition.PlayerNumber(columnName);
-			if (player != 0 && player % 2 == 0)
+			if (_alternateRowColor.GetValueOrPut(
+				columnName,
+				columnName1 => {
+					var playerNumber = ControllerDefinition.PlayerNumber(columnName1);
+					return playerNumber % 2 is 0 && playerNumber is not 0;
+				}))
 			{
 				color = Color.FromArgb(0x0D, 0x00, 0x00, 0x00);
 			}

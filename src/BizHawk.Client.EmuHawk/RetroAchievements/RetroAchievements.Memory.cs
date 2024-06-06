@@ -361,8 +361,8 @@ namespace BizHawk.Client.EmuHawk
 		private static readonly ConsoleID[] UseFullMainMem =
 		{
 			ConsoleID.PlayStation, ConsoleID.Lynx, ConsoleID.Lynx, ConsoleID.NeoGeoPocket,
-			ConsoleID.Jaguar, ConsoleID.JaguarCD, ConsoleID.DS, ConsoleID.AppleII,
-			ConsoleID.Vectrex, ConsoleID.Tic80, ConsoleID.PCEngine,
+			ConsoleID.Jaguar, ConsoleID.JaguarCD, ConsoleID.DS, ConsoleID.DSi,
+			ConsoleID.AppleII, ConsoleID.Vectrex, ConsoleID.Tic80, ConsoleID.PCEngine,
 		};
 
 		// these consoles will use part of the system bus at an offset
@@ -370,7 +370,6 @@ namespace BizHawk.Client.EmuHawk
 		{
 			[ConsoleID.MasterSystem] = new[] { (0xC000, 0x2000) },
 			[ConsoleID.GameGear] = new[] { (0xC000, 0x2000) },
-			[ConsoleID.Atari2600] = new[] { (0, 0x80) },
 			[ConsoleID.Colecovision] = new[] { (0x6000, 0x400) },
 			[ConsoleID.GBA] = new[] { (0x3000000, 0x8000), (0x2000000, 0x40000) },
 			[ConsoleID.SG1000] = new[] { (0xC000, 0x2000), (0x2000, 0x2000), (0x8000, 0x2000) },
@@ -495,6 +494,9 @@ namespace BizHawk.Client.EmuHawk
 						mfs.Add(new(domains["CPU RAM"], 0, domains["CPU RAM"].Size));
 						mfs.Add(new(domains["Main RAM"], 0, domains["Main RAM"].Size));
 						break;
+					case ConsoleID.Atari2600:
+						mfs.Add(new(domains["Main RAM"], 0, domains["Main RAM"].Size));
+						break;
 					case ConsoleID.VirtualBoy:
 						// todo: add System Bus so this isn't needed
 						mfs.Add(new(domains["WRAM"], 0, domains["WRAM"].Size));
@@ -504,6 +506,10 @@ namespace BizHawk.Client.EmuHawk
 						// no, can't use MainMemory here, as System Bus is that due to init ordering
 						// todo: make this MainMemory
 						mfs.Add(new(domains["RAM"], 0, domains["RAM"].Size));
+						break;
+					case ConsoleID.AppleII:
+						mfs.Add(new(domains["Main RAM"], 0, domains["Main RAM"].Size));
+						mfs.Add(new(domains["Auxiliary RAM"], 0, domains["Auxiliary RAM"].Size));
 						break;
 					case ConsoleID.Saturn:
 						// todo: add System Bus so this isn't needed

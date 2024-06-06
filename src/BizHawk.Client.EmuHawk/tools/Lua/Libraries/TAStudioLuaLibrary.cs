@@ -7,6 +7,7 @@ using System.Linq;
 using NLua;
 using BizHawk.Client.Common;
 using BizHawk.Common;
+using BizHawk.Common.CollectionExtensions;
 
 // ReSharper disable UnusedMember.Global
 // ReSharper disable StringLiteralTypo
@@ -16,6 +17,8 @@ namespace BizHawk.Client.EmuHawk
 	[LuaLibrary(released: true)]
 	public sealed class TAStudioLuaLibrary : LuaLibraryBase
 	{
+		private static readonly IDictionary<string, Icon> _iconCache = new Dictionary<string, Icon>();
+
 		public ToolManager Tools { get; set; }
 
 		public TAStudioLuaLibrary(ILuaLibraries luaLibsImpl, ApiContainer apiContainer, Action<string> logOutputCallback)
@@ -491,7 +494,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[LuaMethodExample("tastudio.onqueryitemtext( function( currentindex, itemname )\r\n\tconsole.log( \"called during the text draw event of the tastudio listview. luaf must be a function that takes 2 params: index, column.  The first is the integer row index of the listview, and the 2nd is the string column name. luaf should return a value that can be parsed into a .NET Color object (string color name, or integer value)\" );\r\nend );")]
-		[LuaMethod("onqueryitemtext", "called during the text draw event of the tastudio listview. luaf must be a function that takes 2 params: index, column.  The first is the integer row index of the listview, and the 2nd is the string column name. luaf should return a value that can be parsed into a .NET Color object (string color name, or integer value)")]
+		[LuaMethod("onqueryitemtext", "Called during the text draw event of the tastudio listview. {{luaf}} must be a function that takes 2 params: {{(index, column)}}. The first is the integer row index of the listview, and the 2nd is the string column name. The callback should return a string to be displayed.")]
 		public void OnQueryItemText(LuaFunction luaf)
 		{
 			if (Engaged())
@@ -505,7 +508,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[LuaMethodExample("tastudio.onqueryitemicon( function( currentindex, itemname )\r\n\tconsole.log( \"called during the icon draw event of the tastudio listview. luaf must be a function that takes 2 params: index, column.  The first is the integer row index of the listview, and the 2nd is the string column name. luaf should return a value that can be parsed into a .NET Color object (string color name, or integer value)\" );\r\nend );")]
-		[LuaMethod("onqueryitemicon", "called during the icon draw event of the tastudio listview. luaf must be a function that takes 2 params: index, column.  The first is the integer row index of the listview, and the 2nd is the string column name. luaf should return a value that can be parsed into a .NET Color object (string color name, or integer value)")]
+		[LuaMethod("onqueryitemicon", "Called during the icon draw event of the tastudio listview. {{luaf}} must be a function that takes 2 params: {{(index, column)}}. The first is the integer row index of the listview, and the 2nd is the string column name. The callback should return a string, the path to the {{.ico}} file to be displayed. The file will be cached, so if you change the file on disk, call {{tastudio.clearIconCache()}}.")]
 		public void OnQueryItemIcon(LuaFunction luaf)
 		{
 			if (Engaged())
@@ -515,9 +518,7 @@ namespace BizHawk.Client.EmuHawk
 					var result = luaf.Call(index, name);
 					if (result?[0] != null)
 					{
-						string path = result[0].ToString();
-						Icon icon = new Icon(path);
-						return icon.ToBitmap();
+						return _iconCache.GetValueOrPutNew1(result[0].ToString()).ToBitmap();
 					}
 
 					return null;
@@ -525,8 +526,16 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		[LuaMethodExample("tastudio.ongreenzoneinvalidated( function( currentindex, itemname )\r\n\tconsole.log( \"called whenever the greenzone is invalidated and returns the first frame that was invalidated\" );\r\nend );")]
-		[LuaMethod("ongreenzoneinvalidated", "called whenever the greenzone is invalidated and returns the first frame that was invalidated")]
+		[LuaMethodExample("tastudio.clearIconCache();")]
+		[LuaMethod("clearIconCache", "Clears the cache that is built up by using {{tastudio.onqueryitemicon}}, so that changes to the icons on disk can be picked up.")]
+		public void ClearIconCache()
+		{
+			foreach (var icon in _iconCache.Values) icon.Dispose();
+			_iconCache.Clear();
+		}
+
+		[LuaMethodExample("tastudio.ongreenzoneinvalidated( function( currentindex )\r\n\tconsole.log( \"Called whenever the greenzone is invalidated.\" );\r\nend );")]
+		[LuaMethod("ongreenzoneinvalidated", "Called whenever the greenzone is invalidated. Your callback can have 1 parameter, which will be the index of the first row that was invalidated.")]
 		public void OnGreenzoneInvalidated(LuaFunction luaf)
 		{
 			if (Engaged())
@@ -538,7 +547,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		[LuaMethodExample("tastudio.ongreenzoneinvalidated( function( currentindex, itemname )\r\n\tconsole.log( \"called whenever the greenzone is invalidated and returns the first frame that was invalidated\" );\r\nend );")]
+		[LuaMethodExample("tastudio.onbranchload( function( currentindex )\r\n\tconsole.log( \"Called whenever a branch is loaded.\" );\r\nend );")]
 		[LuaMethod("onbranchload", "called whenever a branch is loaded. luaf must be a function that takes the integer branch index as a parameter")]
 		public void OnBranchLoad(LuaFunction luaf)
 		{

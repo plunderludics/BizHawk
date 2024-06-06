@@ -2,36 +2,67 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using System.Text;
 
 using BizHawk.BizInvoke;
 using BizHawk.Common;
+using BizHawk.Common.IOExtensions;
 using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Waterbox;
 
 namespace BizHawk.Emulation.Cores.Arcades.MAME
 {
-	[PortedCore(CoreNames.MAME, "MAMEDev", "0.250", "https://github.com/mamedev/mame.git", isReleased: false)]
+	[PortedCore(CoreNames.MAME, "MAMEDev", "0.252", "https://github.com/mamedev/mame.git")]
 	public partial class MAME : IRomInfo
 	{
 		[CoreConstructor(VSystemID.Raw.Arcade)]
 		public MAME(CoreLoadParameters<object, MAMESyncSettings> lp)
 		{
 			_gameFileName = Path.GetFileName(lp.Roms[0].RomPath).ToLowerInvariant();
-
-			ServiceProvider = new BasicServiceProvider(this);
-
 			_syncSettings = lp.SyncSettings ?? new();
 
+			ServiceProvider = new BasicServiceProvider(this);
 			DeterministicEmulation = !_syncSettings.RTCSettings.UseRealTime || lp.DeterministicEmulationRequested;
 
 			_logCallback = MAMELogCallback;
 			_baseTimeCallback = MAMEBaseTimeCallback;
 			_inputPollCallback = InputCallbacks.Call;
 			_filenameCallback = name => _nvramFilenames.Add(name);
+			_infoCallback = info =>
+			{
+				var text = info.Replace(". ", "\n").Replace("\n\n", "\n");
+				lp.Comm.Notify(text, 4 * Regex.Matches(text, "\n").Count);
+				RomDetails =
+					$"Full Name:    { _gameFullName }\r\n" +
+					$"Short Name:   { _gameShortName }\r\n" +
+					$"Resolution:   { BufferWidth }x{ BufferHeight }\r\n" +
+					$"Aspect Ratio: { _wAspect }:{ _hAspect }\r\n" +
+					$"Framerate:    { (float)VsyncNumerator / VsyncDenominator } " +
+					$"({ VsyncNumerator } / { VsyncDenominator })\r\n\r\n" +
+					text + (text == "" ? "" : "\r\n") +
+					string.Join("\r\n", _romHashes.Select(static r => $"{r.Value} - {r.Key}"));
+
+				if (text.ToLower().Contains("imperfect"))
+				{
+					lp.Game.Status = RomStatus.Imperfect;
+				}
+
+				if (text.ToLower().Contains("unemulated"))
+				{
+					lp.Game.Status = RomStatus.Unimplemented;
+				}
+
+				if (text.ToLower().Contains("doesn't work"))
+				{
+					lp.Game.Status = RomStatus.NotWorking;
+				}
+
+			};
 
 			_exe = new(new()
 			{
@@ -48,7 +79,7 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 
 			using (_exe.EnterExit())
 			{
-				_adapter = CallingConventionAdapters.MakeWaterbox(new Delegate[] { _logCallback, _baseTimeCallback, _inputPollCallback, _filenameCallback }, _exe);
+				_adapter = CallingConventionAdapters.MakeWaterbox(new Delegate[] { _logCallback, _baseTimeCallback, _inputPollCallback, _filenameCallback, _infoCallback }, _exe);
 				_core = BizInvoker.GetInvoker<LibMAME>(_exe, _exe, _adapter);
 				StartMAME(lp.Roms);
 			}
@@ -56,10 +87,8 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 			if (_loadFailure != string.Empty)
 			{
 				Dispose();
-				throw new Exception("\n\n" + _loadFailure);
+				throw new("\n\n" + _loadFailure);
 			}
-
-			RomDetails = _gameFullName + "\r\n" + string.Join("\r\n", _romHashes.Select(static r => $"{r.Key} - {r.Value}"));
 
 			// concat all SHA1 hashes together (unprefixed), then hash that
 			var hashes = string.Concat(_romHashes.Values
@@ -70,7 +99,22 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 
 			lp.Game.Name = _gameFullName;
 			lp.Game.Hash = SHA1Checksum.ComputeDigestHex(Encoding.ASCII.GetBytes(hashes));
-			lp.Game.Status = _romHashes.Values.Any(static s => s is "NO GOOD DUMP KNOWN") ? RomStatus.Unknown : RomStatus.GoodDump;
+
+			if (_romHashes.Values.Any(static s => s is "NO GOOD DUMP KNOWN"))
+			{
+				lp.Game.Status = RomStatus.Unknown;
+			}
+			else if (_romHashes.Keys.Any(static s => s.Contains("BAD DUMP")))
+			{
+				lp.Game.Status = RomStatus.BadDump;
+			}
+			else
+			{
+				lp.Game.Status = RomStatus.GoodDump;
+			}
+
+			_core.mame_info_get_warnings_string(_infoCallback);
+			_infoCallback = null;
 
 			_exe.Seal();
 		}
@@ -82,14 +126,15 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 		private readonly LibMAME.LogCallbackDelegate _logCallback;
 		private readonly LibMAME.BaseTimeCallbackDelegate _baseTimeCallback;
 		private readonly LibMAME.InputPollCallbackDelegate _inputPollCallback;
+		private readonly LibMAME.InfoCallbackDelegate _infoCallback;
 
-		public string RomDetails { get; }
+		public string RomDetails { get; set; }
 
 		private readonly string _gameFileName;
 		private string _gameFullName = "Arcade";
 		private string _gameShortName = "arcade";
-		private readonly SortedList<string, string> _romHashes = new();
 		private string _loadFailure = string.Empty;
+		private readonly SortedList<string, string> _romHashes = new();
 
 		private void StartMAME(List<IRomAsset> roms)
 		{
@@ -98,15 +143,52 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 
 			var gameName = _gameFileName.Split('.')[0];
 
+			static byte[] MakeRomData(IRomAsset rom)
+			{
+				if (rom.Extension.ToLowerInvariant() is ".zip")
+				{
+					// if this is deflate, unzip the zip, and rezip it without compression
+					// this is to get around some zlib bug?
+					using var ret = new MemoryStream();
+					ret.Write(rom.FileData, 0, rom.FileData.Length);
+					using (var zip = new ZipArchive(ret, ZipArchiveMode.Update, leaveOpen: true))
+					{
+						foreach (var entryName in zip.Entries.Select(e => e.FullName).ToList())
+						{
+							try // TODO: this is a bad way to detect deflate (although it works I guess)
+							{
+								var oldEntry = zip.GetEntry(entryName)!;
+								using var oldEntryStream = oldEntry.Open(); // if this isn't deflate, this throws InvalidDataException
+								var contents = oldEntryStream.ReadAllBytes();
+								oldEntryStream.Dispose();
+								oldEntry.Delete();
+								var newEntry = zip.CreateEntry(entryName, CompressionLevel.NoCompression);
+								using var newEntryStream = newEntry.Open();
+								newEntryStream.Write(contents, 0, contents.Length);
+							}
+							catch (InvalidDataException)
+							{
+								// ignored
+							}
+						}
+					}
+
+					// ZipArchive's Dispose() is what actually modifies the backing stream
+					return ret.ToArray();
+				}
+
+				return rom.FileData;
+			}
+
 			// mame expects chd files in a folder of the game name
 			string MakeFileName(IRomAsset rom)
-				=> rom.Extension.ToLowerInvariant() == ".chd"
+				=> rom.Extension.ToLowerInvariant() is ".chd"
 					? gameName + '/' + Path.GetFileNameWithoutExtension(rom.RomPath).ToLowerInvariant() + rom.Extension.ToLowerInvariant()
 					: Path.GetFileNameWithoutExtension(rom.RomPath).ToLowerInvariant() + rom.Extension.ToLowerInvariant();
 
 			foreach (var rom in roms)
 			{
-				_exe.AddReadonlyFile(rom.FileData, MakeFileName(rom));
+				_exe.AddReadonlyFile(MakeRomData(rom), MakeFileName(rom));
 			}
 
 			// https://docs.mamedev.org/commandline/commandline-index.html
@@ -123,9 +205,9 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 				, "-rompath",                       ""  // mame doesn't load roms from full paths, only from dirs to scan
 				, "-joystick_contradictory"             // allow L+R/U+D on digital joystick
 				, "-nvram_directory",               ""  // path to nvram from
-				, "-artpath",                      "?"  // path to artwork
-				, "-diff_directory",               "?"  // path to hdd diffs
-				, "-cfg_directory",                "?"  // path to config
+				, "-artpath",                       ""  // path to artwork
+				, "-diff_directory",                ""  // path to hdd diffs
+				, "-cfg_directory",                 ""  // path to config
 				, "-volume",                     "-32"  // lowest attenuation means mame osd remains silent
 				, "-output",                 "console"  // print everything to hawk console
 				, "-samplerate", _sampleRate.ToString() // match hawk samplerate
@@ -326,6 +408,10 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 				"table.sort(final) " +
 				"return table.concat(final)";
 
+			public static string GetFramerateDenominator(int frequency) =>
+				"for k,v in pairs(manager.machine.screens) do " +
+					$"return emu.attotime(0, v.refresh_attoseconds):as_ticks({ frequency }) " +
+				"end";
 			public static string MakeLookupKey(string gameName, string luaCode) =>
 				$"[{ gameName }] { luaCode }";
 			public static string InputField(string tag, string fieldName) =>

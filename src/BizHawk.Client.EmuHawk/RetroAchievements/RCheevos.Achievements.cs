@@ -1,13 +1,39 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace BizHawk.Client.EmuHawk
 {
 	public partial class RCheevos
 	{
 		private readonly RCheevosAchievementListForm _cheevoListForm = new();
+
+		private sealed class CheevoUnlockRequest : RCheevoHttpRequest
+		{
+			private LibRCheevos.rc_api_award_achievement_request_t _apiParams;
+
+			protected override void ResponseCallback(byte[] serv_resp)
+			{
+				var res = _lib.rc_api_process_award_achievement_response(out var resp, serv_resp);
+				_lib.rc_api_destroy_award_achievement_response(ref resp);
+				if (res != LibRCheevos.rc_error_t.RC_OK)
+				{
+					Console.WriteLine($"CheevoUnlockRequest failed in ResponseCallback with {res}");
+				}
+			}
+
+			public override void DoRequest()
+			{
+				var apiParamsResult = _lib.rc_api_init_award_achievement_request(out var api_req, ref _apiParams);
+				InternalDoRequest(apiParamsResult, ref api_req);
+			}
+
+			public CheevoUnlockRequest(string username, string api_token, int achievement_id, bool hardcore, string game_hash)
+			{
+				_apiParams = new(username, api_token, achievement_id, hardcore, game_hash);
+			}
+		}
 
 		private bool CheevosActive { get; set; }
 		private bool AllowUnofficialCheevos { get; set; }
@@ -22,8 +48,11 @@ namespace BizHawk.Client.EmuHawk
 			public string Definition { get; }
 			public string Author { get; }
 			private string BadgeName { get; }
-			public Bitmap BadgeUnlocked { get; private set; }
-			public Bitmap BadgeLocked { get; private set; }
+			public Bitmap BadgeUnlocked => _badgeUnlockedRequest?.Image;
+			public Bitmap BadgeLocked => _badgeLockedRequest?.Image;
+
+			private ImageRequest _badgeUnlockedRequest, _badgeLockedRequest;
+
 			public DateTime Created { get; }
 			public DateTime Updated { get; }
 
@@ -51,10 +80,12 @@ namespace BizHawk.Client.EmuHawk
 			public bool IsEnabled => !Invalid && (IsOfficial || AllowUnofficialCheevos());
 			public bool IsOfficial => Category is LibRCheevos.rc_runtime_achievement_category_t.RC_ACHIEVEMENT_CATEGORY_CORE;
 
-			public async void LoadImages()
+			public void LoadImages(IList<RCheevoHttpRequest> requests)
 			{
-				BadgeUnlocked = await GetImage(BadgeName, LibRCheevos.rc_api_image_type_t.RC_IMAGE_TYPE_ACHIEVEMENT).ConfigureAwait(false);
-				BadgeLocked = await GetImage(BadgeName, LibRCheevos.rc_api_image_type_t.RC_IMAGE_TYPE_ACHIEVEMENT_LOCKED).ConfigureAwait(false);
+				_badgeUnlockedRequest = new(BadgeName, LibRCheevos.rc_api_image_type_t.RC_IMAGE_TYPE_ACHIEVEMENT);
+				_badgeLockedRequest = new(BadgeName, LibRCheevos.rc_api_image_type_t.RC_IMAGE_TYPE_ACHIEVEMENT_LOCKED);
+				requests.Add(_badgeUnlockedRequest); 
+				requests.Add(_badgeLockedRequest); 
 			}
 
 			public Cheevo(in LibRCheevos.rc_api_achievement_definition_t cheevo, Func<bool> allowUnofficialCheevos)
@@ -67,8 +98,6 @@ namespace BizHawk.Client.EmuHawk
 				Definition = cheevo.Definition;
 				Author = cheevo.Author;
 				BadgeName = cheevo.BadgeName;
-				BadgeUnlocked = null;
-				BadgeLocked = null;
 				Created = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc).AddSeconds(cheevo.created).ToLocalTime();
 				Updated = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc).AddSeconds(cheevo.updated).ToLocalTime();
 				IsSoftcoreUnlocked = false;
@@ -88,8 +117,6 @@ namespace BizHawk.Client.EmuHawk
 				Definition = cheevo.Definition;
 				Author = cheevo.Author;
 				BadgeName = cheevo.BadgeName;
-				BadgeUnlocked = null;
-				BadgeLocked = null;
 				Created = cheevo.Created;
 				Updated = cheevo.Updated;
 				IsSoftcoreUnlocked = false;
@@ -104,7 +131,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private string GetCheevoProgress(int id)
 		{
-			var len = _lib.rc_runtime_format_achievement_measured(ref _runtime, id, _cheevoFormatBuffer, _cheevoFormatBuffer.Length);
+			var len = _lib.rc_runtime_format_achievement_measured(_runtime, id, _cheevoFormatBuffer, _cheevoFormatBuffer.Length);
 			return Encoding.ASCII.GetString(_cheevoFormatBuffer, 0, len);
 		}
 
@@ -116,75 +143,64 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			var initReady = HardcoreMode ? _gameData.HardcoreInitUnlocksReady : _gameData.SoftcoreInitUnlocksReady;
-			initReady.WaitOne();
+			_activeModeUnlocksRequest.Wait();
 
-			foreach (var cheevo in _gameData.CheevoEnumerable)
-			{
-				if (cheevo.IsEnabled && !cheevo.IsUnlocked(HardcoreMode))
-				{
-					_lib.rc_runtime_deactivate_achievement(ref _runtime, cheevo.ID);
-				}
-			}
-
+			DeactivateCheevos(HardcoreMode);
 			AllowUnofficialCheevos ^= true;
-
-			foreach (var cheevo in _gameData.CheevoEnumerable)
-			{
-				if (cheevo.IsEnabled && !cheevo.IsUnlocked(HardcoreMode))
-				{
-					_lib.rc_runtime_activate_achievement(ref _runtime, cheevo.ID, cheevo.Definition, IntPtr.Zero, 0);
-				}
-			}
+			ActivateCheevos(HardcoreMode);
 		}
 
 		private void ToSoftcoreMode()
 		{
 			if (_gameData == null || _gameData.GameID == 0) return;
+			
+			// don't worry if the meanings of _active and _inactive are wrong
+			// if they are, then they're both already finished
 
-			_gameData.SoftcoreInitUnlocksReady.WaitOne();
+			// first deactivate any hardcore cheevos
+			// if _activeModeUnlocksRequest is still active, it's hardcore mode
+			_activeModeUnlocksRequest.Wait();
+			DeactivateCheevos(true);
 
-			foreach (var cheevo in _gameData.CheevoEnumerable)
-			{
-				if (cheevo.IsEnabled && !cheevo.IsUnlocked(false))
-				{
-					_lib.rc_runtime_deactivate_achievement(ref _runtime, cheevo.ID);
-				}
-			}
-
-			_gameData.HardcoreInitUnlocksReady.WaitOne();
-
-			foreach (var cheevo in _gameData.CheevoEnumerable)
-			{
-				if (cheevo.IsEnabled && !cheevo.IsUnlocked(true))
-				{
-					_lib.rc_runtime_activate_achievement(ref _runtime, cheevo.ID, cheevo.Definition, IntPtr.Zero, 0);
-				}
-			}
+			// now activate the softcore cheevos
+			// if _inactiveModeUnlocksRequest is still active, it's softcore mode
+			_inactiveModeUnlocksRequest.Wait();
+			ActivateCheevos(false);
 
 			Update();
 		}
 
-		private static async Task SendUnlockAchievementAsync(string username, string api_token, int id, bool hardcore, string hash)
+		private void DeactivateCheevos(bool hardcore)
 		{
-			var api_params = new LibRCheevos.rc_api_award_achievement_request_t(username, api_token, id, hardcore, hash);
-			var res = LibRCheevos.rc_error_t.RC_INVALID_STATE;
-			if (_lib.rc_api_init_award_achievement_request(out var api_req, ref api_params) == LibRCheevos.rc_error_t.RC_OK)
+			foreach (var cheevo in _gameData.CheevoEnumerable)
 			{
-				var serv_req = await SendAPIRequest(in api_req).ConfigureAwait(false);
-				res = _lib.rc_api_process_award_achievement_response(out var resp, serv_req);
-				_lib.rc_api_destroy_award_achievement_response(ref resp);
-			}
-
-			_lib.rc_api_destroy_request(ref api_req);
-
-			if (res != LibRCheevos.rc_error_t.RC_OK)
-			{
-				// todo: warn user? correct local version of cheevos?
+				if (cheevo.IsEnabled && !cheevo.IsUnlocked(hardcore))
+				{
+					_lib.rc_runtime_deactivate_achievement(_runtime, cheevo.ID);
+				}
 			}
 		}
 
-		private static async void SendUnlockAchievement(string username, string api_token, int id, bool hardcore, string hash)
-			=> await SendUnlockAchievementAsync(username, api_token, id, hardcore, hash).ConfigureAwait(false);
+		private bool _activeModeCheevosOnceActivated;
+
+		private void ActivateCheevos(bool hardcore)
+		{
+			foreach (var cheevo in _gameData.CheevoEnumerable)
+			{
+				if (cheevo.IsEnabled && !cheevo.IsUnlocked(hardcore))
+				{
+					_lib.rc_runtime_activate_achievement(_runtime, cheevo.ID, cheevo.Definition, IntPtr.Zero, 0);
+				}
+			}
+
+			_activeModeCheevosOnceActivated = true;
+		}
+
+		private void OneShotActivateActiveModeCheevos()
+		{
+			if (_activeModeCheevosOnceActivated || _gameData.GameID == 0) return;
+			_activeModeUnlocksRequest.Wait();
+			ActivateCheevos(HardcoreMode);
+		}
 	}
 }

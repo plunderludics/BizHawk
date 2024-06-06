@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
+using BizHawk.Common.CollectionExtensions;
 using BizHawk.Common.PathExtensions;
 using BizHawk.Emulation.Common;
 
@@ -61,6 +63,7 @@ namespace BizHawk.Client.Common
 			[VSystemID.Raw.NDS] = "NDS",
 			[VSystemID.Raw.Sega32X] = "Sega 32X",
 			[VSystemID.Raw.GGL] = "Dual Game Gear",
+			[VSystemID.Raw.Satellaview] = "Satellaview"
 		};
 
 		private static PathEntry BaseEntryFor(string sysID, string path)
@@ -80,12 +83,7 @@ namespace BizHawk.Client.Common
 		}
 
 		public static string GetDisplayNameFor(string sysID)
-		{
-			if (_displayNameLookup.TryGetValue(sysID, out var dispName)) return dispName;
-			var newDispName = $"{sysID} (INTERIM)";
-			_displayNameLookup[sysID] = newDispName;
-			return newDispName;
-		}
+			=> _displayNameLookup.GetValueOrPut(sysID, static s => s + " (INTERIM)");
 
 		public static bool InGroup(string sysID, string group)
 			=> sysID == group || group.Split('_').Contains(sysID);
@@ -126,7 +124,7 @@ namespace BizHawk.Client.Common
 
 		private PathEntry TryGetDebugPath(string system, string type)
 		{
-			if (Paths.Any(p => p.IsSystem(system)))
+			if (Paths.Exists(p => p.IsSystem(system)))
 			{
 				// we have the system, but not the type.  don't attempt to add an unknown type
 				return null;
@@ -143,7 +141,7 @@ namespace BizHawk.Client.Common
 			// Add missing entries
 			foreach (var defaultPath in Defaults.Value)
 			{
-				if (!Paths.Any(p => p.System == defaultPath.System && p.Type == defaultPath.Type)) Paths.Add(defaultPath);
+				if (!Paths.Exists(p => p.System == defaultPath.System && p.Type == defaultPath.Type)) Paths.Add(defaultPath);
 			}
 
 			var entriesToRemove = new List<PathEntry>();
@@ -197,11 +195,11 @@ namespace BizHawk.Client.Common
 
 			CommonEntriesFor(VSystemID.Raw.AmstradCPC, basePath: Path.Combine(".", "AmstradCPC"), omitSaveRAM: true),
 
-			CommonEntriesFor(VSystemID.Raw.AppleII, basePath: Path.Combine(".", "Apple II"), omitSaveRAM: true),
+			CommonEntriesFor(VSystemID.Raw.AppleII, basePath: Path.Combine(".", "Apple II")),
 
 			CommonEntriesFor(VSystemID.Raw.Arcade, basePath: Path.Combine(".", "Arcade")),
 
-			CommonEntriesFor(VSystemID.Raw.C64, basePath: Path.Combine(".", "C64"), omitSaveRAM: true),
+			CommonEntriesFor(VSystemID.Raw.C64, basePath: Path.Combine(".", "C64")),
 
 			CommonEntriesFor(VSystemID.Raw.ChannelF, basePath: Path.Combine(".", "Channel F"), omitSaveRAM: true),
 
@@ -271,6 +269,8 @@ namespace BizHawk.Client.Common
 			CommonEntriesFor(VSystemID.Raw.PSX, basePath: Path.Combine(".", "PSX")),
 
 			CommonEntriesFor(VSystemID.Raw.SAT, basePath: Path.Combine(".", "Saturn")),
+
+			CommonEntriesFor(VSystemID.Raw.Satellaview, basePath: Path.Combine(".", "Satellaview")),
 
 			CommonEntriesFor(VSystemID.Raw.SG, basePath: Path.Combine(".", "SG-1000")),
 

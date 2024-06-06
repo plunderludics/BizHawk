@@ -30,6 +30,9 @@ namespace BizHawk.Client.EmuHawk
 
 		private static readonly FilesystemFilterSet SessionsFSFilterSet = new FilesystemFilterSet(new FilesystemFilter("Lua Session Files", new[] { "luases" }));
 
+		public static Icon ToolIcon
+			=> Resources.TextDocIcon;
+
 		private readonly LuaAutocompleteInstaller _luaAutoInstaller = new LuaAutocompleteInstaller();
 		private readonly Dictionary<LuaFile, FileSystemWatcher> _watches = new();
 
@@ -117,7 +120,7 @@ namespace BizHawk.Client.EmuHawk
 			InsertSeparatorToolbarItem.Image = Resources.InsertSeparator;
 			EraseToolbarItem.Image = Resources.Erase;
 			RecentScriptsSubMenu.Image = Resources.Recent;
-			Icon = Resources.TextDocIcon;
+			Icon = ToolIcon;
 
 			Closing += (o, e) =>
 			{
@@ -154,11 +157,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void LuaConsole_Load(object sender, EventArgs e)
 		{
-			// Hack for previous config settings
-			if (Settings.Columns.Any(c => c.Text == null))
-			{
-				Settings = new LuaConsoleSettings();
-			}
+			if (Settings.Columns.Exists(static c => c.Text is null)) Settings = new(); //HACK for previous config settings
 
 			if (Config.RecentLuaSession.AutoLoad && !Config.RecentLuaSession.Empty)
 			{
@@ -822,6 +821,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void NewScriptMenuItem_Click(object sender, EventArgs e)
 		{
+			var luaDir = Config!.PathEntries.LuaAbsolutePath();
 			string initDir;
 			string ext;
 			if (!string.IsNullOrWhiteSpace(LuaImp.ScriptList.Filename))
@@ -830,7 +830,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 			else
 			{
-				initDir = Config!.PathEntries.LuaAbsolutePath();
+				initDir = luaDir;
 				ext = Path.GetFileNameWithoutExtension(Game.Name);
 			}
 			var result = this.ShowFileSaveDialog(
@@ -839,8 +839,11 @@ namespace BizHawk.Client.EmuHawk
 				initDir: initDir,
 				initFileName: ext);
 			if (string.IsNullOrWhiteSpace(result)) return;
-			string defaultTemplate = "while true do\n\temu.frameadvance();\nend";
-			File.WriteAllText(result, defaultTemplate);
+			const string TEMPLATE_FILENAME = ".template.lua";
+			var templatePath = Path.Combine(luaDir, TEMPLATE_FILENAME);
+			const string DEF_TEMPLATE_CONTENTS = "-- This template lives at `.../Lua/.template.lua`.\nwhile true do\n\t-- Code here will run once when the script is loaded, then after each emulated frame.\n\temu.frameadvance();\nend\n";
+			if (!File.Exists(templatePath)) File.WriteAllText(path: templatePath, contents: DEF_TEMPLATE_CONTENTS);
+			File.Copy(sourceFileName: templatePath, destFileName: result);
 			LuaImp.ScriptList.Add(new LuaFile(Path.GetFileNameWithoutExtension(result), result));
 			Config!.RecentLua.Add(result);
 			UpdateDialog();

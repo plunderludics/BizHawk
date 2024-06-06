@@ -18,6 +18,8 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 		public int VsyncDenominator { get; private set; } = 1;
 
 		private int[] _frameBuffer = new int[0];
+		private double _wAspect = 1;
+		private double _hAspect = 1;
 
 		/// <summary>
 		/// Attoseconds for the emulated system's vsync rate.
@@ -27,19 +29,19 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 
 		private void UpdateFramerate()
 		{
-			VsyncNumerator = 1000000000;
 			VsyncAttoseconds = _core.mame_lua_get_long(MAMELuaCommand.GetRefresh);
-			VsyncDenominator = (int)(VsyncAttoseconds / 1000000000);
+			VsyncNumerator = 0x3ffffffc;
+			VsyncDenominator = _core.mame_lua_get_int(MAMELuaCommand.GetFramerateDenominator(VsyncNumerator));
 		}
 
 		private void UpdateAspect()
 		{
-			var x = _core.mame_lua_get_double(MAMELuaCommand.GetBoundX);
-			var y = _core.mame_lua_get_double(MAMELuaCommand.GetBoundY);
-			VirtualHeight = BufferWidth > BufferHeight * x / y
-				? (int)Math.Round(BufferWidth * y / x)
+			_wAspect = _core.mame_lua_get_double(MAMELuaCommand.GetBoundX);
+			_hAspect = _core.mame_lua_get_double(MAMELuaCommand.GetBoundY);
+			VirtualHeight = BufferWidth > BufferHeight * _wAspect / _hAspect
+				? (int)Math.Round(BufferWidth * _hAspect / _wAspect)
 				: BufferHeight;
-			VirtualWidth = (int)Math.Round(VirtualHeight * x / y);
+			VirtualWidth = (int)Math.Round(VirtualHeight * _wAspect / _hAspect);
 		}
 
 		private void UpdateVideo()

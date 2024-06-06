@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
@@ -62,7 +63,7 @@ namespace BizHawk.Client.EmuHawk
 					tuple =>
 					{
 						var instance = tuple.Ctor.Invoke(tuple.CtorTypes.Select(t => avail[t]).ToArray());
-						ServiceInjector.UpdateServices(serviceProvider, instance);
+						if (!ServiceInjector.UpdateServices(serviceProvider, instance, mayCache: true)) throw new Exception("ApiHawk impl. has required service(s) that can't be fulfilled");
 						return (IExternalApi) instance;
 					}));
 		}

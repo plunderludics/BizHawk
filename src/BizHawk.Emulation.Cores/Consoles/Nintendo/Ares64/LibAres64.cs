@@ -43,6 +43,12 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.Ares64
 			Bob,
 		}
 
+		public enum CpuType : uint
+		{
+			Interpreter,
+			Recompiler,
+		}
+
 		public enum IplVer : uint
 		{
 			Japan,
@@ -74,6 +80,10 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.Ares64
 
 			public bool Reset;
 			public bool Power;
+
+			public bool BobDeinterlacer;
+			public bool FastVI;
+			public bool SkipDraw;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -100,19 +110,16 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.Ares64
 		}
 
 		[BizImport(CC)]
-		public abstract bool Init(ref LoadData loadData, ControllerType[] controllerSettings, bool isPal, bool bobDeinterlace, long initTime);
+		public abstract bool Init(ref LoadData loadData, ControllerType[] controllerSettings, bool isPal, long initTime);
 
 		[BizImport(CC)]
 		public abstract bool GetRumbleStatus(int num);
+		
+		[BizImport(CC)]
+		public abstract void PostLoadState();
 
 		[BizImport(CC)]
 		public abstract void GetDisassembly(uint address, uint instruction, byte[] buf);
-
-		[UnmanagedFunctionPointer(CC)]
-		public delegate void TraceCallback(IntPtr disasm);
-
-		[BizImport(CC)]
-		public abstract void SetTraceCallback(TraceCallback callback);
 
 		[BizImport(CC)]
 		public abstract void GetRegisters(ulong[] buf);

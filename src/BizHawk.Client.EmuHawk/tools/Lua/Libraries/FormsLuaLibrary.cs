@@ -42,7 +42,11 @@ namespace BizHawk.Client.EmuHawk
 			=> control.Location = UIHelper.Scale(new Point(x, y));
 
 		private static void SetSize(Control control, int width, int height)
-			=> control.Size = UIHelper.Scale(new Size(width, height));
+		{
+			var scaled = UIHelper.Scale(new Size(width, height));
+			if (control is LuaPictureBox lpb) lpb.LuaResize(scaled.Width, scaled.Height);
+			else control.Size = scaled;
+		}
 
 		private static void SetText(Control control, string caption)
 			=> control.Text = caption ?? string.Empty;
@@ -415,9 +419,8 @@ namespace BizHawk.Client.EmuHawk
 			if (width.HasValue && height.HasValue)
 			{
 				pictureBox.LuaResize(width.Value, height.Value);
+				SetSize(pictureBox, width.Value, height.Value);
 			}
-
-			SetSize(pictureBox, width.Value, height.Value);
 
 			return (long)pictureBox.Handle;
 		}

@@ -1,19 +1,22 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 using BizHawk.BizInvoke;
 using BizHawk.Common;
+using BizHawk.Common.IOExtensions;
+using BizHawk.Common.NumberExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Properties;
 using BizHawk.Emulation.Cores.Waterbox;
 
 namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 {
-	[PortedCore(CoreNames.MelonDS, "Arisotura", "0.9.4", "http://melonds.kuribo64.net/")]
+	[PortedCore(CoreNames.MelonDS, "Arisotura", "0.9.5", "https://melonds.kuribo64.net/")]
 	[ServiceNotApplicable(new[] { typeof(IDriveLight), typeof(IRegionable) })]
 	public partial class NDS : WaterboxCore
 	{
@@ -22,7 +25,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 
 		[CoreConstructor(VSystemID.Raw.NDS)]
 		public NDS(CoreLoadParameters<NDSSettings, NDSSyncSettings> lp)
-			: base(lp.Comm, new Configuration
+			: base(lp.Comm, new()
 			{
 				DefaultWidth = 256,
 				DefaultHeight = 384,
@@ -34,28 +37,29 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 				SystemId = VSystemID.Raw.NDS,
 			})
 		{
-			_syncSettings = lp.SyncSettings ?? new NDSSyncSettings();
-			_settings = lp.Settings ?? new NDSSettings();
+			_syncSettings = lp.SyncSettings ?? new();
+			_settings = lp.Settings ?? new();
 
 			IsDSi = _syncSettings.UseDSi;
 
 			var roms = lp.Roms.Select(r => r.RomData).ToList();
+			
+			DSiTitleId = GetDSiTitleId(roms[0]);
+			IsDSi |= IsDSiWare;
 
 			if (roms.Count > (IsDSi ? 1 : 3))
 			{
 				throw new InvalidOperationException("Wrong number of ROMs!");
 			}
 
-			IsDSiWare = IsDSi && RomIsWare(roms[0]);
-
-			bool gbacartpresent = roms.Count > 1;
-			bool gbasrampresent = roms.Count == 3;
+			var gbacartpresent = roms.Count > 1;
+			var gbasrampresent = roms.Count == 3;
 
 			InitMemoryCallbacks();
 			_tracecb = MakeTrace;
 			_threadstartcb = ThreadStartCallback;
 
-			_core = PreInit<LibMelonDS>(new WaterboxOptions
+			_core = PreInit<LibMelonDS>(new()
 			{
 				Filename = "melonDS.wbx",
 				SbrkHeapSizeKB = 2 * 1024,
@@ -84,20 +88,20 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 				: null;
 
 			var nand = IsDSi
-				? CoreComm.CoreFileProvider.GetFirmwareOrThrow(new("NDS", "nand"))
+				? DecideNAND(CoreComm.CoreFileProvider, (DSiTitleId.Upper & ~0xFF) == 0x00030000, roms[0][0x1B0])
 				: null;
 
 			var fw = IsDSi
 				? CoreComm.CoreFileProvider.GetFirmwareOrThrow(new("NDS", "firmwarei"))
 				: CoreComm.CoreFileProvider.GetFirmware(new("NDS", "firmware"));
 
-			var tmd = IsDSi && IsDSiWare
-				? GetTMDData(roms[0])
+			var tmd = IsDSiWare
+				? GetTMDData(DSiTitleId.Full)
 				: null;
 
-			bool skipfw = _syncSettings.SkipFirmware || !_syncSettings.UseRealBIOS || fw == null;
+			var skipfw = _syncSettings.SkipFirmware || !_syncSettings.UseRealBIOS || fw == null;
 
-			LibMelonDS.LoadFlags loadFlags = LibMelonDS.LoadFlags.NONE;
+			var loadFlags = LibMelonDS.LoadFlags.NONE;
 
 			if (_syncSettings.UseRealBIOS || IsDSi)
 				loadFlags |= LibMelonDS.LoadFlags.USE_REAL_BIOS;
@@ -105,11 +109,13 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 				loadFlags |= LibMelonDS.LoadFlags.SKIP_FIRMWARE;
 			if (gbacartpresent)
 				loadFlags |= LibMelonDS.LoadFlags.GBA_CART_PRESENT;
+			if (IsDSi && (_syncSettings.ClearNAND || lp.DeterministicEmulationRequested))
+				loadFlags |= LibMelonDS.LoadFlags.CLEAR_NAND; // TODO: need a way to send through multiple DSiWare titles at once for this approach
 			if (fw is null || _syncSettings.FirmwareOverride || lp.DeterministicEmulationRequested)
 				loadFlags |= LibMelonDS.LoadFlags.FIRMWARE_OVERRIDE;
 			if (IsDSi)
 				loadFlags |= LibMelonDS.LoadFlags.IS_DSI;
-			if (IsDSi && IsDSiWare)
+			if (IsDSiWare)
 				loadFlags |= LibMelonDS.LoadFlags.LOAD_DSIWARE;
 			if (_syncSettings.ThreadedRendering)
 				loadFlags |= LibMelonDS.LoadFlags.THREADED_RENDERING;
@@ -122,7 +128,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 			fwSettings.FirmwareBirthdayMonth = _syncSettings.FirmwareBirthdayMonth;
 			fwSettings.FirmwareBirthdayDay = _syncSettings.FirmwareBirthdayDay;
 			fwSettings.FirmwareFavouriteColour = _syncSettings.FirmwareFavouriteColour;
-			var message = _syncSettings.FirmwareMessage.Length != 0 ? Encoding.UTF8.GetBytes(_syncSettings.FirmwareMessage) : new byte[1] { 0 };
+			var message = _syncSettings.FirmwareMessage.Length != 0 ? Encoding.UTF8.GetBytes(_syncSettings.FirmwareMessage) : new byte[1];
 			fwSettings.FirmwareMessageLength = message.Length;
 
 			var loadData = new LibMelonDS.LoadData
@@ -204,8 +210,10 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 			_frameThreadPtr = _core.GetFrameThreadProc();
 			if (_frameThreadPtr != IntPtr.Zero)
 			{
-				Console.WriteLine($"Setting up waterbox thread for 0x{_frameThreadPtr:X16}");
-				_frameThreadStart = CallingConventionAdapters.GetWaterboxUnsafeUnwrapped().GetDelegateForFunctionPointer<Action>(_frameThreadPtr);
+				Console.WriteLine($"Setting up waterbox thread for 0x{(ulong)_frameThreadPtr:X16}");
+				_frameThread = new(FrameThreadProc) { IsBackground = true };
+				_frameThread.Start();
+				_frameThreadAction = CallingConventionAdapters.GetWaterboxUnsafeUnwrapped().GetDelegateForFunctionPointer<Action>(_frameThreadPtr);
 				_core.SetThreadStartCallback(_threadstartcb);
 			}
 
@@ -217,36 +225,52 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 			_serviceProvider.Register(Tracer);
 		}
 
-		private static bool RomIsWare(byte[] file)
-		{
-			uint lowerWareTitleId = 0;
-			for (int i = 0; i < 4; i++)
-			{
-				lowerWareTitleId <<= 8;
-				lowerWareTitleId |= file[0x237 - i];
-			}
-			return lowerWareTitleId == 0x00030004;
-		}
-
-		private static byte[] GetTMDData(byte[] ware)
+		private static (ulong Full, uint Upper, uint Lower) GetDSiTitleId(IReadOnlyList<byte> file)
 		{
 			ulong titleId = 0;
-			for (int i = 0; i < 8; i++)
+			for (var i = 0; i < 8; i++)
 			{
 				titleId <<= 8;
-				titleId |= ware[0x237 - i];
+				titleId |= file[0x237 - i];
 			}
+			return (titleId, (uint)(titleId >> 32), (uint)(titleId & 0xFFFFFFFFU));
+		}
+
+		private static byte[] DecideNAND(ICoreFileProvider cfp, bool isDSiEnhanced, byte regionFlags)
+		{
+			// TODO: priority settings?
+			var nandOptions = new List<string> { "NAND (JPN)", "NAND (USA)", "NAND (EUR)", "NAND (AUS)", "NAND (CHN)", "NAND (KOR)" };
+			if (isDSiEnhanced) // NB: Core makes cartridges region free regardless, DSiWare must follow DSi region locking however (we'll enforce it regardless)
+			{
+				nandOptions.Clear();
+				if (regionFlags.Bit(0)) nandOptions.Add("NAND (JPN)");
+				if (regionFlags.Bit(1)) nandOptions.Add("NAND (USA)");
+				if (regionFlags.Bit(2)) nandOptions.Add("NAND (EUR)");
+				if (regionFlags.Bit(3)) nandOptions.Add("NAND (AUS)");
+				if (regionFlags.Bit(4)) nandOptions.Add("NAND (CHN)");
+				if (regionFlags.Bit(5)) nandOptions.Add("NAND (KOR)");
+			}
+
+			foreach (var option in nandOptions)
+			{
+				var ret = cfp.GetFirmware(new("NDS", option));
+				if (ret is not null) return ret;
+			}
+
+			throw new MissingFirmwareException("Suitable NAND file not found!");
+		}
+
+		private static byte[] GetTMDData(ulong titleId)
+		{
 			using var zip = new ZipArchive(Zstd.DecompressZstdStream(new MemoryStream(Resources.TMDS.Value)), ZipArchiveMode.Read, false);
-			using var tmd = zip.GetEntry($"{titleId:x16}.tmd")?.Open() ?? throw new Exception($"Cannot find TMD for title ID {titleId:x16}, please report");
-			var ret = new byte[tmd.Length];
-			tmd.Read(ret, 0, (int)tmd.Length);
-			return ret;
+			using var tmd = zip.GetEntry($"{titleId:x16}.tmd")?.Open() ?? throw new($"Cannot find TMD for title ID {titleId:x16}, please report");
+			return tmd.ReadAllBytes();
 		}
 
 		// todo: wire this up w/ frontend
 		public byte[] GetNAND()
 		{
-			int length = _core.GetNANDSize();
+			var length = _core.GetNANDSize();
 
 			if (length > 0)
 			{
@@ -255,12 +279,14 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 				return ret;
 			}
 
-			return new byte[0];
+			return null;
 		}
 
 		public bool IsDSi { get; }
 
-		public bool IsDSiWare { get; }
+		public bool IsDSiWare => DSiTitleId.Upper == 0x00030004;
+
+		private (ulong Full, uint Upper, uint Lower) DSiTitleId { get; }
 
 		public override ControllerDefinition ControllerDefinition => NDSController;
 
@@ -275,7 +301,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 			.AddAxis("GBA Light Sensor", 0.RangeTo(10), 0)
 			.MakeImmutable();
 
-		private LibMelonDS.Buttons GetButtons(IController c)
+		private static LibMelonDS.Buttons GetButtons(IController c)
 		{
 			LibMelonDS.Buttons b = 0;
 			if (c.IsPressed("Up"))
@@ -330,24 +356,56 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.NDS
 		}
 
 		private readonly IntPtr _frameThreadPtr;
-		private readonly Action _frameThreadStart;
+		private readonly Action _frameThreadAction;
 		private readonly LibMelonDS.ThreadStartCallback _threadstartcb;
 
-		private Task _frameThreadProcActive;
+		private readonly Thread _frameThread;
+		private readonly SemaphoreSlim _frameThreadStartEvent = new(0, 1);
+		private readonly SemaphoreSlim _frameThreadEndEvent = new(0, 1);
+		private bool _isDisposing;
+		private bool _renderThreadRanThisFrame;
+
+		public override void Dispose()
+		{
+			_isDisposing = true;
+			_frameThreadStartEvent.Release();
+			_frameThread?.Join();
+			_frameThreadStartEvent.Dispose();
+			_frameThreadEndEvent.Dispose();
+			base.Dispose();
+		}
+
+		private void FrameThreadProc()
+		{
+			while (true)
+			{
+				_frameThreadStartEvent.Wait();
+				if (_isDisposing) break;
+				_frameThreadAction();
+				_frameThreadEndEvent.Release();
+			}
+		}
 
 		private void ThreadStartCallback()
 		{
-			if (_frameThreadProcActive != null)
+			if (_renderThreadRanThisFrame)
 			{
-				throw new InvalidOperationException("Attempted to start render thread twice");
+				// This is technically possible due to the game able to force another frame to be rendered by touching vcount
+				// (ALSO MEANS VSYNC NUMBERS ARE KIND OF A LIE)
+				_frameThreadEndEvent.Wait();
 			}
-			_frameThreadProcActive = Task.Run(_frameThreadStart);
+
+			_renderThreadRanThisFrame = true;
+			_frameThreadStartEvent.Release();
 		}
 
 		protected override void FrameAdvancePost()
 		{
-			_frameThreadProcActive?.Wait();
-			_frameThreadProcActive = null;
+			if (_renderThreadRanThisFrame)
+			{
+				_frameThreadEndEvent.Wait();
+				_renderThreadRanThisFrame = false;
+			}
 		}
 
 		protected override void LoadStateBinaryInternal(BinaryReader reader)

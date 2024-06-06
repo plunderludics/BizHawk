@@ -106,19 +106,14 @@ namespace BizHawk.Client.Common
 			if (Movie is ITasMovie tasMovie)
 			{
 				tasMovie.GreenzoneCurrentFrame();
-				if (tasMovie.IsPlayingOrFinished() && Movie.Emulator.Frame >= tasMovie.InputLogLength)
+				if (tasMovie.IsPlayingOrFinished() && Settings.MovieEndAction == MovieEndAction.Record && Movie.Emulator.Frame >= tasMovie.InputLogLength)
 				{
-					if (Settings.MovieEndAction == MovieEndAction.Record)
-					{
-						HandleFrameLoopForRecordMode();
-					}
-					else
-					{
-						HandlePlaybackEnd();
-					}
+					HandleFrameLoopForRecordMode();
+					return;
 				}
 			}
-			else if (Movie.IsPlaying() && Movie.Emulator.Frame >= Movie.InputLogLength)
+
+			if (Movie.IsPlaying() && Movie.Emulator.Frame >= Movie.InputLogLength)
 			{
 				HandlePlaybackEnd();
 			}
@@ -193,7 +188,7 @@ namespace BizHawk.Client.Common
 			return true;
 		}
 
-		/// <exception cref="MoviePlatformMismatchException"><paramref name="record"/> is <see langword="false"/> and <paramref name="movie"/>.<see cref="IMovie.SystemID"/> does not match <paramref name="systemId"/>.<see cref="IEmulator.SystemId"/></exception>
+		/// <exception cref="MoviePlatformMismatchException"><paramref name="record"/> is <see langword="false"/> and <paramref name="movie"/>.<see cref="IBasicMovieInfo.SystemID"/> does not match <paramref name="systemId"/>.<see cref="IEmulator.SystemId"/></exception>
 		public void QueueNewMovie(IMovie movie, bool record, string systemId, IDictionary<string, string> preferredCores)
 		{
 			if (movie.IsActive() && movie.Changes)
@@ -203,7 +198,7 @@ namespace BizHawk.Client.Common
 
 			if (!record) // The semantics of record is that we are starting a new movie, and even wiping a pre-existing movie with the same path, but non-record means we are loading an existing movie into playback mode
 			{
-				movie.Load(false);
+				movie.Load();
 				
 				if (movie.SystemID != systemId)
 				{
@@ -216,8 +211,8 @@ namespace BizHawk.Client.Common
 			{
 				if (string.IsNullOrWhiteSpace(movie.Core))
 				{
-					PopupMessage(preferredCores.TryGetValue(systemId, out _)
-						? $"No core specified in the movie file, using the preferred core {preferredCores[systemId]} instead."
+					PopupMessage(preferredCores.TryGetValue(systemId, out var coreName)
+						? $"No core specified in the movie file, using the preferred core {coreName} instead."
 						: "No core specified in the movie file, using the default core instead.");
 				}
 				else
@@ -265,6 +260,9 @@ namespace BizHawk.Client.Common
 				Movie.StartNewPlayback();
 			}
 		}
+
+		public void AbortQueuedMovie()
+			=> _queuedMovie = null;
 
 		public void StopMovie(bool saveChanges = true)
 		{

@@ -5,6 +5,8 @@ using System.Reflection.Emit;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 
+using BizHawk.Common.CollectionExtensions;
+
 namespace BizHawk.Common
 {
 	public static class SettingsUtil
@@ -32,11 +34,7 @@ namespace BizHawk.Common
 		public static void SetDefaultValues<T>(T obj)
 			where T : notnull
 		{
-			if (!DefaultValueSetters.TryGetValue(typeof(T), out var f))
-			{
-				f = CreateSetter(typeof(T));
-				DefaultValueSetters[typeof(T)] = f;
-			}
+			var f = DefaultValueSetters.GetValueOrPut(typeof(T), CreateSetter);
 			f.SetDefaultValues(obj, f.DefaultValues);
 		}
 
@@ -89,10 +87,10 @@ namespace BizHawk.Common
 						{
 							il.Emit(OpCodes.Unbox_Any, desiredType);
 						}
-						else if (IntTypes.ContainsKey(sourceType) && IntTypes.ContainsKey(desiredType))
+						else if (IntTypes.ContainsKey(sourceType) && IntTypes.TryGetValue(desiredType, out var desiredOpcode))
 						{
 							il.Emit(OpCodes.Unbox_Any, sourceType);
-							il.Emit(IntTypes[desiredType]);
+							il.Emit(desiredOpcode);
 						}
 						else
 						{

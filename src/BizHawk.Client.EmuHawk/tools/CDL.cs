@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
@@ -21,6 +22,9 @@ namespace BizHawk.Client.EmuHawk
 	public partial class CDL : ToolFormBase, IToolFormAutoConfig
 	{
 		private static readonly FilesystemFilterSet CDLFilesFSFilterSet = new(new FilesystemFilter("Code Data Logger Files", new[] { "cdl" }));
+
+		public static Icon ToolIcon
+			=> Resources.CdLoggerIcon;
 
 		private RecentFiles _recentFld = new RecentFiles();
 
@@ -50,7 +54,10 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[RequiredService]
-		private ICodeDataLogger CodeDataLogger { get; set; }
+		public ICodeDataLogger/*?*/ _cdlCore { get; set; }
+
+		private ICodeDataLogger CodeDataLogger
+			=> _cdlCore!;
 
 		private string _currentFilename;
 		private CodeDataLog _cdl;
@@ -75,7 +82,7 @@ namespace BizHawk.Client.EmuHawk
 			tsbLoggingActive.Image = Resources.Placeholder;
 			tsbViewUpdate.Image = Resources.Placeholder;
 			tsbExportText.Image = Resources.LoadConfig;
-			Icon = Resources.CdLoggerIcon;
+			Icon = ToolIcon;
 
 			tsbViewStyle.SelectedIndex = 0;
 
@@ -454,7 +461,7 @@ namespace BizHawk.Client.EmuHawk
 		private void ShutdownCDL()
 		{
 			_cdl = null;
-			CodeDataLogger?.SetCDL(null);
+			CodeDataLogger.SetCDL(null);
 		}
 
 		protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -475,9 +482,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		protected override void OnClosed(EventArgs e)
-		{
-			CodeDataLogger?.SetCDL(null);
-		}
+			=> CodeDataLogger.SetCDL(null);
 
 		private void CDL_Load(object sender, EventArgs e)
 		{

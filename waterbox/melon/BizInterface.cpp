@@ -21,7 +21,7 @@
 
 #include <sstream>
 
-#define EXPORT extern "C" ECL_EXPORT
+constexpr u32 DSIWARE_CATEGORY = 0x00030004;
 
 static GPU::RenderSettings biz_render_settings { false, 1, false };
 static bool biz_skip_fw;
@@ -38,7 +38,7 @@ typedef enum
 	USE_REAL_BIOS = 0x01,
 	SKIP_FIRMWARE = 0x02,
 	GBA_CART_PRESENT = 0x04,
-	RESERVED_FLAG = 0x08,
+	CLEAR_NAND = 0x08,
 	FIRMWARE_OVERRIDE = 0x10,
 	IS_DSI = 0x20,
 	LOAD_DSIWARE = 0x40,
@@ -73,27 +73,7 @@ typedef struct
 
 extern std::stringstream* NANDFilePtr;
 
-static bool LoadDSiWare(u8* TmdData)
-{
-	FILE* bios7i = Platform::OpenLocalFile(Config::DSiBIOS7Path, "rb");
-	if (!reinterpret_cast<void*>(bios7i))
-		return false;
-
-	u8 es_keyY[16];
-	fseek(bios7i, 0x8308, SEEK_SET);
-	fread(es_keyY, 16, 1, bios7i);
-	fclose(bios7i);
-
-	if (!DSi_NAND::Init(es_keyY))
-		return false;
-
-	bool ret = DSi_NAND::ImportTitle("dsiware.rom", TmdData, false);
-
-	DSi_NAND::DeInit();
-	return ret;
-}
-
-EXPORT bool Init(LoadFlags loadFlags, LoadData* loadData, FirmwareSettings* fwSettings)
+ECL_EXPORT bool Init(LoadFlags loadFlags, LoadData* loadData, FirmwareSettings* fwSettings)
 {
 	Config::ExternalBIOSEnable = !!(loadFlags & USE_REAL_BIOS);
 	Config::AudioBitrate = loadData->AudioBitrate;
@@ -122,10 +102,41 @@ EXPORT bool Init(LoadFlags loadFlags, LoadData* loadData, FirmwareSettings* fwSe
 
 	NANDFilePtr = isDsi ? new std::stringstream(std::string(loadData->NandData, loadData->NandLen), std::ios_base::in | std::ios_base::out | std::ios_base::binary) : nullptr;
 
-	if (isDsi && (loadFlags & LOAD_DSIWARE))
+	if (isDsi)
 	{
-		if (!LoadDSiWare(loadData->TmdData))
+		FILE* bios7i = Platform::OpenLocalFile(Config::DSiBIOS7Path, "rb");
+		if (!bios7i)
 			return false;
+
+		u8 es_keyY[16];
+		fseek(bios7i, 0x8308, SEEK_SET);
+		fread(es_keyY, 16, 1, bios7i);
+		fclose(bios7i);
+
+		if (!DSi_NAND::Init(es_keyY))
+			return false;
+
+		if (loadFlags & CLEAR_NAND)
+		{
+			std::vector<u32> titlelist;
+			DSi_NAND::ListTitles(DSIWARE_CATEGORY, titlelist);
+
+			for (auto& title : titlelist)
+			{
+				DSi_NAND::DeleteTitle(DSIWARE_CATEGORY, title);
+			}
+		}
+
+		if (loadFlags & LOAD_DSIWARE)
+		{
+			if (!DSi_NAND::ImportTitle("dsiware.rom", loadData->TmdData, false))
+			{
+				DSi_NAND::DeInit();
+				return false;
+			}
+		}
+
+		DSi_NAND::DeInit();
 	}
 
 	if (!NDS::Init()) return false;
@@ -152,13 +163,13 @@ EXPORT bool Init(LoadFlags loadFlags, LoadData* loadData, FirmwareSettings* fwSe
 namespace NDSCart { extern CartCommon* Cart; }
 extern bool NdsSaveRamIsDirty;
 
-EXPORT void PutSaveRam(u8* data, u32 len)
+ECL_EXPORT void PutSaveRam(u8* data, u32 len)
 {
 	NDS::LoadSave(data, len);
 	NdsSaveRamIsDirty = false;
 }
 
-EXPORT void GetSaveRam(u8* data)
+ECL_EXPORT void GetSaveRam(u8* data)
 {
 	if (NDSCart::Cart)
 	{
@@ -167,14 +178,52 @@ EXPORT void GetSaveRam(u8* data)
 	}
 }
 
-EXPORT s32 GetSaveRamLength()
+ECL_EXPORT u32 GetSaveRamLength()
 {
 	return NDSCart::Cart ? NDSCart::Cart->GetSaveLen() : 0;
 }
 
-EXPORT bool SaveRamIsDirty()
+ECL_EXPORT bool SaveRamIsDirty()
 {
 	return NdsSaveRamIsDirty;
+}
+
+ECL_EXPORT void ImportDSiWareSavs(u32 titleId)
+{
+	if (DSi_NAND::Init(&DSi::ARM7iBIOS[0x8308]))
+	{
+		DSi_NAND::ImportTitleData(DSIWARE_CATEGORY, titleId, DSi_NAND::TitleData_PublicSav, "public.sav");
+		DSi_NAND::ImportTitleData(DSIWARE_CATEGORY, titleId, DSi_NAND::TitleData_PrivateSav, "private.sav");
+		DSi_NAND::ImportTitleData(DSIWARE_CATEGORY, titleId, DSi_NAND::TitleData_BannerSav, "banner.sav");
+		DSi_NAND::DeInit();
+	}
+}
+
+ECL_EXPORT void ExportDSiWareSavs(u32 titleId)
+{
+	if (DSi_NAND::Init(&DSi::ARM7iBIOS[0x8308]))
+	{
+		DSi_NAND::ExportTitleData(DSIWARE_CATEGORY, titleId, DSi_NAND::TitleData_PublicSav, "public.sav");
+		DSi_NAND::ExportTitleData(DSIWARE_CATEGORY, titleId, DSi_NAND::TitleData_PrivateSav, "private.sav");
+		DSi_NAND::ExportTitleData(DSIWARE_CATEGORY, titleId, DSi_NAND::TitleData_BannerSav, "banner.sav");
+		DSi_NAND::DeInit();
+	}
+}
+
+ECL_EXPORT void DSiWareSavsLength(u32 titleId, u32* publicSavSize, u32* privateSavSize, u32* bannerSavSize)
+{
+	*publicSavSize = *privateSavSize = *bannerSavSize = 0;
+	if (DSi_NAND::Init(&DSi::ARM7iBIOS[0x8308]))
+	{
+		u32 version;
+		NDSHeader header{};
+
+		DSi_NAND::GetTitleInfo(DSIWARE_CATEGORY, titleId, version, &header, nullptr);
+		*publicSavSize = header.DSiPublicSavSize;
+		*privateSavSize = header.DSiPrivateSavSize;
+		*bannerSavSize = (header.AppFlags & 0x04) ? 0x4000 : 0;
+		DSi_NAND::DeInit();
+	}
 }
 
 /* excerpted from gbatek
@@ -311,7 +360,7 @@ static void ARM7Access(u8* buffer, s64 address, s64 count, bool write)
 	}
 }
 
-EXPORT void GetMemoryAreas(MemoryArea *m)
+ECL_EXPORT void GetMemoryAreas(MemoryArea *m)
 {
 	m[0].Data = NDS::MainRAM;
 	m[0].Name = "Main RAM";
@@ -394,7 +443,7 @@ static void MicFeedNoise(s8 vol)
 
 static bool RunningFrame = false;
 
-EXPORT void FrameAdvance(MyFrameInfo* f)
+ECL_EXPORT void FrameAdvance(MyFrameInfo* f)
 {
 	RunningFrame = true;
 
@@ -465,22 +514,22 @@ EXPORT void FrameAdvance(MyFrameInfo* f)
 
 void (*InputCallback)() = nullptr;
 
-EXPORT void SetInputCallback(void (*callback)())
+ECL_EXPORT void SetInputCallback(void (*callback)())
 {
 	InputCallback = callback;
 }
 
-EXPORT void GetRegs(u32* regs)
+ECL_EXPORT void GetRegs(u32* regs)
 {
 	NDS::GetRegs(regs);
 }
 
-EXPORT void SetReg(s32 ncpu, s32 index, s32 val)
+ECL_EXPORT void SetReg(s32 ncpu, s32 index, s32 val)
 {
 	NDS::SetReg(ncpu, index, val);
 }
 
-EXPORT u32 GetCallbackCycleOffset()
+ECL_EXPORT u32 GetCallbackCycleOffset()
 {
 	return RunningFrame ? NDS::GetSysClockCycles(2) : 0;
 }
@@ -489,7 +538,7 @@ void (*ReadCallback)(u32) = nullptr;
 void (*WriteCallback)(u32) = nullptr;
 void (*ExecuteCallback)(u32) = nullptr;
 
-EXPORT void SetMemoryCallback(u32 which, void (*callback)(u32 addr))
+ECL_EXPORT void SetMemoryCallback(u32 which, void (*callback)(u32 addr))
 {
 	switch (which)
 	{
@@ -524,13 +573,13 @@ void TraceTrampoline(TraceMask_t type, u32* regs, u32 opcode)
 	TraceCallback(type, opcode, regs, disasm, NDS::GetSysClockCycles(2));
 }
 
-EXPORT void SetTraceCallback(void (*callback)(TraceMask_t mask, u32 opcode, u32* regs, char* disasm, u32 cyclesOff), TraceMask_t mask)
+ECL_EXPORT void SetTraceCallback(void (*callback)(TraceMask_t mask, u32 opcode, u32* regs, char* disasm, u32 cyclesOff), TraceMask_t mask)
 {
 	TraceCallback = callback;
 	TraceMask = callback ? mask : TRACE_NONE;
 }
 
-EXPORT void GetDisassembly(TraceMask_t type, u32 opcode, char* ret)
+ECL_EXPORT void GetDisassembly(TraceMask_t type, u32 opcode, char* ret)
 {
 	static char disasm[TRACE_STRING_LENGTH];
 	memset(disasm, 0, sizeof disasm);
@@ -551,17 +600,17 @@ namespace Platform
 	extern void (*ThreadStartCallback)();
 }
 
-EXPORT uintptr_t GetFrameThreadProc()
+ECL_EXPORT uintptr_t GetFrameThreadProc()
 {
 	return Platform::FrameThreadProc;
 }
 
-EXPORT void SetThreadStartCallback(void (*callback)())
+ECL_EXPORT void SetThreadStartCallback(void (*callback)())
 {
 	Platform::ThreadStartCallback = callback;
 }
 
-EXPORT u32 GetNANDSize()
+ECL_EXPORT u32 GetNANDSize()
 {
 	if (NANDFilePtr)
 	{
@@ -572,7 +621,7 @@ EXPORT u32 GetNANDSize()
 	return 0;
 }
 
-EXPORT void GetNANDData(char* buf)
+ECL_EXPORT void GetNANDData(char* buf)
 {
 	if (NANDFilePtr)
 	{
@@ -584,7 +633,7 @@ EXPORT void GetNANDData(char* buf)
 
 namespace GPU { void ResetVRAMCache(); }
 
-EXPORT void ResetCaches()
+ECL_EXPORT void ResetCaches()
 {
 	GPU::ResetVRAMCache();
 }

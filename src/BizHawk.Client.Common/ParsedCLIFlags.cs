@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace BizHawk.Client.Common
 {
@@ -35,6 +36,10 @@ namespace BizHawk.Client.Common
 		public readonly bool luaConsole;
 
 		public readonly (string IP, int Port)? SocketAddress;
+
+		public readonly ProtocolType SocketProtocol;
+
+		public readonly IReadOnlyList<(string Key, string Value)>? UserdataUnparsedPairs;
 
 		public readonly string? MMFFilename;
 
@@ -80,8 +85,11 @@ namespace BizHawk.Client.Common
 			(string? UrlGet, string? UrlPost)? httpAddresses,
 			bool? audiosync,
 			string? openExtToolDll,
-			string? customWindowTitle,
+			ProtocolType socketProtocol,
+			IReadOnlyList<(string Key, string Value)>? userdataUnparsedPairs,
 			string? cmdRom,
+			// [UnityHawk]:
+			string? customWindowTitle,
 			string? firmwareDir,
 			string? savestateDir,
 			string? savestateExtension,
@@ -114,7 +122,12 @@ namespace BizHawk.Client.Common
 			HTTPAddresses = httpAddresses;
 			this.audiosync = audiosync;
 			this.openExtToolDll = openExtToolDll;
+<<<<<<< HEAD
 			this.customWindowTitle = customWindowTitle;
+=======
+			SocketProtocol = socketProtocol;
+			UserdataUnparsedPairs = userdataUnparsedPairs;
+>>>>>>> 2.9.1-mirror
 			this.cmdRom = cmdRom;
 			this.firmwareDir = firmwareDir;
 			this.savestateDir = savestateDir;

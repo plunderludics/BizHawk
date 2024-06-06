@@ -10,6 +10,7 @@ using System.Windows.Forms;
 
 using BizHawk.Client.Common;
 using BizHawk.Common;
+using BizHawk.Common.CollectionExtensions;
 using BizHawk.Common.ReflectionExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.WinForms.Controls;
@@ -123,28 +124,18 @@ namespace BizHawk.Client.EmuHawk
 			if (!(CreateInstance<T>(toolPath) is T newTool)) return null;
 
 			if (newTool is Form form) form.Owner = _owner;
-			if (!ServiceInjector.UpdateServices(_emulator.ServiceProvider, newTool)) return null;
+			if (!ServiceInjector.UpdateServices(_emulator.ServiceProvider, newTool)) return null; //TODO pass `true` for `mayCache` when from EmuHawk assembly
 			SetBaseProperties(newTool);
 			var toolTypeName = typeof(T).FullName!;
 			// auto settings
 			if (newTool is IToolFormAutoConfig autoConfigTool)
 			{
-				AttachSettingHooks(
-					autoConfigTool,
-					_config.CommonToolSettings.TryGetValue(toolTypeName, out var settings)
-						? settings
-						: (_config.CommonToolSettings[toolTypeName] = new ToolDialogSettings())
-				);
+				AttachSettingHooks(autoConfigTool, _config.CommonToolSettings.GetValueOrPutNew(toolTypeName));
 			}
 			// custom settings
 			if (HasCustomConfig(newTool))
 			{
-				InstallCustomConfig(
-					newTool,
-					_config.CustomToolSettings.TryGetValue(toolTypeName, out var settings)
-						? settings
-						: (_config.CustomToolSettings[toolTypeName] = new Dictionary<string, object>())
-				);
+				InstallCustomConfig(newTool, _config.CustomToolSettings.GetValueOrPutNew(toolTypeName));
 			}
 
 			newTool.Restart();
@@ -181,22 +172,12 @@ namespace BizHawk.Client.EmuHawk
 			// auto settings
 			if (newTool is IToolFormAutoConfig autoConfigTool)
 			{
-				AttachSettingHooks(
-					autoConfigTool,
-					_config.CommonToolSettings.TryGetValue(customFormTypeName, out var settings)
-						? settings
-						: (_config.CommonToolSettings[customFormTypeName] = new ToolDialogSettings())
-				);
+				AttachSettingHooks(autoConfigTool, _config.CommonToolSettings.GetValueOrPutNew(customFormTypeName));
 			}
 			// custom settings
 			if (HasCustomConfig(newTool))
 			{
-				InstallCustomConfig(
-					newTool,
-					_config.CustomToolSettings.TryGetValue(customFormTypeName, out var settings)
-						? settings
-						: (_config.CustomToolSettings[customFormTypeName] = new Dictionary<string, object>())
-				);
+				InstallCustomConfig(newTool, _config.CustomToolSettings.GetValueOrPutNew(customFormTypeName));
 			}
 
 			newTool.Restart();
@@ -449,6 +430,7 @@ namespace BizHawk.Client.EmuHawk
 		/// Determines whether a given IToolForm is already loaded
 		/// </summary>
 		/// <typeparam name="T">Type of tool to check</typeparam>
+		/// <remarks>yo why do we have 4 versions of this, each with slightly different behaviour in edge cases --yoshi</remarks>
 		public bool IsLoaded<T>() where T : IToolForm
 			=> _tools.OfType<T>().FirstOrDefault()?.IsActive is true;
 
@@ -466,14 +448,12 @@ namespace BizHawk.Client.EmuHawk
 		/// </summary>
 		/// <typeparam name="T">Type of tool to check</typeparam>
 		public bool Has<T>() where T : IToolForm
-		{
-			return _tools.Any(t => t is T && t.IsActive);
-		}
+			=> _tools.Exists(static t => t is T && t.IsActive);
 
 		/// <returns><see langword="true"/> iff a tool of the given <paramref name="toolType"/> is <see cref="IToolForm.IsActive">active</see></returns>
 		public bool Has(Type toolType)
 			=> typeof(IToolForm).IsAssignableFrom(toolType)
-				&& _tools.Any(t => toolType.IsInstanceOfType(t) && t.IsActive);
+				&& _tools.Exists(t => toolType.IsInstanceOfType(t) && t.IsActive);
 
 		/// <summary>
 		/// Gets the instance of T, or creates and returns a new instance
@@ -482,6 +462,80 @@ namespace BizHawk.Client.EmuHawk
 		public IToolForm Get<T>() where T : class, IToolForm
 		{
 			return Load<T>(false);
+		}
+
+		/// <summary>
+		/// returns the instance of <paramref name="toolType"/>, regardless of whether it's loaded,<br/>
+		/// but doesn't create and load a new instance if it's not found
+		/// </summary>
+		/// <remarks>
+		/// does not check <paramref name="toolType"/> is a class implementing <see cref="IToolForm"/>;<br/>
+		/// you may pass any class or interface
+		/// </remarks>
+		public IToolForm/*?*/ LazyGet(Type toolType)
+			=> _tools.Find(t => toolType.IsAssignableFrom(t.GetType()));
+
+		internal static readonly IDictionary<Type, (Image/*?*/ Icon, string Name)> IconAndNameCache = new Dictionary<Type, (Image/*?*/ Icon, string Name)>
+		{
+			[typeof(LogWindow)] = (LogWindow.ToolIcon.ToBitmap(), "Log Window"), // can't do this lazily, see https://github.com/TASEmulators/BizHawk/issues/2741#issuecomment-1421014589
+		};
+
+		private static PropertyInfo/*?*/ _PInfo_FormBase_WindowTitleStatic = null;
+
+		private static PropertyInfo PInfo_FormBase_WindowTitleStatic
+			=> _PInfo_FormBase_WindowTitleStatic ??= typeof(FormBase).GetProperty("WindowTitleStatic", BindingFlags.NonPublic | BindingFlags.Instance);
+
+		private static bool CaptureIconAndName(object tool, Type toolType, ref Image/*?*/ icon, ref string/*?*/ name)
+		{
+			if (IconAndNameCache.ContainsKey(toolType)) return true;
+			Form winform = null;
+			if (name is null)
+			{
+				winform = tool as FormBase;
+				if (winform is not null)
+				{
+					// then `tool is Formbase` and this getter call is safe
+					name = (string) PInfo_FormBase_WindowTitleStatic.GetValue(tool);
+					// could do `tool._windowTitleStatic ??= tool.WindowTitleStatic`, but the getter's only being run 1 extra time here anyway so not worth the LOC
+				}
+				winform ??= tool as Form;
+				if (winform is not null)
+				{
+					icon = winform.Icon?.ToBitmap();
+					name ??= winform.Name;
+				}
+			}
+			if (!string.IsNullOrWhiteSpace(name))
+			{
+				IconAndNameCache[toolType] = (icon, name);
+				return true;
+			}
+			// else don't cache anything
+			name = winform?.Text;
+			return false;
+		}
+
+		private static void CaptureIconAndName(object tool, Type toolType)
+		{
+			Image/*?*/ icon = null;
+			string/*?*/ name = null;
+			CaptureIconAndName(tool, toolType, ref icon, ref name);
+		}
+
+		public (Image/*?*/ Icon, string Name) GetIconAndNameFor(Type toolType)
+		{
+			if (IconAndNameCache.TryGetValue(toolType, out var tuple)) return tuple;
+			Image/*?*/ icon = null;
+			var name = toolType.GetCustomAttribute<SpecializedToolAttribute>()?.DisplayName; //TODO codegen ToolIcon and WindowTitleStatic from [Tool] or some new attribute -- Bitmap..ctor(Type, string)
+			var instance = LazyGet(toolType);
+			if (instance is not null)
+			{
+				if (CaptureIconAndName(instance, toolType, ref icon, ref name)) return (icon, name);
+				// else fall through
+			}
+			return (
+				icon ?? (toolType.GetProperty("ToolIcon", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as Icon)?.ToBitmap(),
+				string.IsNullOrWhiteSpace(name) ? toolType.Name : name);
 		}
 
 		public IEnumerable<Type> AvailableTools => EmuHawk.ReflectionCache.Types
@@ -525,7 +579,6 @@ namespace BizHawk.Client.EmuHawk
 				else
 				{
 					unavailable.Add(tool);
-					ServiceInjector.ClearServices(tool); // the services of the old emulator core are no longer valid on the tool
 					if (tool is IExternalToolForm) ApiInjector.ClearApis(tool);
 				}
 			}
@@ -652,7 +705,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				tool = (IToolForm)Activator.CreateInstance(toolType);
 			}
-
+			CaptureIconAndName(tool, toolType);
 			// Add to our list of tools
 			_tools.Add(tool);
 			return tool;
@@ -740,6 +793,7 @@ namespace BizHawk.Client.EmuHawk
 				// _tools.Remove(tool);
 			}
 			tool = new T();
+			CaptureIconAndName(tool, typeof(T));
 			_tools.Add(tool);
 			return tool;
 		}

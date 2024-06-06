@@ -122,13 +122,11 @@ namespace BizHawk.Client.Common
 			HTTPAddresses = httpAddresses;
 			this.audiosync = audiosync;
 			this.openExtToolDll = openExtToolDll;
-<<<<<<< HEAD
-			this.customWindowTitle = customWindowTitle;
-=======
 			SocketProtocol = socketProtocol;
 			UserdataUnparsedPairs = userdataUnparsedPairs;
->>>>>>> 2.9.1-mirror
 			this.cmdRom = cmdRom;
+			// [UnityHawk]:
+			this.customWindowTitle = customWindowTitle;
 			this.firmwareDir = firmwareDir;
 			this.savestateDir = savestateDir;
 			this.savestateExtension = savestateExtension;

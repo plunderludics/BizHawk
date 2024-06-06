@@ -5,12 +5,6 @@ using System;
 using System.IO;
 using static BizHawk.Emulation.Cores.Waterbox.WaterboxHostNative;
 
-
-// we do some hacky stuff here for UnityHawk
-// basically waterbox cores don't like to be run in parallel
-// so our workaround is to have multiple copies of all the waterbox dlls in separate subdirs
-// and at runtime load whichever one has the least current users
-
 namespace BizHawk.Emulation.Cores.Waterbox
 {
 	public class WaterboxOptions
@@ -77,47 +71,14 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		private object _keepAliveDelegate;
 
 		private static readonly WaterboxHostNative NativeImpl;
-
-		// [hacky stuff for managing parallel cores (multiple dlls) for UnityHawk]
-		public static int nDllCopies = 2; // How many copies of the waterbox dlls are available on disk?
-		// [making this public for now so we can conveniently tweak it from unity if needed]
-
-		private static int[] userCountPerDll; // userCountPerCore[x] tracks how many users of core x
-		private int dllId; // dll being used by this waterbox core
-
 		static WaterboxHost()
 		{
 			NativeImpl = BizInvoker.GetInvoker<WaterboxHostNative>(
 				new DynamicLibraryImportResolver(OSTailoredCode.IsUnixHost ? "libwaterboxhost.so" : "waterboxhost.dll", hasLimitedLifetime: false),
 				CallingConventionAdapters.Native);
-			userCountPerDll = new int[nDllCopies]; // init to 0
 #if !DEBUG
 			NativeImpl.wbx_set_always_evict_blocks(false);
 #endif
-		}
-
-		// Return whichever dll has the least users currently, and increment that count
-		private static int RequestDllId() {
-			int dllId = -1;
-			int leastUsersSoFar = 9999;
-			for (int i = 0; i < nDllCopies; i++) {
-				if (userCountPerDll[i] < leastUsersSoFar) {
-					dllId = i;
-					leastUsersSoFar = userCountPerDll[i];
-				}
-			}
-			userCountPerDll[dllId]++;
-			if (userCountPerDll[dllId] > 1) {
-				Console.WriteLine($"Warning! Waterbox instance {dllId} has {userCountPerDll[dllId]} simultaneous users, will run synchronously (ie slow)");
-			}
-			return dllId;
-		}
-
-		private static void ReleaseDll(int dllId) {
-			userCountPerDll[dllId]--;
-			if (userCountPerDll[dllId] < 0) {
-				Console.WriteLine($"Error! Waterbox instance {dllId} has {userCountPerDll[dllId]} simultaneous users, something has gone wrong");
-			}
 		}
 
 		private ReadCallback Reader(Stream s)
@@ -144,18 +105,10 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				mmap_size = Z.UU(opt.MmapHeapSizeKB * 1024),
 			};
 
-			// Which copy of the dlls should we use? Check which one has least current users
-			dllId = WaterboxHost.RequestDllId();
-			Console.WriteLine($"WaterboxHost: new instance, using id {dllId}");
-
 			var moduleName = opt.Filename;
 
 			var path = Path.Combine(opt.Path, moduleName);
-			// Choose a filename based on the dllId - e.g. shock.wbx.2.zst
-			var zstpath = path + $".{dllId}.zst";
-			Console.WriteLine($"WaterboxHost: looking for dll in {zstpath}");
-			// TODO would be nice to have multiple fallback options here - ie check [X.wbx.2.zst, X.wbx.2, X.wbx.zst, X.wbx] in that order
-			// currently just falls back to X.wbx, also gives confusing error message when not found
+			var zstpath = path + ".zst";
 			byte[] data;
 			if (File.Exists(zstpath))
 			{
@@ -392,7 +345,6 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				_nativeHost = IntPtr.Zero;
 				GC.SuppressFinalize(this);
 			}
-			WaterboxHost.ReleaseDll(dllId);
 		}
 
 		~WaterboxHost()

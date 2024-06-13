@@ -9,49 +9,51 @@ namespace BizHawk.Client.Common
 	public class UnityHawkSound
 	{
 		// [This has to match the one in Unity - this sucks change it]
-		static readonly string samplesNeededSuffix = "-samples-needed";
+		private const string SAMPLES_NEEDED_SUFFIX = "-samples-needed";
 
-		SharedAudioRpc _audioRpc;
-		SoundOutputProvider _bufferedSoundProvider;
+		private readonly SharedAudioRpc _audioRpc;
+		private readonly SoundOutputProvider _bufferedSoundProvider;
 
 		// Running buffer
-		short[] buffer;
-		int currentBufferSize;
-		static readonly int maxBufferSize = 44100*5; // 5 seconds should be plenty
+		private const int MAX_BUFFER_SIZE = 44100 * 5; // 5 seconds should be plenty
+		private readonly short[] _buffer;
+		private int _currentBufferSize;
 
 		public UnityHawkSound(string audioBufferName, ISoundProvider soundSource, Func<double> getVsyncRate) {
 			soundSource.SetSyncMode(SyncSoundMode.Sync);
-			_bufferedSoundProvider = new SoundOutputProvider(getVsyncRate, standaloneMode: true); // [idk why but standalone mode seems to be less distorted]
-			_bufferedSoundProvider.BaseSoundProvider = soundSource;
+			_bufferedSoundProvider = new (getVsyncRate, standaloneMode: true)
+				{
+					BaseSoundProvider = soundSource
+				}; // [idk why but standalone mode seems to be less distorted]
 
-			_audioRpc = new(audioBufferName, audioBufferName+samplesNeededSuffix, GetSamples);
+			_audioRpc = new(audioBufferName, audioBufferName+SAMPLES_NEEDED_SUFFIX, GetSamples);
 
-			currentBufferSize = 0;
-			buffer = new short[maxBufferSize];
+			_currentBufferSize = 0;
+			_buffer = new short[MAX_BUFFER_SIZE];
 		}
 
 		// Must be run once per emulated frame
 		public void Update() {
 			// Ask Unity via RPC how many audio samples it's waiting for
-			int nSamples = _audioRpc.GetSamplesNeeded();
+			var nSamples = _audioRpc.GetSamplesNeeded();
 			// Get samples from soundProvider and append to running buffer
-			short[] framebuf = new short[nSamples];
-			_bufferedSoundProvider.GetSamples(framebuf);
+			var frameBuf = new short[nSamples];
+			_bufferedSoundProvider.GetSamples(frameBuf);
 
-			if (currentBufferSize + nSamples > maxBufferSize) {
+			if (_currentBufferSize + nSamples > MAX_BUFFER_SIZE) {
 				Console.WriteLine("UnityHawkSound - audio buffer overflowed");
-				nSamples = maxBufferSize - currentBufferSize;
+				nSamples = MAX_BUFFER_SIZE - _currentBufferSize;
 			}
-			Array.Copy(framebuf, 0, buffer, currentBufferSize, nSamples);
-			currentBufferSize += nSamples;
+			Array.Copy(frameBuf, 0, _buffer, _currentBufferSize, nSamples);
+			_currentBufferSize += nSamples;
 		}
 
 		private short[] GetSamples() {
 			// Get all accumulated samples so far
-			short[] truncatedBuf = new short[currentBufferSize];
-			Array.Copy(buffer, truncatedBuf, currentBufferSize);
+			var truncatedBuf = new short[_currentBufferSize];
+			Array.Copy(_buffer, truncatedBuf, _currentBufferSize);
 			// Empty buffer
-			currentBufferSize = 0;
+			_currentBufferSize = 0;
 			return truncatedBuf;
 		}
 	}

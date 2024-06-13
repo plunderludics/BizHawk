@@ -37,7 +37,7 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 			byte[] bytes = response.Data;
 			// Data should be a 4-byte int (endianness according to cpu) representing the number of samples requested
 			if (bytes.Length != 4) {
-				throw new ArgumentException($"GetSamplesNeeded: data had {bytes.Length} bytes instead of 4");
+				throw new Exception($"GetSamplesNeeded: data had {bytes.Length} bytes instead of 4");
 			}
 			int samplesNeeded = BitConverter.ToInt32(bytes, 0);
 

@@ -13,23 +13,21 @@ using Plunderludics.UnityHawk;
 namespace Plunderludics.UnityHawk.SharedBuffers
 {
 	public class SharedKeyInputBuffer {
-		CircularBuffer _inputBuffer;
-		const int _defaultNodeCount = 2048; // size of input buffer, should be plenty
-		int _bufferItemSize = Marshal.SizeOf(typeof(Plunderludics.UnityHawk.InputEvent));
-		public SharedKeyInputBuffer(string bufferName, int nodeCount = _defaultNodeCount) {
+		public const int DEFAULT_NODE_COUNT = 2048; // size of input buffer, should be plenty
+		
+		private readonly CircularBuffer _inputBuffer;
+		private readonly int _bufferItemSize = Marshal.SizeOf(typeof(Plunderludics.UnityHawk.InputEvent));
+		
+		public SharedKeyInputBuffer(string bufferName, int nodeCount = DEFAULT_NODE_COUNT) {
 			Console.WriteLine($"Init input buffer {bufferName}");
 			_inputBuffer = new CircularBuffer(bufferName, nodeCount, _bufferItemSize);
 		}
 
 		public InputEvent? Read() {
 			// Read raw bytes from queue and deserialize to InputEvent type	
-			byte[] bytes = new byte[_bufferItemSize];
-			int amount = _inputBuffer.Read(bytes, timeout: 0);
-			if (amount > 0) {
-				return Serialization.RawDeserialize<InputEvent>(bytes);
-			} else {
-				return null;
-			}
+			var bytes = new byte[_bufferItemSize];
+			var amount = _inputBuffer.Read(bytes, timeout: 0);
+			return amount <= 0 ? null : Serialization.RawDeserialize<InputEvent>(bytes);
 		}
 	}
 }

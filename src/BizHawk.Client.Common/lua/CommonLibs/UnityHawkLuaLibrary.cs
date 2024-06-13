@@ -2,9 +2,8 @@
 
 using System;
 using System.ComponentModel;
-using Plunderludics.UnityHawk.SharedBuffers;
-using NLua;
 using System.Text;
+using Plunderludics.UnityHawk.SharedBuffers;
 
 // Right now only supports string-to-string methods but generic type support would be useful
 // (or at least just ints and floats as well)
@@ -22,13 +21,9 @@ namespace BizHawk.Client.Common
 		[LuaMethod("callmethod", "Calls a method registered in Unity and returns the result. Supports a single string arg and string return value")]
 		public string CallMethod(string methodName, string arg) {
 			Console.WriteLine($"CallMethod {methodName} {arg}");
-			byte[] argBytes = Encoding.ASCII.GetBytes(arg);
-			byte[] retBytes = CallMethodRpc.Instance.CallMethod(methodName, argBytes);
-			if (retBytes == null) {
-				return null;
-			} else {
-				return Encoding.ASCII.GetString(retBytes);
-			}
+			var argBytes = Encoding.ASCII.GetBytes(arg);
+			var retBytes = CallMethodRpc.Instance.CallMethod(methodName, argBytes);
+			return retBytes == null ? null : Encoding.ASCII.GetString(retBytes);
 		}
 	}
 }

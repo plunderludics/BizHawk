@@ -4344,7 +4344,9 @@ namespace BizHawk.Client.EmuHawk
 			if (!Emulator.HasSavestates()) return false;
 			if (IsSavestateSlave) return Master.LoadState();
 
-			if (!new SavestateFile(Emulator, MovieSession, QuickBmpFile, MovieSession.UserBag).Load(path, this))
+			// TODO (moochi) SavestateFile doesn't need to be a class, can be all static
+			// (and everything is public to this anyway)
+			if (!new SavestateFile(Game, Emulator, MovieSession, QuickBmpFile, MovieSession.UserBag).Load(path, this))
 			{
 				AddOnScreenMessage("Loadstate error!");
 				return false;
@@ -4453,7 +4455,8 @@ namespace BizHawk.Client.EmuHawk
 
 			try
 			{
-				new SavestateFile(Emulator, MovieSession, QuickBmpFile, MovieSession.UserBag).Create(path, Config.Savestates);
+				new SavestateFile(Game, Emulator, MovieSession, QuickBmpFile, MovieSession.UserBag)
+					.Create(path, Config.Savestates);
 
 				EmuClient.OnStateSaved(this, userFriendlyStateName);
 				RA?.OnSaveState(path);

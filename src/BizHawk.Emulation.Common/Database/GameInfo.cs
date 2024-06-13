@@ -4,6 +4,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Globalization;
+using System.IO;
+using System.Reflection;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace BizHawk.Emulation.Common
 {
@@ -22,19 +27,33 @@ namespace BizHawk.Emulation.Common
 		string ForcedCore { get; }
 	}
 
+	
+	[DataContract]
 	public class GameInfo : IGameInfo
 	{
-		public string Name { get; set; }
-		public string System { get; set; }
-		public string Hash { get; set; }
-		public string Region { get; set; }
-		public RomStatus Status { get; set; } = RomStatus.NotInDatabase;
-		public bool NotInDatabase { get; set; } = true;
-		public string FirmwareHash { get; set; }
-		public string ForcedCore { get; private set; }
-
+		[DataMember] public string Name { get; set; }
+		[DataMember] public string System { get; set; }
+		[DataMember] public string Hash { get; set; }
+		[DataMember] public string Region { get; set; }
+		[DataMember] public RomStatus Status { get; set; } = RomStatus.NotInDatabase;
+		[DataMember] public bool NotInDatabase { get; set; } = true;
+		[DataMember] public string FirmwareHash { get; set; }
+		[DataMember] public string ForcedCore { get; private set; }
+		
 		private Dictionary<string, string> Options { get; set; } = new Dictionary<string, string>();
 
+		private static readonly JsonSerializer Serializer = new ()
+		{
+			MissingMemberHandling = MissingMemberHandling.Ignore, TypeNameHandling = TypeNameHandling.Auto
+			, ConstructorHandling = ConstructorHandling.Default,
+
+			ObjectCreationHandling = ObjectCreationHandling.Replace
+			, ContractResolver = new DefaultContractResolver
+			{
+				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic
+			}
+		};
+		
 		public GameInfo()
 		{
 		}
@@ -171,6 +190,19 @@ namespace BizHawk.Emulation.Common
 				var value = parts.Length > 1 ? parts[1] : "";
 				Options[key] = value;
 			}
+		}
+
+		public void Serialize(TextWriter tw)
+		{
+			var jw = new JsonTextWriter(tw) { Formatting = Formatting.Indented };
+			Serializer.Serialize(jw, this);
+		}
+		
+		public static GameInfo Deserialize(string serialized)
+		{
+			var sr = new StringReader(serialized);
+			var jr = new JsonTextReader(sr);
+			return Serializer.Deserialize<GameInfo>(jr);
 		}
 	}
 

@@ -13,16 +13,16 @@ namespace BizHawk.Client.Common
 	/// </summary>
 	public class SavestateFile
 	{
+		private readonly GameInfo _gameInfo;
 		private readonly IEmulator _emulator;
 		private readonly IStatable _statable;
 		private readonly IVideoProvider _videoProvider;
 		private readonly IMovieSession _movieSession;
-
 		private readonly IQuickBmpFile _quickBmpFile;
-
 		private readonly IDictionary<string, object> _userBag;
 
 		public SavestateFile(
+			GameInfo gameInfo,
 			IEmulator emulator,
 			IMovieSession movieSession,
 			IQuickBmpFile quickBmpFile,
@@ -33,6 +33,7 @@ namespace BizHawk.Client.Common
 				throw new InvalidOperationException("The provided core must have savestates");
 			}
 
+			_gameInfo = gameInfo;
 			_emulator = emulator;
 			_statable = emulator.AsStatable();
 			if (emulator.HasVideoProvider())
@@ -51,15 +52,17 @@ namespace BizHawk.Client.Common
 			// a text savestate is just like a binary savestate, but with a different core lump
 			using var bs = new ZipStateSaver(filename, config.CompressionLevelNormal);
 
+			bs.PutLump(BinaryStateLump.GameInfo, _gameInfo.Serialize);
+
 			using (new SimpleTime("Save Core"))
 			{
 				if (config.Type == SaveStateType.Text)
 				{
-					bs.PutLump(BinaryStateLump.CorestateText, tw => _statable.SaveStateText(tw));
+					bs.PutLump(BinaryStateLump.CorestateText, _statable.SaveStateText);
 				}
 				else
 				{
-					bs.PutLump(BinaryStateLump.Corestate, bw => _statable.SaveStateBinary(bw));
+					bs.PutLump(BinaryStateLump.Corestate, _statable.SaveStateBinary);
 				}
 			}
 
@@ -116,7 +119,7 @@ namespace BizHawk.Client.Common
 
 			if (_movieSession.Movie.IsActive() && _movieSession.Movie is ITasMovie)
 			{
-				bs.PutLump(BinaryStateLump.LagLog, tw => ((ITasMovie) _movieSession.Movie).LagLog.Save(tw));
+				bs.PutLump(BinaryStateLump.LagLog, ((ITasMovie) _movieSession.Movie).LagLog.Save);
 			}
 		}
 

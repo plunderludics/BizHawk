@@ -198,9 +198,9 @@ namespace BizHawk.Emulation.Common
 			Serializer.Serialize(jw, this);
 		}
 		
-		public static GameInfo Deserialize(string serialized)
+		public static GameInfo Deserialize(Stream stream)
 		{
-			var sr = new StringReader(serialized);
+			var sr = new StreamReader(stream);
 			var jr = new JsonTextReader(sr);
 			return Serializer.Deserialize<GameInfo>(jr);
 		}

@@ -38,7 +38,7 @@ namespace BizHawk.Emulation.Common
 		[DataMember] public RomStatus Status { get; set; } = RomStatus.NotInDatabase;
 		[DataMember] public bool NotInDatabase { get; set; } = true;
 		[DataMember] public string FirmwareHash { get; set; }
-		[DataMember] public string ForcedCore { get; private set; }
+		[DataMember] public string ForcedCore { get; set; }
 		
 		private Dictionary<string, string> Options { get; set; } = new Dictionary<string, string>();
 

@@ -52,7 +52,14 @@ namespace BizHawk.Client.Common
 			// a text savestate is just like a binary savestate, but with a different core lump
 			using var bs = new ZipStateSaver(filename, config.CompressionLevelNormal);
 
+			// hack to have the core name in the game info for the save state
+			var forcedCore = _gameInfo.ForcedCore;
+			_gameInfo.ForcedCore = _emulator.Attributes()
+				.CoreName;
+			
 			bs.PutLump(BinaryStateLump.GameInfo, _gameInfo.Serialize);
+			
+			_gameInfo.ForcedCore = forcedCore;
 
 			using (new SimpleTime("Save Core"))
 			{

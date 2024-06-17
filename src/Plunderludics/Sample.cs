@@ -33,15 +33,15 @@ namespace Plunderludics
 		// (this has a lot of issues, we should improve this format)
 		// [ie maybe just a json that points to all the necessary files]
 		public static Sample LoadFromDir(string sampleFilePath) {
-			string sampleDirPath = Path.GetDirectoryName(sampleFilePath); // workaround for the fact that we don't have an easy way to open a 'select directory' dialog
+			var sampleDirPath = Path.GetDirectoryName(sampleFilePath); // workaround for the fact that we don't have an easy way to open a 'select directory' dialog
 
 			// Assume there's a file called rompath.txt that provides a path to the rom (on the first line)
-			string rompathTxtPath = Path.Combine(sampleDirPath, rompathTxtFileName);
-			List<string> lines = File.ReadLines(rompathTxtPath).ToList();
-			string romPathRelative = lines[0];
+			var rompathTxtPath = Path.Combine(sampleDirPath, rompathTxtFileName);
+			var lines = File.ReadLines(rompathTxtPath).ToList();
+			var romPathRelative = lines[0];
 			// For dumb historical reasons the rompath is currently given relative to the parent of the sample directory
 			// [we should fix this and update all the existing samples]
-			string romPathFull = Path.Combine(Path.GetDirectoryName(sampleDirPath), romPathRelative);
+			var romPathFull = Path.Combine(Path.GetDirectoryName(sampleDirPath), romPathRelative);
 			romPathFull = Path.GetFullPath(romPathFull); // partly 'normalize' the path ie avoid stuff like x/../y
 
 			// Look for config, save state, and lua based on extension

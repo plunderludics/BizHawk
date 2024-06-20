@@ -148,9 +148,15 @@ namespace BizHawk.Client.EmuHawk
 			{
 				new ExceptionBox(e.Message).ShowDialog();
 			}
+			
+			// [UnityHawk: suppress all popup windows]
+			if (cliFlags.suppressPopups) {
+				MsgBox.SuppressAll = true;
+				ExceptionBox.SuppressAll = true;
+			}
+			// [end UnityHawk]
 
 			var configPath = cliFlags.cmdConfigFile ??  Path.Combine(PathUtils.ExeDirectoryPath, "config.ini");
-
 
 			Config initialConfig;
 			try

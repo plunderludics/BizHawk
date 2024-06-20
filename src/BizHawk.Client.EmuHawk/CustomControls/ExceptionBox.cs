@@ -6,15 +6,23 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class ExceptionBox : Form
 	{
+		// [UnityHawk: hack to allow suppressing all popup dialogs]
+		public static bool SuppressAll = false;
+		public new void ShowDialog() { // Nasty hack to 'override' non-virtual method in Form ckass
+			if (!SuppressAll) base.ShowDialog();
+		}
+		// [end UnityHawk]
+
 		public ExceptionBox(string str)
 		{
 			InitializeComponent();
-			Console.WriteLine($"Exception: {str}");
+			Console.Error.WriteLine($"ExceptionBox: {str}"); // [UnityHawk]
 			txtException.Text = str;
 			timer1.Start();
 		}
 
 		public ExceptionBox(Exception ex): this(ex.ToString()) {}
+
 
 		private void btnCopy_Click(object sender, EventArgs e)
 		{

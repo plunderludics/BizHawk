@@ -24,9 +24,8 @@ namespace BizHawk.Client.Common
 			short[] samples;
 			int nSamples;
 			_soundSource.GetSamplesSync(out samples, out nSamples);
-			
-			Console.WriteLine($"UnityHawkSound: writing {samples.Length} samples to buffer");
-			_buffer.Write(samples);
+			// Confusing, only the first nSamples*2 shorts are meaningful (*2 because stereo)
+			_buffer.Write(samples, nSamples);
 		}
 	}
 }

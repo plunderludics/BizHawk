@@ -19,23 +19,22 @@ namespace BizHawk.Client.Common
 	{
 		private const int SampleRate = 44100;
 		private const int ChannelCount = 2;
-		public int SoftCorrectionThresholdSamples = 5 * SampleRate / 1000;
-		public int StartupMaxSamplesSurplusDeficit = 10 * SampleRate / 1000;
-		public int MaxSamplesSurplus = 50 * SampleRate / 1000;
-		public int UsableHistoryLength = 20;
-		public int MaxHistoryLength = 60;
-		public int SoftCorrectionLength = 240;
-		public int BaseMaxConsecutiveEmptyFrames = 1;
-		public int BaseSampleRateUsableHistoryLength = 60;
-		public int BaseSampleRateMaxHistoryLength = 300;
-		public int MinResamplingDistanceSamples = 3;
-		public int TargetExtraSamples = 0;
-
+		private const int SoftCorrectionThresholdSamples = 5 * SampleRate / 1000;
+		private const int StartupMaxSamplesSurplusDeficit = 10 * SampleRate / 1000;
+		private const int MaxSamplesSurplus = 50 * SampleRate / 1000;
+		private const int UsableHistoryLength = 20;
+		private const int MaxHistoryLength = 60;
+		private const int SoftCorrectionLength = 240;
+		private const int BaseMaxConsecutiveEmptyFrames = 1;
+		private const int BaseSampleRateUsableHistoryLength = 60;
+		private const int BaseSampleRateMaxHistoryLength = 300;
+		private const int MinResamplingDistanceSamples = 3;
 
 		private readonly Func<double> _getCoreVsyncRateCallback;
 
 		private readonly Queue<short> _buffer = new Queue<short>();
 		private readonly bool _standaloneMode;
+		private readonly int _targetExtraSamples;
 		private int _maxSamplesDeficit;
 
 		private readonly Queue<int> _extraCountHistory = new Queue<int>();
@@ -60,7 +59,7 @@ namespace BizHawk.Client.Common
 			if (_standaloneMode)
 			{
 				const double targetExtraMs = 10.0;
-				TargetExtraSamples = (int)Math.Ceiling(targetExtraMs * SampleRate / 1000.0);
+				_targetExtraSamples = (int)Math.Ceiling(targetExtraMs * SampleRate / 1000.0);
 			}
 
 			ResetBuffer();
@@ -77,7 +76,7 @@ namespace BizHawk.Client.Common
 			}
 		}
 
-		private int EffectiveMaxSamplesDeficit => _maxSamplesDeficit + TargetExtraSamples;
+		private int EffectiveMaxSamplesDeficit => _maxSamplesDeficit + _targetExtraSamples;
 
 		public ISoundProvider BaseSoundProvider { get; set; }
 
@@ -101,7 +100,7 @@ namespace BizHawk.Client.Common
 		private void ResetBuffer()
 		{
 			_buffer.Clear();
-			for (int i = 0; i < TargetExtraSamples * ChannelCount; i++)
+			for (int i = 0; i < _targetExtraSamples * ChannelCount; i++)
 			{
 				_buffer.Enqueue(0);
 			}
@@ -116,9 +115,6 @@ namespace BizHawk.Client.Common
 		}
 
 		public bool LogDebug { get; set; }
-
-		public delegate void StringLogger(string s);
-		public StringLogger Log { get; set; } = (s) => Console.WriteLine(s);
 
 		private double AdvertisedSamplesPerFrame => SampleRate / _getCoreVsyncRateCallback();
 
@@ -157,7 +153,7 @@ namespace BizHawk.Client.Common
 			GetSamplesFromBase(ref scaleFactor);
 
 			int bufferSampleCount = _buffer.Count / ChannelCount;
-			int extraSampleCount = bufferSampleCount - TargetExtraSamples - idealSampleCount;
+			int extraSampleCount = bufferSampleCount - _targetExtraSamples - idealSampleCount;
 			int maxSamplesDeficit = _extraCountHistory.Count >= UsableHistoryLength ?
 				EffectiveMaxSamplesDeficit : Math.Min(StartupMaxSamplesSurplusDeficit, EffectiveMaxSamplesDeficit);
 			int maxSamplesSurplus = _extraCountHistory.Count >= UsableHistoryLength ?
@@ -167,7 +163,7 @@ namespace BizHawk.Client.Common
 			if (extraSampleCount < -maxSamplesDeficit)
 			{
 				int generateSampleCount = -extraSampleCount;
-				if (LogDebug) Log($"Generating {generateSampleCount} samples");
+				if (LogDebug) Console.WriteLine($"Generating {generateSampleCount} samples");
 				for (int i = 0; i < generateSampleCount * ChannelCount; i++)
 				{
 					_buffer.Enqueue(0);
@@ -178,7 +174,7 @@ namespace BizHawk.Client.Common
 			else if (extraSampleCount > maxSamplesSurplus)
 			{
 				int discardSampleCount = extraSampleCount;
-				if (LogDebug) Log($"Discarding {discardSampleCount} samples");
+				if (LogDebug) Console.WriteLine($"Discarding {discardSampleCount} samples");
 				for (int i = 0; i < discardSampleCount * ChannelCount; i++)
 				{
 					_buffer.Dequeue();
@@ -188,7 +184,7 @@ namespace BizHawk.Client.Common
 			}
 
 			bufferSampleCount = _buffer.Count / ChannelCount;
-			extraSampleCount = bufferSampleCount - TargetExtraSamples - idealSampleCount;
+			extraSampleCount = bufferSampleCount - _targetExtraSamples - idealSampleCount;
 
 			int outputSampleCount = Math.Min(idealSampleCount, bufferSampleCount);
 
@@ -198,11 +194,11 @@ namespace BizHawk.Client.Common
 
 			if (LogDebug)
 			{
-				Log(String.Format("Avg: {0:0.0} ms, Min: {1:0.0}, Max: {2:0.0}, Scale: {3:0.0000}",
+				Console.WriteLine("Avg: {0:0.0} ms, Min: {1:0.0}, Max: {2:0.0}, Scale: {3:0.0000}",
 					CalculatePowerMean(_extraCountHistory, 0.6) * 1000.0 / SampleRate,
 					_extraCountHistory.Min() * 1000.0 / SampleRate,
 					_extraCountHistory.Max() * 1000.0 / SampleRate,
-					scaleFactor));
+					scaleFactor);
 			}
 
 			return outputSampleCount;

@@ -9,8 +9,8 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 	public class SharedAudioBuffer {
 		private CircularBuffer _buffer;
 
-		private const int _nodeCount = (int)(2*44100*0.05); // Number of samples in buffer = 0.05s
-		private const int _nodeBufferSize = sizeof(short);
+		private const int _nodeCount = (int)(2*44100*5); // Number of samples in buffer = 5s
+		private const int _nodeBufferSize = sizeof(short)*2048;
 
 		public SharedAudioBuffer(string name) {
 			Console.WriteLine($"Init audio rpc buffer {name}");
@@ -18,17 +18,16 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 		}
 
 		public void Write(short[] samples, int nSamples) {
-			Console.WriteLine($"Writing {nSamples*2} samples to shared buffer");
 			// Console.WriteLine($"first = {samples[0]}; last = {samples[samples.Length-1]}");
 
-			// Write samples one at a time, which seems inefficient
-			for (int i = 0; i < nSamples*2; i++) {
-				// Console.WriteLine($"buffersize: {_buffer.BufferSize}, nodecount: {_buffer.NodeCount}");
-				int amount = _buffer.Write<short>(ref samples[i], timeout: 0);
-				if (amount <= 0) {
-					// Console.WriteLine("Warning: SharedAudioBuffer failed to write sample");
-				}
+			short[] samplesToWrite = new short[nSamples*2];
+			Array.Copy(samples, samplesToWrite, samplesToWrite.Length);
+
+			int amount = _buffer.Write<short>(samplesToWrite, timeout: 0);			
+			if (amount <= 0) {
+				Console.WriteLine("Warning: SharedAudioBuffer failed to write sample");
 			}
+			Console.WriteLine($"Attempted to write {samplesToWrite.Length} samples to shared buffer, wrote {amount}");
 		}
 	}
 }

@@ -12,6 +12,13 @@ namespace BizHawk.Client.EmuHawk.CustomControls
 	/// </summary>
 	internal partial class MsgBox : Form
 	{
+		// [UnityHawk: hack to allow suppressing all popup dialogs]
+		public static bool SuppressAll = false;
+		public new void ShowDialog() { // Nasty hack to 'override' non-virtual method in Form clas
+			if (!SuppressAll) base.ShowDialog();
+		}
+		// [end UnityHawk]
+
 		private readonly Icon _msgIcon;
 		private static readonly int FormYMargin = UIHelper.ScaleY(10);
 		private static readonly int FormXMargin = UIHelper.ScaleX(16);
@@ -29,6 +36,8 @@ namespace BizHawk.Client.EmuHawk.CustomControls
 		/// <param name="boxIcon">Standard system MessageBox icon.</param>
 		public MsgBox(string message, string title, MessageBoxIcon boxIcon)
 		{
+			Console.WriteLine($"MsgBox: {title}: {message}"); // [UnityHawk]
+
 			var icon = GetMessageBoxIcon(boxIcon);
 			InitializeComponent();
 			Icon = Properties.Resources.MsgBoxIcon;

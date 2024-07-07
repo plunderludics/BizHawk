@@ -52,12 +52,14 @@ namespace BizHawk.Client.Common
 		public readonly string? customWindowTitle;
 
 		public readonly string? cmdRom;
+		// [UnityHawk]
 		public readonly string? firmwareDir;
 		public readonly string? savestateDir;
 		public readonly string? savestateExtension;
 		public readonly string? ramWatchFile;
 		public readonly bool headless;
 		public readonly bool acceptBackgroundInput;
+		public readonly bool suppressPopups;
 		public readonly string? writeTextureToSharedBuffer;
 		public readonly string? readKeyInputFromSharedBuffer;
 		public readonly string? readAnalogInputFromSharedBuffer;
@@ -88,7 +90,7 @@ namespace BizHawk.Client.Common
 			ProtocolType socketProtocol,
 			IReadOnlyList<(string Key, string Value)>? userdataUnparsedPairs,
 			string? cmdRom,
-			// [UnityHawk]:
+			// [UnityHawk]
 			string? customWindowTitle,
 			string? firmwareDir,
 			string? savestateDir,
@@ -96,6 +98,7 @@ namespace BizHawk.Client.Common
 			string? ramWatchFile,
 			bool headless,
 			bool acceptBackgroundInput,
+			bool suppressPopups,
 			string? writeTextureToSharedBuffer,
 			string? readKeyInputFromSharedBuffer,
 			string? readAnalogInputFromSharedBuffer,
@@ -125,7 +128,7 @@ namespace BizHawk.Client.Common
 			SocketProtocol = socketProtocol;
 			UserdataUnparsedPairs = userdataUnparsedPairs;
 			this.cmdRom = cmdRom;
-			// [UnityHawk]:
+			// [UnityHawk]
 			this.customWindowTitle = customWindowTitle;
 			this.firmwareDir = firmwareDir;
 			this.savestateDir = savestateDir;
@@ -133,6 +136,7 @@ namespace BizHawk.Client.Common
 			this.ramWatchFile = ramWatchFile;
 			this.headless = headless;
 			this.acceptBackgroundInput = acceptBackgroundInput;
+			this.suppressPopups = suppressPopups;
 			this.writeTextureToSharedBuffer = writeTextureToSharedBuffer;
 			this.readKeyInputFromSharedBuffer = readKeyInputFromSharedBuffer;
 			this.readAnalogInputFromSharedBuffer = readAnalogInputFromSharedBuffer;

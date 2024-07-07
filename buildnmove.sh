@@ -13,8 +13,11 @@ exeName=EmuHawk.exe
 
 dotnet build $buildProject -c Release -p:UnityHawk=true &&
 # for dlls that are needed by unity, make a second copy outside of the BizHawk~ dir:
-cp output/dll/Plunderludics.dll $packageDir/Plugins/Plunderludics.dll &&
-cp output/dll/Plunderludics.UnityHawk.dll $packageDir/Plugins/Plunderludics.UnityHawk.dll &&
+# TODO wonder if we could do this with automatic dependencies as part of dotnet build command or something
+for fn in Plunderludics Plunderludics.UnityHawk BizHawk.BizInvoke BizHawk.Common
+do
+	cp output/dll/$fn.dll $packageDir/Plugins/$fn.dll || exit 1;
+done
 # everything else is only used by the bizhawk exe itself:
 cp output/$exeName $bizhawkDir/$exeName &&
 cp output/dll/* $bizhawkDir/dll &&

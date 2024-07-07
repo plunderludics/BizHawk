@@ -46,7 +46,7 @@ namespace BizHawk.Client.Common
 			var socketProtocol = ProtocolType.Tcp;
 			List<(string Key, string Value)>? userdataUnparsedPairs = null;
 			string? cmdRom = null;
-			// [UnityHawk]:
+			// [UnityHawk]
 			string? customWindowTitle = null;
 			string? firmwareDir = null;
 			string? savestateDir = null;
@@ -54,6 +54,7 @@ namespace BizHawk.Client.Common
 			string? ramWatchFile = null;
 			bool? headless = null;
 			bool? acceptBackgroundInput = null;
+			bool? suppressPopups = null;
 			string? writeTextureToSharedBuffer = null;
 			string? readKeyInputFromSharedBuffer = null;
 			string? readAnalogInputFromSharedBuffer = null;
@@ -137,6 +138,10 @@ namespace BizHawk.Client.Common
 				else if (argDowncased.StartsWith("--accept-background-input"))
 				{
 					acceptBackgroundInput = true;
+				}
+				else if (argDowncased.StartsWith("--suppress-popups"))
+				{
+					suppressPopups = true;
 				}
 				else if (argDowncased.StartsWith("--fullscreen"))
 				{
@@ -287,7 +292,7 @@ namespace BizHawk.Client.Common
 				socketProtocol: socketProtocol,
 				userdataUnparsedPairs: userdataUnparsedPairs,
 				cmdRom: cmdRom,
-				// [UnityHawk]:
+				// [UnityHawk]
 				customWindowTitle: customWindowTitle,
 				firmwareDir: firmwareDir,
 				savestateDir: savestateDir,
@@ -295,6 +300,7 @@ namespace BizHawk.Client.Common
 				ramWatchFile: ramWatchFile,
 				headless: headless ?? false,
 				acceptBackgroundInput: acceptBackgroundInput ?? false,
+				suppressPopups: suppressPopups ?? false,
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
 				readKeyInputFromSharedBuffer: readKeyInputFromSharedBuffer,
 				readAnalogInputFromSharedBuffer: readAnalogInputFromSharedBuffer,

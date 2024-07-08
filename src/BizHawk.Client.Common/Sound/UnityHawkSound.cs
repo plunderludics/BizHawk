@@ -8,14 +8,14 @@ namespace BizHawk.Client.Common
 {
 	public class UnityHawkSound
 	{
-		private readonly SharedAudioBuffer _buffer;
+		private readonly SharedAudioRpc _rpc;
 		private ISoundProvider _soundSource;
 
 		public UnityHawkSound(string audioBufferName, ISoundProvider soundSource) {
 			_soundSource = soundSource;
 			_soundSource.SetSyncMode(SyncSoundMode.Sync); // ?
 
-			_buffer = new(audioBufferName);
+			_rpc = new(audioBufferName);
 		}
 
 		// Must be run once per emulated frame
@@ -25,7 +25,7 @@ namespace BizHawk.Client.Common
 			int nSamples;
 			_soundSource.GetSamplesSync(out samples, out nSamples);
 			// Confusing, only the first nSamples*2 shorts are meaningful (*2 because stereo)
-			_buffer.Write(samples, nSamples);
+			_rpc.SendSamples(samples, nSamples*2);
 		}
 	}
 }

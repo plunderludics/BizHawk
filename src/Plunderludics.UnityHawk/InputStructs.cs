@@ -58,7 +58,7 @@ namespace Plunderludics.UnityHawk
 	[Serializable]
 	public struct AxisValuesStruct
 	{
-    	[MarshalAs(UnmanagedType.ByValArray, SizeConst = InputStructConsts.AxisValueArrayLength)]
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = InputStructConsts.AxisValueArrayLength)]
 		public AxisValue[] axisValues;
 	}
 }

@@ -4133,7 +4133,11 @@ namespace BizHawk.Client.EmuHawk
 			// Same w audio buffer, has to be re-initialized for new emulator
 			if (_argParser.shareAudioOverRpcBuffer != null) {
 				// Init rpc buffer for passing audio to unity
-				_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider);
+				if (_unityHawkSound == null) {
+					_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider);
+				} else {
+					_unityHawkSound.SetSoundProvider(_currentSoundProvider);
+				}
 			}
 			// Override the savestate directory in the config (needs to be here since the key depends on the platform)
 			if (_argParser.savestateDir != null) {

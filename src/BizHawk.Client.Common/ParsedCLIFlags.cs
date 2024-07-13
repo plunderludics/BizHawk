@@ -54,9 +54,10 @@ namespace BizHawk.Client.Common
 		public readonly string? cmdRom;
 		// [UnityHawk]
 		public readonly string? firmwareDir;
-		public readonly string? savestateDir;
+		public readonly string? savestateSaveDir;
 		public readonly string? savestateExtension;
 		public readonly string? ramWatchFile;
+		public readonly string? ramWatchSaveDir;
 		public readonly bool headless;
 		public readonly bool acceptBackgroundInput;
 		public readonly bool suppressPopups;
@@ -93,9 +94,10 @@ namespace BizHawk.Client.Common
 			// [UnityHawk]
 			string? customWindowTitle,
 			string? firmwareDir,
-			string? savestateDir,
+			string? savestateSaveDir,
 			string? savestateExtension,
 			string? ramWatchFile,
+			string? ramWatchSaveDir,
 			bool headless,
 			bool acceptBackgroundInput,
 			bool suppressPopups,
@@ -131,9 +133,10 @@ namespace BizHawk.Client.Common
 			// [UnityHawk]
 			this.customWindowTitle = customWindowTitle;
 			this.firmwareDir = firmwareDir;
-			this.savestateDir = savestateDir;
+			this.savestateSaveDir = savestateSaveDir;
 			this.savestateExtension = savestateExtension;
 			this.ramWatchFile = ramWatchFile;
+			this.ramWatchSaveDir = ramWatchSaveDir;
 			this.headless = headless;
 			this.acceptBackgroundInput = acceptBackgroundInput;
 			this.suppressPopups = suppressPopups;

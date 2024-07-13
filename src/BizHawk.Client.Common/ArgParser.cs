@@ -49,9 +49,10 @@ namespace BizHawk.Client.Common
 			// [UnityHawk]
 			string? customWindowTitle = null;
 			string? firmwareDir = null;
-			string? savestateDir = null;
+			string? savestateSaveDir = null;
 			string? savestateExtension = null;
 			string? ramWatchFile = null;
+			string? ramWatchSaveDir = null;
 			bool? headless = null;
 			bool? acceptBackgroundInput = null;
 			bool? suppressPopups = null;
@@ -198,7 +199,7 @@ namespace BizHawk.Client.Common
 				}
 				else if (argDowncased.StartsWith("--savestates="))
 				{
-					savestateDir = arg.Substring(arg.IndexOf('=') + 1);
+					savestateSaveDir = arg.Substring(arg.IndexOf('=') + 1);
 				}
 				else if (argDowncased.StartsWith("--savestate-extension="))
 				{
@@ -207,6 +208,10 @@ namespace BizHawk.Client.Common
 				else if (argDowncased.StartsWith("--ram-watch-file="))
 				{
 					ramWatchFile = arg.Substring(arg.IndexOf('=') + 1);
+				}
+				else if (argDowncased.StartsWith("--save-ram-watch="))
+				{
+					ramWatchSaveDir = arg.Substring(arg.IndexOf('=') + 1);
 				}
 				else if (argDowncased.StartsWith("--windowtitle="))
 				{
@@ -295,9 +300,10 @@ namespace BizHawk.Client.Common
 				// [UnityHawk]
 				customWindowTitle: customWindowTitle,
 				firmwareDir: firmwareDir,
-				savestateDir: savestateDir,
+				savestateSaveDir: savestateSaveDir,
 				savestateExtension: savestateExtension,
 				ramWatchFile: ramWatchFile,
+				ramWatchSaveDir: ramWatchSaveDir,
 				headless: headless ?? false,
 				acceptBackgroundInput: acceptBackgroundInput ?? false,
 				suppressPopups: suppressPopups ?? false,

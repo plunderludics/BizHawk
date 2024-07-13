@@ -4139,10 +4139,15 @@ namespace BizHawk.Client.EmuHawk
 					_unityHawkSound.SetSoundProvider(_currentSoundProvider);
 				}
 			}
-			// Override the savestate directory in the config (needs to be here since the key depends on the platform)
-			if (_argParser.savestateDir != null) {
+			// Override the savestate save directory in the config (needs to be here since the key depends on the platform)
+			if (_argParser.savestateSaveDir != null) {
 				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateDir;
+				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
+			}
+			// Override the ram watch save directory in the config 
+			if (_argParser.ramWatchSaveDir != null) {
+				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
 			}
 
 			if (!_argParser.headless && _argParser.ramWatchFile != null) {

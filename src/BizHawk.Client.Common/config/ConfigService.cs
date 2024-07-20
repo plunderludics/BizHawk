@@ -14,7 +14,7 @@ namespace BizHawk.Client.Common
 {
 	public static class ConfigService
 	{
-		internal static readonly JsonSerializer Serializer;
+		internal static JsonSerializer Serializer { get; private set; }
 
 		static ConfigService()
 		{
@@ -80,6 +80,11 @@ namespace BizHawk.Client.Common
 			}
 			msg = string.Format(fmt, Path.GetFileName(filepath), VersionInfo.MainVersion, cfgVersionStr);
 			return false;
+		}
+
+		public static void SetSerializer(JsonSerializer serializer)
+		{
+			Serializer = serializer;
 		}
 
 		/// <exception cref="InvalidOperationException">internal error</exception>

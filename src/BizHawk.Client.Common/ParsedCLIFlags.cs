@@ -59,8 +59,9 @@ namespace BizHawk.Client.Common
 		public readonly string? ramWatchFile;
 		public readonly string? ramWatchSaveDir;
 		public readonly bool headless;
-		public readonly bool acceptBackgroundInput;
+		public readonly bool? acceptBackgroundInput;
 		public readonly bool suppressPopups;
+		public readonly bool? mute;
 		public readonly string? writeTextureToSharedBuffer;
 		public readonly string? readKeyInputFromSharedBuffer;
 		public readonly string? readAnalogInputFromSharedBuffer;
@@ -99,8 +100,9 @@ namespace BizHawk.Client.Common
 			string? ramWatchFile,
 			string? ramWatchSaveDir,
 			bool headless,
-			bool acceptBackgroundInput,
+			bool? acceptBackgroundInput,
 			bool suppressPopups,
+			bool? mute,
 			string? writeTextureToSharedBuffer,
 			string? readKeyInputFromSharedBuffer,
 			string? readAnalogInputFromSharedBuffer,
@@ -140,6 +142,7 @@ namespace BizHawk.Client.Common
 			this.headless = headless;
 			this.acceptBackgroundInput = acceptBackgroundInput;
 			this.suppressPopups = suppressPopups;
+			this.mute = mute;
 			this.writeTextureToSharedBuffer = writeTextureToSharedBuffer;
 			this.readKeyInputFromSharedBuffer = readKeyInputFromSharedBuffer;
 			this.readAnalogInputFromSharedBuffer = readAnalogInputFromSharedBuffer;

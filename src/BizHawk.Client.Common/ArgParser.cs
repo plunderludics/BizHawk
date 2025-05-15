@@ -56,6 +56,7 @@ namespace BizHawk.Client.Common
 			bool? headless = null;
 			bool? acceptBackgroundInput = null;
 			bool? suppressPopups = null;
+			bool? mute = null;
 			string? writeTextureToSharedBuffer = null;
 			string? readKeyInputFromSharedBuffer = null;
 			string? readAnalogInputFromSharedBuffer = null;
@@ -136,13 +137,17 @@ namespace BizHawk.Client.Common
 					// don't open any gui at all
 					headless = true;
 				}
-				else if (argDowncased.StartsWith("--accept-background-input"))
+				else if (argDowncased.StartsWith("--accept-background-input="))
 				{
-					acceptBackgroundInput = true;
+					acceptBackgroundInput = argDowncased.Substring(argDowncased.IndexOf('=') + 1) == "true";;
 				}
 				else if (argDowncased.StartsWith("--suppress-popups"))
 				{
 					suppressPopups = true;
+				}
+				else if (argDowncased.StartsWith("--mute="))
+				{
+					mute = argDowncased.Substring(argDowncased.IndexOf('=') + 1) == "true";
 				}
 				else if (argDowncased.StartsWith("--fullscreen"))
 				{
@@ -305,8 +310,9 @@ namespace BizHawk.Client.Common
 				ramWatchFile: ramWatchFile,
 				ramWatchSaveDir: ramWatchSaveDir,
 				headless: headless ?? false,
-				acceptBackgroundInput: acceptBackgroundInput ?? false,
+				acceptBackgroundInput: acceptBackgroundInput,
 				suppressPopups: suppressPopups ?? false,
+				mute: mute,
 				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
 				readKeyInputFromSharedBuffer: readKeyInputFromSharedBuffer,
 				readAnalogInputFromSharedBuffer: readAnalogInputFromSharedBuffer,

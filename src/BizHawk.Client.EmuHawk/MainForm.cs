@@ -611,8 +611,10 @@ namespace BizHawk.Client.EmuHawk
 				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
 			}
 
-			// Ignore whatever is in the config and set AcceptBackgroundInput based on cli arg
-			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput;
+			// Override config if acceptBackgroundInput cli arg is provided
+			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput ?? Config.AcceptBackgroundInput;
+			// Same for mute
+			Config.SoundEnabled = _argParser.mute.HasValue ? !_argParser.mute.Value : Config.SoundEnabled;
 
 			string callMethodBufferName = _argParser.unityCallMethodBuffer;
 			if (callMethodBufferName != null) {

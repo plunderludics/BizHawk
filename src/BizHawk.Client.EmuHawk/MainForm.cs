@@ -199,7 +199,7 @@ namespace BizHawk.Client.EmuHawk
 					.FirstOrNull(info => info.AsmFilename == requestedExtToolDll
 						|| Path.GetFileName(info.AsmFilename) == requestedExtToolDll
 						|| Path.GetFileNameWithoutExtension(info.AsmFilename) == requestedExtToolDll);
-				if (found is not null) found.Value.TryLoad();
+				if (found is not null) found.Value.TryLoad(true); // [UnityHawk: skip confirmation for loading tool]
 				else Console.WriteLine($"requested ext. tool dll {requestedExtToolDll} could not be loaded");
 			}
 
@@ -5089,6 +5089,9 @@ namespace BizHawk.Client.EmuHawk
 					break;
 				case "FrameAdvance":
 					FrameAdvance();
+					break;
+				case "SetVolume":
+					SetVolume(int.Parse(mc.Argument));
 					break;
 				default:
 					Console.WriteLine($"Warning: Unity attempting to call unsupported bizhawk api method {mc.MethodName}");

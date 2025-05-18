@@ -39,12 +39,12 @@ namespace BizHawk.Client.EmuHawk
 				AsmFilename = asmFilename;
 			}
 
-			public void TryLoad()
+			public void TryLoad(bool skipExtToolWarning = false)
 			{
 				var success = _extToolMan._loadCallback(
 					/*toolPath:*/ AsmFilename,
 					/*customFormTypeName:*/ _entryPointTypeName,
-					/*skipExtToolWarning:*/ _skipExtToolWarning);
+					/*skipExtToolWarning:*/ _skipExtToolWarning || skipExtToolWarning);
 				if (!success || _skipExtToolWarning) return;
 				_skipExtToolWarning = true;
 				_extToolMan._config.TrustedExtTools[AsmFilename] = _asmChecksum;

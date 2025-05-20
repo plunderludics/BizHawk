@@ -44,10 +44,12 @@ namespace Plunderludics.UnityHawk.Tool
 		/// </remarks>
 		private Config GlobalConfig => (_emuApi as EmulationApi ?? throw new Exception("required API wasn't fulfilled")).ForbiddenConfigReference;
 
-		protected override string WindowTitleStatic => "UnityHawk 2";
+		protected override string WindowTitleStatic => "UnityHawk";
 
 		private SharedKeyInputBuffer _keyInputBuffer;
 		// private SharedAnalogInputBuffer _analogInputBuffer; // [TODO I think this can actually just be merged w KeyInputBuffer]
+		private Dictionary<string, bool> buttonState = new(); // Current button state - need to pass to JoypadApi every frame
+		private Dictionary<string, int?> analogState = new(); // Current analog axis state
 
 		private Label text;
 		public UnityHawkMainForm()
@@ -76,23 +78,31 @@ namespace Plunderludics.UnityHawk.Tool
 			
 			// Open sharedmemory buffers
 			string keyInputBufferName = (string)APIs.UserData.Get("unityhawk-key-input-buffer");
-			_keyInputBuffer = new(keyInputBufferName);
+			if (!string.IsNullOrEmpty(keyInputBufferName)) {
+				_keyInputBuffer = new(keyInputBufferName);
+			}
 		}
 
 		public override void UpdateValues(ToolFormUpdateType type)
 		{
 			if (type == ToolFormUpdateType.PreFrame) {
-				// Get input from input buffer and pass to emulator
-				Plunderludics.UnityHawk.InputEvent? mie;
-				while ((mie = _keyInputBuffer.Read()).HasValue) {
-					Plunderludics.UnityHawk.InputEvent ie = mie.Value;
-					
-					if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
-						APIs.Joypad.SetAnalog(ie.name, ie.value, ie.controller);
-					} else {
-						APIs.Joypad.Set(ie.name, ie.value > 0, ie.controller);
+				if (_keyInputBuffer != null) {
+					// Get input from input buffer and pass to emulator
+					Plunderludics.UnityHawk.InputEvent? mie;
+					while ((mie = _keyInputBuffer.Read()).HasValue) {
+						Plunderludics.UnityHawk.InputEvent ie = mie.Value;
+						
+						if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
+							analogState[ie.name] = ie.value;
+						} else {
+							buttonState[ie.name] = ie.value > 0; // TODO should store the controller here I guess (or store string like "P1 A")
+						}
 					}
 				}
+
+				// Send input state to JoypadApi (need to do this every frame)
+				APIs.Joypad.Set(buttonState, 1); // TODO: support controllers other than 1
+				APIs.Joypad.SetAnalog(analogState, 1); // TODO: support controllers other than 1
 
 				// Process api calls from api call buffer
 			} else if (type == ToolFormUpdateType.PostFrame) {

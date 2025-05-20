@@ -17,7 +17,7 @@ echo building for $buildConfig
 packageDir="../unity-hawk/Packages/org.plunderludics.UnityHawk"
 bizhawkDir="$packageDir/BizHawk~"
 
-mkdir -p $bizhawkDir/dll $bizhawkDir/gamedb
+mkdir -p $bizhawkDir/dll $bizhawkDir/gamedb $bizhawkDir/ExternalTools
 
 # For Mac:
 #buildProject=src/BizHawk.Client.Headless/
@@ -26,6 +26,7 @@ mkdir -p $bizhawkDir/dll $bizhawkDir/gamedb
 buildProject=src/BizHawk.Client.EmuHawk/
 exeName=EmuHawk.exe
 
+# TODO also build UnityHawk tool
 
 dotnet build $buildProject -c $buildConfig -p:UnityHawk=true &&
 # for dlls that are needed by unity, make a second copy outside of the BizHawk~ dir:
@@ -59,4 +60,5 @@ done
 # everything else is only used by the bizhawk exe itself:
 cp output/$exeName $bizhawkDir/$exeName &&
 cp output/dll/* $bizhawkDir/dll &&
+cp output/ExternalTools/UnityHawk.dll $bizhawkDir/ExternalTools && # Need the UnityHawk external tool
 cp output/gamedb/* $bizhawkDir/gamedb

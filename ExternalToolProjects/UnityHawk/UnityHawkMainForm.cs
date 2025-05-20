@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Windows.Forms;
 using System.IO;
+using System.Collections.Generic;
 
 using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk;
 using BizHawk.Emulation.Common;
 
-namespace UnityHawk
+using Plunderludics.UnityHawk.SharedBuffers;
+
+namespace Plunderludics.UnityHawk.Tool
 {
 	[ExternalTool("UnityHawk", Description = "UnityHawk")]
-	public class MainForm : ToolFormBase, IExternalToolForm
+	public class UnityHawkMainForm : ToolFormBase, IExternalToolForm
 	{
 		/// <remarks>
 		/// <see cref="RequiredServiceAttribute">RequiredServices</see> are populated by EmuHawk at runtime.
@@ -25,6 +28,10 @@ namespace UnityHawk
 		[RequiredApi]
 		private IEmulationApi? _emuApi { get; set; }
 
+		
+		[RequiredApi]
+		private IUserDataApi ? _userData { get; set; }
+
 		/// <remarks>
 		/// <see cref="ApiContainer"/> can be used as a shorthand for accessing the various APIs, more like the Lua syntax.
 		/// </remarks>
@@ -37,20 +44,23 @@ namespace UnityHawk
 		/// </remarks>
 		private Config GlobalConfig => (_emuApi as EmulationApi ?? throw new Exception("required API wasn't fulfilled")).ForbiddenConfigReference;
 
-		protected override string WindowTitleStatic => "UnityHawk";
+		protected override string WindowTitleStatic => "UnityHawk 2";
+
+		private SharedKeyInputBuffer _keyInputBuffer;
+		// private SharedAnalogInputBuffer _analogInputBuffer; // [TODO I think this can actually just be merged w KeyInputBuffer]
 
 		private Label text;
-		public MainForm()
+		public UnityHawkMainForm()
 		{
 			this.text = new System.Windows.Forms.Label();
 			this.SuspendLayout();
 
 			// Text gets cut off for some reason
-			this.text.Location = new System.Drawing.Point(12, 57);
+			// this.text.Location = new System.Drawing.Point(12, 57);
 			this.text.Name = "text";
-			this.text.Size = new System.Drawing.Size(35, 13);
+			this.text.Size = new System.Drawing.Size(100, 13);
 			this.text.TabIndex = 0;
-			this.text.Text = "Hello World!";
+			this.text.Text = "UnityHawk :)";
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(284, 261);
@@ -63,11 +73,32 @@ namespace UnityHawk
 		public override void Restart()
 		{
 			Console.WriteLine("Restarting UnityHawk plugin...");
+			
+			// Open sharedmemory buffers
+			string keyInputBufferName = (string)APIs.UserData.Get("unityhawk-key-input-buffer");
+			_keyInputBuffer = new(keyInputBufferName);
 		}
 
 		public override void UpdateValues(ToolFormUpdateType type)
 		{
-			this.text.Text = $"UpdateValues({type})";
+			if (type == ToolFormUpdateType.PreFrame) {
+				// Get input from input buffer and pass to emulator
+				Plunderludics.UnityHawk.InputEvent? mie;
+				while ((mie = _keyInputBuffer.Read()).HasValue) {
+					Plunderludics.UnityHawk.InputEvent ie = mie.Value;
+					
+					if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
+						APIs.Joypad.SetAnalog(ie.name, ie.value, ie.controller);
+					} else {
+						APIs.Joypad.Set(ie.name, ie.value > 0, ie.controller);
+					}
+				}
+
+				// Process api calls from api call buffer
+			} else if (type == ToolFormUpdateType.PostFrame) {
+				// Send texture through texture buffer
+				// Send audio through audio buffer
+			}
 		}
 	}
 }

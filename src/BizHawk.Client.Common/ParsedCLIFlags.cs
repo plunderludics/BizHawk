@@ -53,6 +53,7 @@ namespace BizHawk.Client.Common
 
 		public readonly string? cmdRom;
 		// [UnityHawk]
+		public readonly string? extToolsDir;
 		public readonly string? firmwareDir;
 		public readonly string? savestateSaveDir;
 		public readonly string? savestateExtension;
@@ -94,6 +95,7 @@ namespace BizHawk.Client.Common
 			string? cmdRom,
 			// [UnityHawk]
 			string? customWindowTitle,
+			string? extToolsDir,
 			string? firmwareDir,
 			string? savestateSaveDir,
 			string? savestateExtension,
@@ -134,6 +136,7 @@ namespace BizHawk.Client.Common
 			this.cmdRom = cmdRom;
 			// [UnityHawk]
 			this.customWindowTitle = customWindowTitle;
+			this.extToolsDir = extToolsDir;
 			this.firmwareDir = firmwareDir;
 			this.savestateSaveDir = savestateSaveDir;
 			this.savestateExtension = savestateExtension;

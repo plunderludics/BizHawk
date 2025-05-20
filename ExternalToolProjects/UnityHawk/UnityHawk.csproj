@@ -1,4 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<Import Project="$(ProjectDir)../NET48ExternalToolForm.targets" />
 	<Import Project="$(ProjectDir)../ExtToolCommon.props" />
+	
+	<ItemGroup>
+		<Reference Include="Plunderludics.UnityHawk" 
+			HintPath="$(MSBuildProjectDirectory)/../../output/dll/Plunderludics.UnityHawk.dll"
+			Private="true" />
+	</ItemGroup>
 </Project>

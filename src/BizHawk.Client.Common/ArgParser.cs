@@ -49,6 +49,7 @@ namespace BizHawk.Client.Common
 			// [UnityHawk]
 			string? customWindowTitle = null;
 			string? firmwareDir = null;
+			string? extToolsDir = null;
 			string? savestateSaveDir = null;
 			string? savestateExtension = null;
 			string? ramWatchFile = null;
@@ -198,6 +199,10 @@ namespace BizHawk.Client.Common
 					// - dll path matches given string; or dll filename matches given string with or without `.dll`
 					openExtToolDll = arg.Substring(20);
 				}
+				else if (argDowncased.StartsWith("--ext-tools-dir="))
+				{
+					extToolsDir = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else if (argDowncased.StartsWith("--firmware="))
 				{
 					firmwareDir = arg.Substring(arg.IndexOf('=') + 1);
@@ -305,6 +310,7 @@ namespace BizHawk.Client.Common
 				// [UnityHawk]
 				customWindowTitle: customWindowTitle,
 				firmwareDir: firmwareDir,
+				extToolsDir: extToolsDir,
 				savestateSaveDir: savestateSaveDir,
 				savestateExtension: savestateExtension,
 				ramWatchFile: ramWatchFile,

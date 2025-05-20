@@ -476,6 +476,9 @@ namespace BizHawk.Client.EmuHawk
 					? new SocketServer(NetworkingTakeScreenshot, _argParser.SocketProtocol, socketIP, socketPort)
 					: null
 			);
+			
+			// [UnityHawk]
+			UnityHawkSetup();
 
 			ExtToolManager = new(
 				Config,
@@ -551,6 +554,7 @@ namespace BizHawk.Client.EmuHawk
 					_ => AllowInput.None
 				}
 			);
+			inputProvider = Input.Instance; // [UnityHawk] - TODO remove
 			InitControls();
 
 			InputManager.ResetMainControllers(_autofireNullControls);
@@ -600,47 +604,6 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			if (Config.MainFormStayOnTop) TopMost = true;
-
-
-
-			// [UnityHawk]
-			// Process cli args and set up shared buffers
-
-			if (_argParser.firmwareDir != null) {
-				// Override firmware directory
-				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
-			}
-
-			// Override config if acceptBackgroundInput cli arg is provided
-			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput ?? Config.AcceptBackgroundInput;
-			// Same for mute
-			Config.SoundEnabled = _argParser.mute.HasValue ? !_argParser.mute.Value : Config.SoundEnabled;
-
-			string callMethodBufferName = _argParser.unityCallMethodBuffer;
-			if (callMethodBufferName != null) {
-				// Init RPC buffer for CallMethod calls to unity (from lua)
-				CallMethodRpc.Init(callMethodBufferName);
-			}
-
-			string apiBufferName = _argParser.apiCallMethodBuffer;
-			if (apiBufferName != null) {
-				// Init RPC buffer for Bizhawk API calls from unity
-				_apiCallBuffer = new ApiCallBuffer(apiBufferName);
-			}
-
-			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
-			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
-			if (keyInputBufferName != null || analogInputBufferName != null) {
-				// Get key presses from Unity via shared buffer
-				inputProvider = new UnityHawkInput(keyInputBufferName, analogInputBufferName);
-			} else {
-				// Use native OS input
-				inputProvider = Input.Instance;
-			}
-
-			// [end UnityHawk]
-
-
 
 			if (_argParser.cmdRom != null)
 			{
@@ -4130,27 +4093,27 @@ namespace BizHawk.Client.EmuHawk
 		private void OnRomChanged()
 		{
 			// [UnityHawk]
-			// Need to init/re-init texture buffer here because size depends on the video resolution of the platform
-			InitSharedTextureBuffer();
-			// Same w audio buffer, has to be re-initialized for new emulator
-			if (_argParser.shareAudioOverRpcBuffer != null) {
-				// Init rpc buffer for passing audio to unity
-				if (_unityHawkSound == null) {
-					_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider);
-				} else {
-					_unityHawkSound.SetSoundProvider(_currentSoundProvider);
-				}
-			}
-			// Override the savestate save directory in the config (needs to be here since the key depends on the platform)
-			if (_argParser.savestateSaveDir != null) {
-				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
-			}
-			// Override the ram watch save directory in the config 
-			if (_argParser.ramWatchSaveDir != null) {
-				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-				Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
-			}
+			// // Need to init/re-init texture buffer here because size depends on the video resolution of the platform
+			// InitSharedTextureBuffer();
+			// // Same w audio buffer, has to be re-initialized for new emulator
+			// if (_argParser.shareAudioOverRpcBuffer != null) {
+			// 	// Init rpc buffer for passing audio to unity
+			// 	if (_unityHawkSound == null) {
+			// 		_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider);
+			// 	} else {
+			// 		_unityHawkSound.SetSoundProvider(_currentSoundProvider);
+			// 	}
+			// }
+			// // Override the savestate save directory in the config (needs to be here since the key depends on the platform)
+			// if (_argParser.savestateSaveDir != null) {
+			// 	// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+			// 	Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
+			// }
+			// // Override the ram watch save directory in the config 
+			// if (_argParser.ramWatchSaveDir != null) {
+			// 	// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+			// 	Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
+			// }
 
 			if (!_argParser.headless && _argParser.ramWatchFile != null) {
 				Tools.Load<RamWatch>();
@@ -5038,6 +5001,52 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		// [UnityHawk methods]
+		private void UnityHawkSetup() {
+			// Process cli args and set up shared buffers
+
+			if (_argParser.firmwareDir != null) {
+				// Override firmware directory
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
+			}
+
+			if (_argParser.extToolsDir != null) {
+				// Override external tools directory (necessary because of the weird way ExternalToolManager is set up)
+				Config.PathEntries[PathEntryCollection.GLOBAL, "External Tools"].Path = _argParser.extToolsDir;
+			}
+
+			// Override config if acceptBackgroundInput cli arg is provided
+			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput ?? Config.AcceptBackgroundInput;
+			// Same for mute
+			Config.SoundEnabled = _argParser.mute.HasValue ? !_argParser.mute.Value : Config.SoundEnabled;
+
+			string callMethodBufferName = _argParser.unityCallMethodBuffer;
+			if (callMethodBufferName != null) {
+				// Init RPC buffer for CallMethod calls to unity (from lua)
+				CallMethodRpc.Init(callMethodBufferName);
+			}
+
+			string apiBufferName = _argParser.apiCallMethodBuffer;
+			if (apiBufferName != null) {
+				// Init RPC buffer for Bizhawk API calls from unity
+				_apiCallBuffer = new ApiCallBuffer(apiBufferName);
+			}
+
+			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
+			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
+			// if (keyInputBufferName != null || analogInputBufferName != null) {
+			// 	// Get key presses from Unity via shared buffer
+			// 	// TODO: remove all this input stuff!
+			// 	// inputProvider = new UnityHawkInput(keyInputBufferName, analogInputBufferName);
+			// } else {
+			// 	// Use native OS input
+			// 	inputProvider = Input.Instance;
+			// }
+
+			// TODO: configure UnityHawk external tool
+
+			inputProvider = Input.Instance; // TODO: Need to disable native input when UnityHawk plugin is handling input (or just make sure background input not accepted?)
+		}
+		
 		// Extension for savestates. Defaults to ".State" (as in original Bizhawk) but can be set via --savestate-extension flag
 		private string SaveStateExtension() {
 			return _argParser.savestateExtension ?? "State";

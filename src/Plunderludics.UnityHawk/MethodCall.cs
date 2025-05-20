@@ -1,7 +1,3 @@
-// This is basically the same as BizHawk.Client.Common.InputEvent,
-// but duplicated here so that Unity can use this class without having a dependency on the BizHawk.Client.Common dll
-// Currently has no support for modifier keys
-
 #nullable enable
 
 using System;

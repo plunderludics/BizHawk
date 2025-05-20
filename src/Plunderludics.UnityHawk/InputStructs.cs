@@ -9,56 +9,67 @@ using System.Runtime.InteropServices;
 
 namespace Plunderludics.UnityHawk
 {
-	// This is basically the same as BizHawk.Client.Common.InputEvent,
-	// but duplicated here so that Unity can use this class without having a dependency on the BizHawk.Client.Common dll
-	// Currently has no support for modifier keys
-	[Serializable]
-	public struct InputEvent
+	public struct InputEvent 
 	{
-		public InputEventType EventType;
-
+		// For simplicity, use this for both axis and button input: 0 is unpressed, > 0 is pressed
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-		public string ButtonName;
-
-		public ClientInputFocus Source;
-
-		public override string ToString() => $"{EventType}:{ButtonName}";
+		public string name; // E.g. "P1 A"
+		public int value;
+		public int controller; // Starts from 1
+		public bool isAnalog;
+	 	public override string ToString() => $"{name}:{value}";
 	}
 
-	public enum InputEventType
-	{
-		Press, Release
-	}
+	// // This is basically the same as BizHawk.Client.Common.InputEvent,
+	// // but duplicated here so that Unity can use this class without having a dependency on the BizHawk.Client.Common dll
+	// // Currently has no support for modifier keys
+	// [Serializable]
+	// public struct InputEvent
+	// {
+	// 	public InputEventType EventType;
 
-	[Flags]
-	public enum ClientInputFocus
-	{
-		None = 0,
-		Mouse = 1,
-		Keyboard = 2,
-		Pad = 4
-	}
+	// 	[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+	// 	public string ButtonName;
 
-	// This is added in order to make a serializable version of a Dictionary<string, int>
-	// which is the type Bizhawk uses for analog input values
-	[Serializable]
-	public struct AxisValue
-	{
-		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-		public string Name;
-		public int Value;
-		public override string ToString() => $"{Name}:{Value}";
-	}
+	// 	public ClientInputFocus Source;
 
-	public static class InputStructConsts {
-		public const int AxisValueArrayLength = 256;
-	}
+	// 	public override string ToString() => $"{EventType}:{ButtonName}";
+	// }
 
-	// [This is kinda weird, could probably be done in a nicer way, idk]
-	[Serializable]
-	public struct AxisValuesStruct
-	{
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = InputStructConsts.AxisValueArrayLength)]
-		public AxisValue[] axisValues;
-	}
+	// public enum InputEventType
+	// {
+	// 	Press, Release
+	// }
+
+	// [Flags]
+	// public enum ClientInputFocus
+	// {
+	// 	None = 0,
+	// 	Mouse = 1,
+	// 	Keyboard = 2,
+	// 	Pad = 4
+	// }
+
+	// // This is added in order to make a serializable version of a Dictionary<string, int>
+	// // which is the type Bizhawk uses for analog input values
+	// [Serializable]
+	// public struct AxisValue
+	// {
+	// 	[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+	// 	public string Name;
+	// 	public int Value;
+	// 	public override string ToString() => $"{Name}:{Value}";
+	// }
+
+	// public static class InputStructConsts {
+	// 	public const int AxisValueArrayLength = 256;
+	// }
+
+	// // [This is kinda weird, could probably be done in a nicer way, idk]
+	// [Serializable]
+	// public struct AxisValuesStruct
+	// {
+	// 	[MarshalAs(UnmanagedType.ByValArray, SizeConst = InputStructConsts.AxisValueArrayLength)]
+	// 	public AxisValue[] axisValues;
+	// }
 }

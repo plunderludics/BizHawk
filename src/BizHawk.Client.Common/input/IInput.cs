@@ -1,4 +1,5 @@
-﻿// Added for UnityHawk support
+﻿// TODO: remove
+// Added for UnityHawk support
 // implemented by Input.cs (original OS input)
 // and UnityHawkInput (get input from Unity via shared memory)
 

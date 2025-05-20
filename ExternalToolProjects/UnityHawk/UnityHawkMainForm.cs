@@ -24,12 +24,14 @@ namespace Plunderludics.UnityHawk.Tool
 		private ApiContainer APIs => _apiContainer!;
 
 		private IVideoProvider _videoProvider;
+		private ISoundProvider _soundProvider;
 
 		protected override string WindowTitleStatic => "UnityHawk";
 
 		private SharedInputBuffer _inputBuffer;
 		private ApiCallRpc _apiCallRpc;
 		private SharedTextureBuffer _sharedTextureBuffer;
+		private UnityHawkSound _unityHawkSound;
 
 		// private SharedAnalogInputBuffer _analogInputBuffer; // [TODO I think this can actually just be merged w KeyInputBuffer]
 		private Dictionary<string, bool> buttonState = new();  // Current button state - need to pass to JoypadApi every frame
@@ -93,16 +95,20 @@ namespace Plunderludics.UnityHawk.Tool
 				}
 			}
 
-			// Same w audio buffer, has to be re-initialized for new emulator
-			// string audioRpcName = (string)APIs.UserData.Get("unityhawk-texture-buffer");
-			// if (_argParser.shareAudioOverRpcBuffer != null) {
-			// 	// Init rpc buffer for passing audio to unity
-			// 	if (_unityHawkSound == null) {
-			// 		_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider);
-			// 	} else {
-			// 		_unityHawkSound.SetSoundProvider(_currentSoundProvider);
-			// 	}
-			// }
+			// Audio buffer
+			_soundProvider = _emu.AsSoundProviderOrDefault();
+			string audioRpcName = (string)APIs.UserData.Get("unityhawk-audio-buffer");
+			if (audioRpcName != null) {
+				GlobalConfig.SoundVolume = 0; // Hack to disable native sound: TODO unity should probably mute via cli arg instead
+				// (Don't set SoundEnabled = false, that disables the sound provider completely)
+
+				// Init rpc buffer for passing audio to unity
+				if (_unityHawkSound == null) {
+					_unityHawkSound = new (audioRpcName, _soundProvider);
+				} else {
+					_unityHawkSound.SetSoundProvider(_soundProvider);
+				}
+			}
 		}
 
 		protected override void UpdateBefore() {
@@ -125,7 +131,7 @@ namespace Plunderludics.UnityHawk.Tool
 			APIs.Joypad.Set(buttonState, 1); // TODO: support controllers other than 1
 			APIs.Joypad.SetAnalog(analogState, 1); // TODO: support controllers other than 1
 
-			// Process api calls from api call buffer
+			// TODO Process api calls from api call buffer
 		}
 
 		protected override void UpdateAfter() {
@@ -140,6 +146,7 @@ namespace Plunderludics.UnityHawk.Tool
 				_sharedTextureBuffer.Write(pixels, width, height, APIs.Emulation.FrameCount());
 			}
 			// Send audio through audio buffer
+			_unityHawkSound?.Update();
 		}
 
 		// This is only for api calls that require a return value - others are handled on the main thread in UpdateValues
@@ -148,12 +155,10 @@ namespace Plunderludics.UnityHawk.Tool
 				case "GetSystemId":
 					output = APIs.Emulation.GetSystemId();
 					return true;
-					break;
 				default:
 					output = "";
 					Console.WriteLine($"UnityHawk: Unknown API call {methodName} with args {argString}");
 					return false;
-					break;
 			}
 		}
 	}

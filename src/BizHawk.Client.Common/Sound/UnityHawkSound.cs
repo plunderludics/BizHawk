@@ -1,3 +1,4 @@
+// TODO move this into UnityHawk external tool project and appropriate namespace
 using System;
 
 using BizHawk.Emulation.Common;

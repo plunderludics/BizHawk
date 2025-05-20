@@ -1078,7 +1078,7 @@ namespace BizHawk.Client.EmuHawk
 		// Buffers for communication with Unity process via shared memory
 		// ApiCallBuffer _apiCallBuffer = null;
 		// SharedTextureBuffer _sharedTextureBuffer;
-		private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
+		// private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
 
 		public CheatCollection CheatList { get; }
 
@@ -3329,13 +3329,7 @@ namespace BizHawk.Client.EmuHawk
 				UpdateToolsAfter();
 			}
 
-			// [UnityHawk]
-			if (_unityHawkSound != null) {
-				_unityHawkSound.Update();
-			} else {
-				// Only update native sound if not sharing audio via rpc
-				Sound.UpdateSound(atten, DisableSecondaryThrottling);
-			}
+			Sound.UpdateSound(atten, DisableSecondaryThrottling);
 		}
 
 		private void CalcFramerateAndUpdateDisplay(long currentTimestamp, bool isRewinding, bool isFastForwarding)

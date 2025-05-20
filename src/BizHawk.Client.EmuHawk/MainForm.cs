@@ -854,15 +854,6 @@ namespace BizHawk.Client.EmuHawk
 				StepRunLoop_Throttle();
 
 				Render();
-
-				if (_sharedTextureBuffer != null) {
-					int[] pixels = _currentVideoProvider.GetVideoBuffer();
-					int width =  _currentVideoProvider.BufferWidth;
-					int height =  _currentVideoProvider.BufferHeight;
-					// Pass current frame index along with texture to make it possible to sync with lua rpc calls
-					// (due to small unpredictable lag in the shared buffer write)
-					_sharedTextureBuffer.Write(pixels, width, height, Emulator.Frame);
-				}
 				
 				// HACK: RAIntegration might peek at memory during messages
 				// we need this to allow memory access here, otherwise it will deadlock
@@ -1083,9 +1074,10 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		// [UnityHawk]
+		// TODO remove
 		// Buffers for communication with Unity process via shared memory
 		// ApiCallBuffer _apiCallBuffer = null;
-		SharedTextureBuffer _sharedTextureBuffer;
+		// SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
 
 		public CheatCollection CheatList { get; }
@@ -4094,27 +4086,17 @@ namespace BizHawk.Client.EmuHawk
 		private void OnRomChanged()
 		{
 			// [UnityHawk]
-			// // Need to init/re-init texture buffer here because size depends on the video resolution of the platform
-			// InitSharedTextureBuffer();
-			// // Same w audio buffer, has to be re-initialized for new emulator
-			// if (_argParser.shareAudioOverRpcBuffer != null) {
-			// 	// Init rpc buffer for passing audio to unity
-			// 	if (_unityHawkSound == null) {
-			// 		_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider);
-			// 	} else {
-			// 		_unityHawkSound.SetSoundProvider(_currentSoundProvider);
-			// 	}
-			// }
-			// // Override the savestate save directory in the config (needs to be here since the key depends on the platform)
-			// if (_argParser.savestateSaveDir != null) {
-			// 	// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-			// 	Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
-			// }
-			// // Override the ram watch save directory in the config 
-			// if (_argParser.ramWatchSaveDir != null) {
-			// 	// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-			// 	Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
-			// }
+			// (Could move this into external tool, but does it belong there? Feels like in principle this stuff could be useful outside of UnityHawk)
+			// Override the savestate save directory in the config (needs to be here since the key depends on the platform)
+			if (_argParser.savestateSaveDir != null) {
+				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
+			}
+			// Override the ram watch save directory in the config 
+			if (_argParser.ramWatchSaveDir != null) {
+				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
+			}
 
 			if (!_argParser.headless && _argParser.ramWatchFile != null) {
 				Tools.Load<RamWatch>();
@@ -5051,19 +5033,6 @@ namespace BizHawk.Client.EmuHawk
 		// Extension for savestates. Defaults to ".State" (as in original Bizhawk) but can be set via --savestate-extension flag
 		private string SaveStateExtension() {
 			return _argParser.savestateExtension ?? "State";
-		}
-		private void InitSharedTextureBuffer() {
-			string texBufName = _argParser.writeTextureToSharedBuffer;
-			if (texBufName != null) {
-				// Init shared texture buffer for passing to unity
-				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
-				if (_sharedTextureBuffer == null) {
-					_sharedTextureBuffer = new(texBufName, texbuf.Length);
-				} else {
-					// If buffer already exists, resize it to fit new emulator
-					_sharedTextureBuffer.SetSize(texbuf.Length);
-				}
-			}
 		}
 
 		// TODO move into UnityHawk plugin

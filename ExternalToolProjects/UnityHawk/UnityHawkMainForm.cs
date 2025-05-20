@@ -14,20 +14,32 @@ namespace Plunderludics.UnityHawk.Tool
 	[ExternalTool("UnityHawk", Description = "UnityHawk")]
 	public class UnityHawkMainForm : ToolFormBase, IExternalToolForm
 	{
+		// Supposed to use this for anything unsupported by APIs
+		[RequiredService]
+		private IEmulator? _emu { get; set; }
+
+		// (This gets magically set by EmuHawk somehow)
 		public ApiContainer? _apiContainer { get; set; }
 
 		private ApiContainer APIs => _apiContainer!;
 
+		private IVideoProvider _videoProvider;
+
 		protected override string WindowTitleStatic => "UnityHawk";
 
-		private Plunderludics.UnityHawk.SharedBuffers.SharedInputBuffer _inputBuffer;
+		private SharedInputBuffer _inputBuffer;
 		private ApiCallRpc _apiCallRpc;
+		private SharedTextureBuffer _sharedTextureBuffer;
 
 		// private SharedAnalogInputBuffer _analogInputBuffer; // [TODO I think this can actually just be merged w KeyInputBuffer]
 		private Dictionary<string, bool> buttonState = new();  // Current button state - need to pass to JoypadApi every frame
 		private Dictionary<string, int?> analogState = new();  // Current analog axis state
 
 		private Label text;
+
+		// Copied this from HelloWorld/CustomMainForm.cs, it says it's a very bad idea but doesn't say why - how else can we modify config values?
+		private Config GlobalConfig => (APIs.Emulation as EmulationApi ?? throw new Exception("required API wasn't fulfilled")).ForbiddenConfigReference;
+
 		public UnityHawkMainForm()
 		{
 			this.text = new System.Windows.Forms.Label();
@@ -47,49 +59,87 @@ namespace Plunderludics.UnityHawk.Tool
 			this.PerformLayout();
 		}
 
-		/// <remarks>This is called once when the form is opened, and every time a new movie session starts.</remarks>
-		public override void Restart()
-		{
+		/// When emuhawk opens, and whenever new rom is loaded
+		public override void Restart() {
 			Console.WriteLine("Restarting UnityHawk plugin...");
 			
 			// Open sharedmemory buffers
 			// TODO: could put these arg names in a shared dll?
-			string inputBufferName = (string)APIs.UserData.Get("unityhawk-input-buffer");
-			if (!string.IsNullOrEmpty(inputBufferName)) {
-				_inputBuffer = new(inputBufferName);
+			if (_inputBuffer == null) {
+				string inputBufferName = (string)APIs.UserData.Get("unityhawk-input-buffer");
+				if (!string.IsNullOrEmpty(inputBufferName)) {
+					_inputBuffer = new(inputBufferName);
+				}
 			}
 
-			string apiCallRpcName = (string)APIs.UserData.Get("unityhawk-api-call-rpc");
-			if (!string.IsNullOrEmpty(apiCallRpcName)) {
-				_apiCallRpc = new(apiCallRpcName, ProcessApiRpcCall);
+			if (_apiCallRpc == null) {
+				string apiCallRpcName = (string)APIs.UserData.Get("unityhawk-api-call-rpc");
+				if (!string.IsNullOrEmpty(apiCallRpcName)) {
+					_apiCallRpc = new(apiCallRpcName, ProcessApiRpcCall);
+				}
 			}
+
+			_videoProvider = _emu.AsVideoProviderOrDefault();
+			// Need to init/re-init texture buffer here because size depends on the video resolution of the platform
+			string texBufName = (string)APIs.UserData.Get("unityhawk-texture-buffer");
+			if (texBufName != null) {
+				// Init shared texture buffer for passing to unity
+				int[] texbuf = _videoProvider.GetVideoBuffer();
+				if (_sharedTextureBuffer == null) {
+					_sharedTextureBuffer = new(texBufName, texbuf.Length);
+				} else {
+					// If buffer already exists, resize it to fit new emulator
+					_sharedTextureBuffer.SetSize(texbuf.Length);
+				}
+			}
+
+			// Same w audio buffer, has to be re-initialized for new emulator
+			// string audioRpcName = (string)APIs.UserData.Get("unityhawk-texture-buffer");
+			// if (_argParser.shareAudioOverRpcBuffer != null) {
+			// 	// Init rpc buffer for passing audio to unity
+			// 	if (_unityHawkSound == null) {
+			// 		_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider);
+			// 	} else {
+			// 		_unityHawkSound.SetSoundProvider(_currentSoundProvider);
+			// 	}
+			// }
 		}
 
-		public override void UpdateValues(ToolFormUpdateType type) {
-			if (type == ToolFormUpdateType.PreFrame) {
-				if (_inputBuffer != null) {
-					// Get input from input buffer and pass to emulator
-					Plunderludics.UnityHawk.InputEvent? mie;
-					while ((mie = _inputBuffer.Read()).HasValue) {
-						Plunderludics.UnityHawk.InputEvent ie = mie.Value;
-						
-						if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
-							analogState[ie.name] = ie.value;
-						} else {
-							buttonState[ie.name] = ie.value > 0; // TODO should store the controller here I guess (or store string like "P1 A")
-						}
+		protected override void UpdateBefore() {
+			// Before frame
+			if (_inputBuffer != null) {
+				// Get input from input buffer and pass to emulator
+				Plunderludics.UnityHawk.InputEvent? mie;
+				while ((mie = _inputBuffer.Read()).HasValue) {
+					Plunderludics.UnityHawk.InputEvent ie = mie.Value;
+					
+					if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
+						analogState[ie.name] = ie.value;
+					} else {
+						buttonState[ie.name] = ie.value > 0; // TODO should store the controller here I guess (or store string like "P1 A")
 					}
 				}
-
-				// Send input state to JoypadApi (need to do this every frame)
-				APIs.Joypad.Set(buttonState, 1); // TODO: support controllers other than 1
-				APIs.Joypad.SetAnalog(analogState, 1); // TODO: support controllers other than 1
-
-				// Process api calls from api call buffer
-			} else if (type == ToolFormUpdateType.PostFrame) {
-				// Send texture through texture buffer
-				// Send audio through audio buffer
 			}
+
+			// Send input state to JoypadApi (need to do this every frame)
+			APIs.Joypad.Set(buttonState, 1); // TODO: support controllers other than 1
+			APIs.Joypad.SetAnalog(analogState, 1); // TODO: support controllers other than 1
+
+			// Process api calls from api call buffer
+		}
+
+		protected override void UpdateAfter() {
+			// After frame
+			// Send texture through texture buffer
+			if (_sharedTextureBuffer != null) {
+				int[] pixels = _videoProvider.GetVideoBuffer();
+				int width =  _videoProvider.BufferWidth;
+				int height =  _videoProvider.BufferHeight;
+				// Pass current frame index along with texture to make it possible to sync with lua rpc calls
+				// (due to small unpredictable lag in the shared buffer write)
+				_sharedTextureBuffer.Write(pixels, width, height, APIs.Emulation.FrameCount());
+			}
+			// Send audio through audio buffer
 		}
 
 		// This is only for api calls that require a return value - others are handled on the main thread in UpdateValues

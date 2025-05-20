@@ -4996,31 +4996,6 @@ namespace BizHawk.Client.EmuHawk
 			// Same for mute
 			Config.SoundEnabled = _argParser.mute.HasValue ? !_argParser.mute.Value : Config.SoundEnabled;
 
-			string callMethodBufferName = _argParser.unityCallMethodBuffer;
-			if (callMethodBufferName != null) {
-				// Init RPC buffer for CallMethod calls to unity (from lua)
-				CallMethodRpc.Init(callMethodBufferName);
-			}
-
-			// string apiBufferName = _argParser.apiCallMethodBuffer;
-			// if (apiBufferName != null) {
-			// 	// Init RPC buffer for Bizhawk API calls from unity
-			// 	_apiCallBuffer = new ApiCallBuffer(apiBufferName);
-			// }
-
-			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
-			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
-			// if (keyInputBufferName != null || analogInputBufferName != null) {
-			// 	// Get key presses from Unity via shared buffer
-			// 	// TODO: remove all this input stuff!
-			// 	// inputProvider = new UnityHawkInput(keyInputBufferName, analogInputBufferName);
-			// } else {
-			// 	// Use native OS input
-			// 	inputProvider = Input.Instance;
-			// }
-
-			// TODO: configure UnityHawk external tool
-
 			inputProvider = Input.Instance; // TODO: Need to disable native input when UnityHawk plugin is handling input (or just make sure background input not accepted?)
 		}
 		
@@ -5028,53 +5003,5 @@ namespace BizHawk.Client.EmuHawk
 		private string SaveStateExtension() {
 			return _argParser.savestateExtension ?? "State";
 		}
-
-		// TODO move into UnityHawk plugin
-		// private void ProcessUnityHawkApiCalls(ApiCallBuffer apiCallBuffer) {
-		// 	Plunderludics.UnityHawk.MethodCall? mcq;
-		// 	while ((mcq = apiCallBuffer.Read()).HasValue) {
-		// 		Plunderludics.UnityHawk.MethodCall mc = mcq.Value;
-		// 		// Console.WriteLine($"Unity attempting api call {mc}");
-		// 		switch (mc.MethodName) {
-		// 		// [Mmm these string constants should really go in a file shared between unity and bizhawk]
-		// 		case "LoadRom":
-		// 			string romPath = mc.Argument;
-		// 			// Load the rom using the same logic as when it's provided on the command line
-		// 			// [This code is copied 3 times rn :/ TODO refactor]
-		// 			Console.WriteLine($"LoadSample: Looking for rom in {romPath}");
-		// 			var ioa = OpenAdvancedSerializer.ParseWithLegacy(romPath);
-		// 			if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
-		// 			_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
-		// 			if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {romPath}");
-
-		// 			break;
-		// 		case "LoadState":
-		// 			LoadState(mc.Argument, "placeholderStateName", suppressOSD: true);
-		// 			break;
-		// 		case "SaveState":
-		// 			SaveState(mc.Argument, "placeholderStateName", fromLua: false, suppressOSD: true);
-		// 			break;
-		// 		case "Unpause":
-		// 			UnpauseEmulator();
-		// 			break;
-		// 		case "Pause":
-		// 			PauseEmulator();
-		// 			break;
-		// 		case "FrameAdvance":
-		// 			FrameAdvance();
-		// 			break;
-		// 		case "SetVolume":
-		// 			SetVolume(int.Parse(mc.Argument));
-		// 			break;
-		// 		default:
-		// 			Console.WriteLine($"Warning: Unity attempting to call unsupported bizhawk api method {mc.MethodName}");
-		// 			break;
-		// 		}
-		// 		// [TODO: would be good to return the bool success value for OpenRom()]
-		// 		// Previous implementation using reflection:
-		// 		// typeof(IMainFormForApi).GetMethod(methodCall.MethodName).Invoke(_api, new object[] {methodCall.Argument});
-		// 	}
-		// }
-		// [end UnityHawk methods]
 	}
 }

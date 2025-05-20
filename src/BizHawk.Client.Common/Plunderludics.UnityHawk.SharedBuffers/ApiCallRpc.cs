@@ -5,9 +5,6 @@ using SharedMemory;
 
 namespace Plunderludics.UnityHawk.SharedBuffers {
 public class ApiCallRpc {
-    /// the buffer name
-    string _name;
-
     /// the rpc buffer
     RpcBuffer _rpcBuffer;
 

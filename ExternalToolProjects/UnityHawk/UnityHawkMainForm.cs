@@ -30,6 +30,8 @@ namespace Plunderludics.UnityHawk.Tool
 
 		private SharedInputBuffer _inputBuffer;
 		private ApiCallRpc _apiCallRpc;
+		private ApiCommandBuffer _apiCommandBuffer;
+		private CallMethodRpc _callMethodRpc; // For lua calls to unity
 		private SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound;
 
@@ -74,15 +76,35 @@ namespace Plunderludics.UnityHawk.Tool
 				}
 			}
 
+			// API command buffer is for write-only commands that don't require a return value, run in main thread before each framae
+			if (_apiCommandBuffer == null) {
+				string apiCommandBufferName = (string)APIs.UserData.Get("unityhawk-api-command-buffer");
+				if (apiCommandBufferName != null) {
+					// Init RPC buffer for API commands from unity
+					_apiCommandBuffer = new(apiCommandBufferName);
+				}
+			}
+
+			// API call buffer is for read-only commands that require a return value (and run in separate thread w arbitrary timing)
 			if (_apiCallRpc == null) {
 				string apiCallRpcName = (string)APIs.UserData.Get("unityhawk-api-call-rpc");
 				if (!string.IsNullOrEmpty(apiCallRpcName)) {
 					_apiCallRpc = new(apiCallRpcName, ProcessApiRpcCall);
 				}
 			}
+			
+			// For lua callbacks to unity
+			if (CallMethodRpc.Instance == null) {
+				string callMethodBufferName = (string)APIs.UserData.Get("unityhawk-lua-callbacks-buffer");
+				if (callMethodBufferName != null) {
+					// Init RPC buffer for CallMethod calls to unity (from lua)
+					CallMethodRpc.Init(callMethodBufferName);
+				}
+			}
 
+			// Texture buffer
 			_videoProvider = _emu.AsVideoProviderOrDefault();
-			// Need to init/re-init texture buffer here because size depends on the video resolution of the platform
+			// Need to init/re-init texture buffer here when rom changes because size depends on the video resolution of the platform
 			string texBufName = (string)APIs.UserData.Get("unityhawk-texture-buffer");
 			if (texBufName != null) {
 				// Init shared texture buffer for passing to unity
@@ -131,7 +153,10 @@ namespace Plunderludics.UnityHawk.Tool
 			APIs.Joypad.Set(buttonState, 1); // TODO: support controllers other than 1
 			APIs.Joypad.SetAnalog(analogState, 1); // TODO: support controllers other than 1
 
-			// TODO Process api calls from api call buffer
+			// Process api commands from unity
+			if (_apiCommandBuffer != null) {
+				ProcessApiCommands();
+			}
 		}
 
 		protected override void UpdateAfter() {
@@ -145,8 +170,50 @@ namespace Plunderludics.UnityHawk.Tool
 				// (due to small unpredictable lag in the shared buffer write)
 				_sharedTextureBuffer.Write(pixels, width, height, APIs.Emulation.FrameCount());
 			}
+
 			// Send audio through audio buffer
 			_unityHawkSound?.Update();
+		}
+
+		// For write-only api calls from unity that don't require a return value - run on main thread before each frame
+		// [Should probably go in different file]
+		private void ProcessApiCommands() {
+			Plunderludics.UnityHawk.MethodCall? mcq;
+			while ((mcq = _apiCommandBuffer.Read()).HasValue) {
+				Plunderludics.UnityHawk.MethodCall mc = mcq.Value;
+				Console.WriteLine($"Receiving api command {mc}");
+				switch (mc.MethodName) {
+				// [Mmm these string constants should really go in a file shared between unity and bizhawk]
+				case "LoadRom":
+					APIs.EmuClient.OpenRom(mc.Argument);
+					break;
+				case "LoadState":
+					bool success = APIs.EmuClient.LoadState(mc.Argument, isFullPath: true);
+					if (!success) {
+						Console.WriteLine($"Warning: Unity attempted to load state {mc.Argument} but it failed");
+					}
+					break;
+				case "SaveState":
+					APIs.EmuClient.SaveState(mc.Argument, isFullPath: true);
+					break;
+				case "Pause":
+					APIs.EmuClient.Pause();
+					break;
+				case "Unpause":
+					APIs.EmuClient.Unpause();
+					break;
+				case "FrameAdvance":
+					APIs.EmuClient.DoFrameAdvance();
+					break;
+				case "SetVolume":
+					APIs.EmuClient.SetVolume(int.Parse(mc.Argument));
+					break;
+				// TODO: WriteMemory, FreezeMemory
+				default:
+					Console.WriteLine($"Warning: Unity attempting to send unsupported bizhawk api command {mc.MethodName}");
+					break;
+				}
+			}
 		}
 
 		// This is only for api calls that require a return value - others are handled on the main thread in UpdateValues
@@ -155,6 +222,7 @@ namespace Plunderludics.UnityHawk.Tool
 				case "GetSystemId":
 					output = APIs.Emulation.GetSystemId();
 					return true;
+				// TODO ReadMemory
 				default:
 					output = "";
 					Console.WriteLine($"UnityHawk: Unknown API call {methodName} with args {argString}");

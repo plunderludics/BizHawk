@@ -64,7 +64,7 @@ namespace BizHawk.Client.Common
 
 		public void Set(string button, bool? state = null, int? controller = null)
 		{
-			Console.WriteLine($"Set {button} {state} {controller}");
+			// Console.WriteLine($"Set {button} {state} {controller}");
 			try
 			{
 				var buttonToSet = controller == null ? button : $"P{controller} {button}";

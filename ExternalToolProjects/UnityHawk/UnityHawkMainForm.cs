@@ -77,7 +77,8 @@ namespace Plunderludics.UnityHawk.Tool
 			Console.WriteLine("Restarting UnityHawk plugin...");
 			
 			// Open sharedmemory buffers
-			string keyInputBufferName = (string)APIs.UserData.Get("unityhawk-key-input-buffer");
+			// TODO: could put these arg names in a shared dll?
+			string keyInputBufferName = (string)APIs.UserData.Get("unityhawk-input-buffer");
 			if (!string.IsNullOrEmpty(keyInputBufferName)) {
 				_keyInputBuffer = new(keyInputBufferName);
 			}

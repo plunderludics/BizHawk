@@ -26,9 +26,17 @@ mkdir -p $bizhawkDir/dll $bizhawkDir/gamedb $bizhawkDir/ExternalTools
 buildProject=src/BizHawk.Client.EmuHawk/
 exeName=EmuHawk.exe
 
-# TODO also build UnityHawk tool
-
+echo "building $buildProject"
 dotnet build $buildProject -c $buildConfig -p:UnityHawk=true &&
+
+# also build UnityHawk tool
+echo "building UnityHawk external tool"
+cd ExternalToolProjects/UnityHawk/
+. build_release.sh # TODO should config debug/release I guess
+cd ../..
+
+echo "copying dlls and assets into $packageDir"
+
 # for dlls that are needed by unity, make a second copy outside of the BizHawk~ dir:
 # TODO wonder if we could do this with automatic dependencies as part of dotnet build command or something
 for fn in \

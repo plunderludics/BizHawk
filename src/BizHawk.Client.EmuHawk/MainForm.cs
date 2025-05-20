@@ -806,10 +806,11 @@ namespace BizHawk.Client.EmuHawk
 
 			for (; ; )
 			{
-				if (_apiCallBuffer != null) {
-					// First do any pending api call requests from unity
-					ProcessUnityHawkApiCalls(_apiCallBuffer);
-				}
+				// TODO move to UnityHawkMainForm
+				// if (_apiCallBuffer != null) {
+				// 	// First do any pending api call requests from unity
+				// 	ProcessUnityHawkApiCalls(_apiCallBuffer);
+				// }
 
 				inputProvider.Update();
 
@@ -1083,7 +1084,7 @@ namespace BizHawk.Client.EmuHawk
 
 		// [UnityHawk]
 		// Buffers for communication with Unity process via shared memory
-		ApiCallBuffer _apiCallBuffer = null;
+		// ApiCallBuffer _apiCallBuffer = null;
 		SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
 
@@ -5025,11 +5026,11 @@ namespace BizHawk.Client.EmuHawk
 				CallMethodRpc.Init(callMethodBufferName);
 			}
 
-			string apiBufferName = _argParser.apiCallMethodBuffer;
-			if (apiBufferName != null) {
-				// Init RPC buffer for Bizhawk API calls from unity
-				_apiCallBuffer = new ApiCallBuffer(apiBufferName);
-			}
+			// string apiBufferName = _argParser.apiCallMethodBuffer;
+			// if (apiBufferName != null) {
+			// 	// Init RPC buffer for Bizhawk API calls from unity
+			// 	_apiCallBuffer = new ApiCallBuffer(apiBufferName);
+			// }
 
 			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
 			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
@@ -5065,52 +5066,52 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		// [This should probably go in a new file but whatever]
-		private void ProcessUnityHawkApiCalls(ApiCallBuffer apiCallBuffer) {
-			Plunderludics.UnityHawk.MethodCall? mcq;
-			while ((mcq = apiCallBuffer.Read()).HasValue) {
-				Plunderludics.UnityHawk.MethodCall mc = mcq.Value;
-				// Console.WriteLine($"Unity attempting api call {mc}");
-				switch (mc.MethodName) {
-				// [Mmm these string constants should really go in a file shared between unity and bizhawk]
-				case "LoadRom":
-					string romPath = mc.Argument;
-					// Load the rom using the same logic as when it's provided on the command line
-					// [This code is copied 3 times rn :/ TODO refactor]
-					Console.WriteLine($"LoadSample: Looking for rom in {romPath}");
-					var ioa = OpenAdvancedSerializer.ParseWithLegacy(romPath);
-					if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
-					_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
-					if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {romPath}");
+		// TODO move into UnityHawk plugin
+		// private void ProcessUnityHawkApiCalls(ApiCallBuffer apiCallBuffer) {
+		// 	Plunderludics.UnityHawk.MethodCall? mcq;
+		// 	while ((mcq = apiCallBuffer.Read()).HasValue) {
+		// 		Plunderludics.UnityHawk.MethodCall mc = mcq.Value;
+		// 		// Console.WriteLine($"Unity attempting api call {mc}");
+		// 		switch (mc.MethodName) {
+		// 		// [Mmm these string constants should really go in a file shared between unity and bizhawk]
+		// 		case "LoadRom":
+		// 			string romPath = mc.Argument;
+		// 			// Load the rom using the same logic as when it's provided on the command line
+		// 			// [This code is copied 3 times rn :/ TODO refactor]
+		// 			Console.WriteLine($"LoadSample: Looking for rom in {romPath}");
+		// 			var ioa = OpenAdvancedSerializer.ParseWithLegacy(romPath);
+		// 			if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
+		// 			_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
+		// 			if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {romPath}");
 
-					break;
-				case "LoadState":
-					LoadState(mc.Argument, "placeholderStateName", suppressOSD: true);
-					break;
-				case "SaveState":
-					SaveState(mc.Argument, "placeholderStateName", fromLua: false, suppressOSD: true);
-					break;
-				case "Unpause":
-					UnpauseEmulator();
-					break;
-				case "Pause":
-					PauseEmulator();
-					break;
-				case "FrameAdvance":
-					FrameAdvance();
-					break;
-				case "SetVolume":
-					SetVolume(int.Parse(mc.Argument));
-					break;
-				default:
-					Console.WriteLine($"Warning: Unity attempting to call unsupported bizhawk api method {mc.MethodName}");
-					break;
-				}
-				// [TODO: would be good to return the bool success value for OpenRom()]
-				// Previous implementation using reflection:
-				// typeof(IMainFormForApi).GetMethod(methodCall.MethodName).Invoke(_api, new object[] {methodCall.Argument});
-			}
-		}
+		// 			break;
+		// 		case "LoadState":
+		// 			LoadState(mc.Argument, "placeholderStateName", suppressOSD: true);
+		// 			break;
+		// 		case "SaveState":
+		// 			SaveState(mc.Argument, "placeholderStateName", fromLua: false, suppressOSD: true);
+		// 			break;
+		// 		case "Unpause":
+		// 			UnpauseEmulator();
+		// 			break;
+		// 		case "Pause":
+		// 			PauseEmulator();
+		// 			break;
+		// 		case "FrameAdvance":
+		// 			FrameAdvance();
+		// 			break;
+		// 		case "SetVolume":
+		// 			SetVolume(int.Parse(mc.Argument));
+		// 			break;
+		// 		default:
+		// 			Console.WriteLine($"Warning: Unity attempting to call unsupported bizhawk api method {mc.MethodName}");
+		// 			break;
+		// 		}
+		// 		// [TODO: would be good to return the bool success value for OpenRom()]
+		// 		// Previous implementation using reflection:
+		// 		// typeof(IMainFormForApi).GetMethod(methodCall.MethodName).Invoke(_api, new object[] {methodCall.Argument});
+		// 	}
+		// }
 		// [end UnityHawk methods]
 	}
 }

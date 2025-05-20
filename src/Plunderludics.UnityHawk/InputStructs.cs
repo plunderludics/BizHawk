@@ -1,5 +1,8 @@
 // Struct types used for sending serialized input data (key events and analog input signals)
 // over IPC from Unity to Bizhawk.
+
+// TODO: move into UnityHawk external tool project
+
 #nullable enable
 
 using System;

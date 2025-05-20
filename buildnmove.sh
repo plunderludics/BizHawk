@@ -27,12 +27,12 @@ buildProject=src/BizHawk.Client.EmuHawk/
 exeName=EmuHawk.exe
 
 echo "building $buildProject"
-dotnet build $buildProject -c $buildConfig -p:UnityHawk=true &&
+dotnet build $buildProject -c $buildConfig -p:UnityHawk=true || exit 1;
 
 # also build UnityHawk tool
 echo "building UnityHawk external tool"
 cd ExternalToolProjects/UnityHawk/
-. build_release.sh # TODO should config debug/release I guess
+. build_release.sh || exit 1; # TODO should config debug/release I guess
 cd ../..
 
 echo "copying dlls and assets into $packageDir"

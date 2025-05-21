@@ -176,6 +176,15 @@ namespace Plunderludics.UnityHawk.Tool
 			_unityHawkSound?.Update();
 		}
 
+		protected override void UpdatePaused() {
+			// Called when the emulator is paused
+			// Need to keep processing api commands so we can receive Unpause or FrameAdvance
+			Console.WriteLine("UnityHawk: Paused");
+			if (_apiCommandBuffer != null) {
+				ProcessApiCommands();
+			}
+		}
+
 		// For write-only api calls from unity that don't require a return value - run on main thread before each frame
 		// [Should probably go in different file]
 		private void ProcessApiCommands() {

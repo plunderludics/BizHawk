@@ -733,6 +733,18 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
+		// [added for UnityHawk]
+		public void UpdateToolsPaused() 
+		{
+			foreach (var tool in _tools)
+			{
+				if (tool.IsActive)
+				{
+					tool.UpdateValues(ToolFormUpdateType.Paused);
+				}
+			}
+		}
+
 		public void FastUpdateBefore()
 		{
 			foreach (var tool in _tools)

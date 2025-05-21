@@ -3,6 +3,8 @@ using System.Text;
 
 using SharedMemory;
 
+using Plunderludics.UnityHawk.Shared;
+
 namespace Plunderludics.UnityHawk.SharedBuffers
 {
 	// For calling C# methods in Unity from BizHawk lua

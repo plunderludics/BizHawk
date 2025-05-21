@@ -3,6 +3,8 @@
 using System;
 using SharedMemory;
 
+using Plunderludics.UnityHawk.Shared;
+
 namespace Plunderludics.UnityHawk.SharedBuffers {
 public class ApiCallRpc {
     /// the rpc buffer

@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 
-namespace Plunderludics.UnityHawk
+namespace Plunderludics.UnityHawk.Shared
 {
 	public struct InputEvent 
 	{

@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 using SharedMemory;
 
-using Plunderludics.UnityHawk;
+using Plunderludics.UnityHawk.Shared;
 
 namespace Plunderludics.UnityHawk.SharedBuffers
 {
@@ -16,7 +16,7 @@ public class SharedInputBuffer {
 	public const int DEFAULT_NODE_COUNT = 2048; // size of input buffer, should be plenty
 	
 	private readonly CircularBuffer _inputBuffer;
-	private readonly int _bufferItemSize = Marshal.SizeOf(typeof(Plunderludics.UnityHawk.InputEvent));
+	private readonly int _bufferItemSize = Marshal.SizeOf(typeof(InputEvent));
 	
 	public SharedInputBuffer(string bufferName, int nodeCount = DEFAULT_NODE_COUNT) {
 		Console.WriteLine($"Init input buffer {bufferName}");

@@ -3,7 +3,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Plunderludics.UnityHawk
+namespace Plunderludics.UnityHawk.Shared
 {
 	// Copied these from internet somewhere
 	public static class Serialization {

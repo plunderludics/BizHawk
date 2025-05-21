@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 
-namespace Plunderludics.UnityHawk
+namespace Plunderludics.UnityHawk.Shared
 {
 	[Serializable]
 	// Just a pair of strings (method name, argument)

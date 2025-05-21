@@ -7,8 +7,7 @@ using System.Runtime.InteropServices;
 
 using SharedMemory;
 
-using Plunderludics.UnityHawk;
-using BizHawk.Client.Common;
+using Plunderludics.UnityHawk.Shared;
 
 namespace Plunderludics.UnityHawk.SharedBuffers
 {

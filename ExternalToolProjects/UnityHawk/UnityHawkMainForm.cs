@@ -8,6 +8,9 @@ using BizHawk.Client.EmuHawk;
 using BizHawk.Emulation.Common;
 
 using Plunderludics.UnityHawk.SharedBuffers;
+using Plunderludics.UnityHawk.Shared;
+
+using InputEvent = Plunderludics.UnityHawk.Shared.InputEvent;
 
 namespace Plunderludics.UnityHawk.Tool
 {
@@ -135,9 +138,9 @@ namespace Plunderludics.UnityHawk.Tool
 			// Before frame
 			if (_inputBuffer != null) {
 				// Get input from input buffer and pass to emulator
-				Plunderludics.UnityHawk.InputEvent? mie;
+				InputEvent? mie;
 				while ((mie = _inputBuffer.Read()).HasValue) {
-					Plunderludics.UnityHawk.InputEvent ie = mie.Value;
+					InputEvent ie = mie.Value;
 					
 					if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
 						analogState[ie.name] = ie.value;
@@ -176,9 +179,9 @@ namespace Plunderludics.UnityHawk.Tool
 		// For write-only api calls from unity that don't require a return value - run on main thread before each frame
 		// [Should probably go in different file]
 		private void ProcessApiCommands() {
-			Plunderludics.UnityHawk.MethodCall? mcq;
+			MethodCall? mcq;
 			while ((mcq = _apiCommandBuffer.Read()).HasValue) {
-				Plunderludics.UnityHawk.MethodCall mc = mcq.Value;
+				MethodCall mc = mcq.Value;
 				Console.WriteLine($"Receiving api command {mc}");
 				switch (mc.MethodName) {
 				// [Mmm these string constants should really go in a file shared between unity and bizhawk]

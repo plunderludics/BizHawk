@@ -231,6 +231,7 @@ namespace Plunderludics.UnityHawk.Tool
 					bool isBigEndian = bool.Parse(args[3]);
 					string domain = (args.Length > 4) ? args[4] : APIs.Memory.MainMemoryName;
 
+					APIs.Memory.SetBigEndian(isBigEndian);
 					switch (size)
 					{
 					case 1:
@@ -260,6 +261,7 @@ namespace Plunderludics.UnityHawk.Tool
 					bool isBigEndian = bool.Parse(args[3]);
 					string domain = (args.Length > 4) ? args[4] : APIs.Memory.MainMemoryName;
 
+					APIs.Memory.SetBigEndian(isBigEndian);
 					switch (size)
 					{
 					case 1:
@@ -291,9 +293,13 @@ namespace Plunderludics.UnityHawk.Tool
 					APIs.Memory.WriteFloat(address, value, domain);
 					break;
 				}
-				case "FreezeFloat":
-					// TODO
+				case "FreezeBytes": {
+					// Freezes bytes to whatever the current value is
+					// (Do we need to provide a way to set a specific value?)
+					/*(long address, int size, string domain = null)*/
+					// MainForm.CheatList.Add();
 					break;
+				}
 				default:
 					Console.WriteLine($"Warning: Unity attempting to send unsupported bizhawk api command {mc.MethodName}");
 					break;

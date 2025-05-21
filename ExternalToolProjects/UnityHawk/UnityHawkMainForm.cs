@@ -16,10 +16,10 @@ namespace Plunderludics.UnityHawk.Tool
 	{
 		// Supposed to use this for anything unsupported by APIs
 		[RequiredService]
-		private IEmulator? _emu { get; set; }
+		private IEmulator _emu { get; set; }
 
 		// (This gets magically set by EmuHawk somehow)
-		public ApiContainer? _apiContainer { get; set; }
+		public ApiContainer _apiContainer { get; set; }
 
 		private ApiContainer APIs => _apiContainer!;
 
@@ -31,11 +31,9 @@ namespace Plunderludics.UnityHawk.Tool
 		private SharedInputBuffer _inputBuffer;
 		private ApiCallRpc _apiCallRpc;
 		private ApiCommandBuffer _apiCommandBuffer;
-		private CallMethodRpc _callMethodRpc; // For lua calls to unity
 		private SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound;
 
-		// private SharedAnalogInputBuffer _analogInputBuffer; // [TODO I think this can actually just be merged w KeyInputBuffer]
 		private Dictionary<string, bool> buttonState = new();  // Current button state - need to pass to JoypadApi every frame
 		private Dictionary<string, int?> analogState = new();  // Current analog axis state
 

@@ -1,4 +1,4 @@
-// TODO remove this and the enclosing project
+// TODO this probably belongs within the UnityHawk external tool project
 
 using System;
 using System.Linq;

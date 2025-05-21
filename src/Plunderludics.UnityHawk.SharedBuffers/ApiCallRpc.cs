@@ -11,7 +11,8 @@ public class ApiCallRpc {
     RpcBuffer _rpcBuffer;
 
     /// the callback for this rpc
-    public delegate bool CallApiMethod(string methodName, string argString, out string output);
+    /// (return null if and only if method call fails for some reason)
+    public delegate string CallApiMethod(string methodName, string argString);
 
     public ApiCallRpc(string name, CallApiMethod callApiMethod) {
         _rpcBuffer = new (
@@ -24,17 +25,15 @@ public class ApiCallRpc {
                     string methodName = methodCall.MethodName;
                     string argString = methodCall.Argument;
                     // Console.WriteLine($"ApiCallRpc: {methodName}({argString})");
-
-                    var exists = callApiMethod(methodName, argString, out returnString);
-
-                    // [messy hack] don't allow returning null because it seems to break things on the other side of the RPC
+                    returnString = callApiMethod(methodName, argString);
+                    
                     if (returnString == null) {
-                        Console.WriteLine($"Warning: {methodName} returned null but null return values are not supported, converting to empty string");
-                        returnString = "";
+                        Console.WriteLine($"Error: ApiCallRpc {methodCall} returned null");
+                        return null;
                     }
                 } catch (Exception e) {
                     Console.WriteLine($"Error in ApiCallRpc: {e}");
-                    returnString = ""; // return an empty string to avoid crashing bizhawk
+                    return null;
                 }
 
                 byte[] returnData = System.Text.Encoding.ASCII.GetBytes(returnString);

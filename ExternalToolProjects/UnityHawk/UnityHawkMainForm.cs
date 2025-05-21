@@ -221,7 +221,20 @@ namespace Plunderludics.UnityHawk.Tool
 				case "SetVolume":
 					APIs.EmuClient.SetVolume(int.Parse(mc.Argument));
 					break;
-				// TODO: WriteMemory, FreezeMemory
+				case "WriteByteRange":
+					// TODO
+					break;
+				case "WriteFloat":
+					// TODO
+					break;
+				case "FreezeByteRange":
+					// Can use MainForm.CheatList.Add i think
+					// (Or if that doesn't work just store freezes locally and write values each frame)
+					// TODO
+					break;
+				case "FreezeFloat":
+					// TODO
+					break;
 				default:
 					Console.WriteLine($"Warning: Unity attempting to send unsupported bizhawk api command {mc.MethodName}");
 					break;
@@ -230,16 +243,62 @@ namespace Plunderludics.UnityHawk.Tool
 		}
 
 		// This is only for api calls that require a return value - others are handled on the main thread in UpdateValues
-		private bool ProcessApiRpcCall(string methodName, string argString, out string output) {
+		private string ProcessApiRpcCall(string methodName, string argString) {
 			switch (methodName) {
 				case "GetSystemId":
-					output = APIs.Emulation.GetSystemId();
-					return true;
-				// TODO ReadMemory
+					return APIs.Emulation.GetSystemId();
+				case "ReadUnsigned": {
+					/*(long address, int size, bool isBigEndian, string domain = null)*/
+					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					var args = argString.Split(',');
+					long address = long.Parse(args[0]);
+					int size = int.Parse(args[1]);
+					bool isBigEndian = bool.Parse(args[2]);
+					string domain = (args.Length > 3) ? args[3] : APIs.Memory.MainMemoryName;
+
+					APIs.Memory.SetBigEndian(isBigEndian); // (Idk why MemoryApi is weird like this..)
+
+					// Annoyingly MemoryApi has a ReadUnsigned method but only exposes the ReadU* methods..
+					return (size switch {
+						1 => APIs.Memory.ReadU8(address, domain).ToString(),
+						2 => APIs.Memory.ReadU16(address, domain).ToString(),
+						3 => APIs.Memory.ReadU24(address, domain).ToString(),
+						4 => APIs.Memory.ReadU32(address, domain).ToString(),
+						_ => throw new InvalidOperationException($"Invalid size {size} for ReadUnsigned")
+					});
+				}
+				case "ReadSigned": {
+					/*(long address, int size, bool isBigEndian, string domain = null)*/
+					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					var args = argString.Split(',');
+					long address = long.Parse(args[0]);
+					int size = int.Parse(args[1]);
+					bool isBigEndian = bool.Parse(args[2]);
+					string domain = (args.Length > 3) ? args[3] : APIs.Memory.MainMemoryName;
+
+					APIs.Memory.SetBigEndian(isBigEndian);
+
+					return (size switch {
+						1 => APIs.Memory.ReadS8(address, domain).ToString(),
+						2 => APIs.Memory.ReadS16(address, domain).ToString(),
+						3 => APIs.Memory.ReadS24(address, domain).ToString(),
+						4 => APIs.Memory.ReadS32(address, domain).ToString(),
+						_ => throw new InvalidOperationException($"Invalid size {size} for ReadUnsigned")
+					});
+				}
+				case "ReadFloat": {
+					/*(long address, bool isBigEndian, string domain = null)*/
+					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					var args = argString.Split(',');
+					long address = long.Parse(args[0]);
+					bool isBigEndian = bool.Parse(args[1]);
+					string domain = (args.Length > 2) ? args[2] : APIs.Memory.MainMemoryName;
+
+					return APIs.Memory.ReadFloat(address, domain).ToString();
+				}
 				default:
-					output = "";
 					Console.WriteLine($"UnityHawk: Unknown API call {methodName} with args {argString}");
-					return false;
+					return null;
 			}
 		}
 	}

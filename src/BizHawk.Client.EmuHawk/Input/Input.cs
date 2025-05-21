@@ -12,7 +12,7 @@ using BizHawk.Common.CollectionExtensions;
 
 namespace BizHawk.Client.EmuHawk
 {
-	public class Input : IInput
+	public class Input
 	{
 		/// <summary>
 		/// If your form needs this kind of input focus, be sure to say so.

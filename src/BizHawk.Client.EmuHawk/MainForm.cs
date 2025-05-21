@@ -477,8 +477,7 @@ namespace BizHawk.Client.EmuHawk
 					: null
 			);
 			
-			// [UnityHawk]
-			UnityHawkSetup();
+			UnityHawkSetup(); // [UnityHawk]
 
 			ExtToolManager = new(
 				Config,
@@ -554,7 +553,6 @@ namespace BizHawk.Client.EmuHawk
 					_ => AllowInput.None
 				}
 			);
-			inputProvider = Input.Instance; // [UnityHawk] - TODO remove
 			InitControls();
 
 			InputManager.ResetMainControllers(_autofireNullControls);
@@ -806,13 +804,7 @@ namespace BizHawk.Client.EmuHawk
 
 			for (; ; )
 			{
-				// TODO move to UnityHawkMainForm
-				// if (_apiCallBuffer != null) {
-				// 	// First do any pending api call requests from unity
-				// 	ProcessUnityHawkApiCalls(_apiCallBuffer);
-				// }
-
-				inputProvider.Update();
+				Input.Instance.Update();
 
 				// handle events and dispatch as a hotkey action, or a hotkey button, or an input button
 				// ...but prepare haptics first, those get read in ProcessInput
@@ -1042,8 +1034,6 @@ namespace BizHawk.Client.EmuHawk
 
 		private new Config Config => _getGlobalConfig();
 
-		private IInput inputProvider; // a bit messy, but can be either Input or UnityHawkInput
-
 		public Action<string> LoadGlobalConfigFromFile { get; set; }
 
 		private readonly Func<string> _getConfigPath;
@@ -1072,13 +1062,6 @@ namespace BizHawk.Client.EmuHawk
 			get => _sound;
 			set => _updateGlobalSound(_sound = value);
 		}
-
-		// [UnityHawk]
-		// TODO remove
-		// Buffers for communication with Unity process via shared memory
-		// ApiCallBuffer _apiCallBuffer = null;
-		// SharedTextureBuffer _sharedTextureBuffer;
-		// private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
 
 		public CheatCollection CheatList { get; }
 
@@ -1121,7 +1104,7 @@ namespace BizHawk.Client.EmuHawk
 
 			// loop through all available events
 			InputEvent ie;
-			while ((ie = inputProvider.DequeueEvent()) != null)
+			while ((ie = Input.Instance.DequeueEvent()) != null)
 			{
 				// useful debugging:
 				// Console.WriteLine(ie);
@@ -1222,7 +1205,7 @@ namespace BizHawk.Client.EmuHawk
 			//also handle axes
 			//we'll need to isolate the mouse coordinates so we can translate them
 			KeyValuePair<string, int>? mouseX = null, mouseY = null;
-			foreach (var f in inputProvider.GetAxisValues())
+			foreach (var f in Input.Instance.GetAxisValues())
 			{
 				if (f.Key == "WMouse X")
 					mouseX = f;
@@ -2075,7 +2058,6 @@ namespace BizHawk.Client.EmuHawk
 				bool useAsyncMode = _currentSoundProvider.CanProvideAsync && !Config.SoundThrottle;
 				_currentSoundProvider.SetSyncMode(useAsyncMode ? SyncSoundMode.Async : SyncSoundMode.Sync);
 				Sound.SetInputPin(_currentSoundProvider);
-				// TODO should probably update UnityHawkSound if necessary too - currently won't support changing the loaded game at runtime though
 			}
 		}
 
@@ -4079,25 +4061,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void OnRomChanged()
 		{
-			// [UnityHawk]
-			// (Could move this into external tool, but does it belong there? Feels like in principle this stuff could be useful outside of UnityHawk)
-			// Override the savestate save directory in the config (needs to be here since the key depends on the platform)
-			if (_argParser.savestateSaveDir != null) {
-				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
-			}
-			// Override the ram watch save directory in the config 
-			if (_argParser.ramWatchSaveDir != null) {
-				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-				Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
-			}
-
-			if (!_argParser.headless && _argParser.ramWatchFile != null) {
-				Tools.Load<RamWatch>();
-				Tools.RamWatch.LoadWatchFile(new FileInfo(_argParser.ramWatchFile), true);
-			}
-
-			// [end UnityHawk]
+			UnityHawkOnRomChanged(); // [UnityHawk]
 
 			OSD.Fps = "0 fps";
 			UpdateWindowTitle();
@@ -4995,13 +4959,33 @@ namespace BizHawk.Client.EmuHawk
 			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput ?? Config.AcceptBackgroundInput;
 			// Same for mute
 			Config.SoundEnabled = _argParser.mute.HasValue ? !_argParser.mute.Value : Config.SoundEnabled;
+		}
 
-			inputProvider = Input.Instance;
+		private void UnityHawkOnRomChanged() {
+			// (Could move this stuff into external tool (userdata config instead of cli args), but does it belong there? Feels like in principle this could be useful outside of UnityHawk)
+
+			// Override the savestate save directory in the config (needs to be here since the key depends on the platform)
+			if (_argParser.savestateSaveDir != null) {
+				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
+			}
+			// Override the ram watch save directory in the config 
+			if (_argParser.ramWatchSaveDir != null) {
+				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
+			}
+			// Load specified ram watch file
+			if (!_argParser.headless && _argParser.ramWatchFile != null) {
+				Tools.Load<RamWatch>();
+				Tools.RamWatch.LoadWatchFile(new FileInfo(_argParser.ramWatchFile), true);
+			}
 		}
 		
 		// Extension for savestates. Defaults to ".State" (as in original Bizhawk) but can be set via --savestate-extension flag
 		private string SaveStateExtension() {
 			return _argParser.savestateExtension ?? "State";
 		}
+
+		// [end UnityHawk]
 	}
 }

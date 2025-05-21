@@ -221,17 +221,76 @@ namespace Plunderludics.UnityHawk.Tool
 				case "SetVolume":
 					APIs.EmuClient.SetVolume(int.Parse(mc.Argument));
 					break;
-				case "WriteByteRange":
-					// TODO
+				case "WriteUnsigned": {
+					/*(long address, uint value, int size, bool isBigEndian, string domain = null)*/
+					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					var args = mc.Argument.Split(',');
+					long address = long.Parse(args[0]);
+					uint value = uint.Parse(args[1]);
+					int size = int.Parse(args[2]);
+					bool isBigEndian = bool.Parse(args[3]);
+					string domain = (args.Length > 4) ? args[4] : APIs.Memory.MainMemoryName;
+
+					switch (size)
+					{
+					case 1:
+						APIs.Memory.WriteU8(address, value, domain);
+						break;
+					case 2:
+						APIs.Memory.WriteU16(address, value, domain);
+						break;
+					case 3:
+						APIs.Memory.WriteU24(address, value, domain);
+						break;
+					case 4:
+						APIs.Memory.WriteU32(address, value, domain);
+						break;
+					default:
+						throw new InvalidOperationException($"Invalid size {size} for WriteUnsigned");
+					}
 					break;
-				case "WriteFloat":
-					// TODO
+				}
+				case "WriteSigned": {
+					/*(long address, int value, int size, bool isBigEndian, string domain = null)*/
+					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					var args = mc.Argument.Split(',');
+					long address = long.Parse(args[0]);
+					int value = int.Parse(args[1]);
+					int size = int.Parse(args[2]);
+					bool isBigEndian = bool.Parse(args[3]);
+					string domain = (args.Length > 4) ? args[4] : APIs.Memory.MainMemoryName;
+
+					switch (size)
+					{
+					case 1:
+						APIs.Memory.WriteS8(address, value, domain);
+						break;
+					case 2:
+						APIs.Memory.WriteS16(address, value, domain);
+						break;
+					case 3:
+						APIs.Memory.WriteS24(address, value, domain);
+						break;
+					case 4:
+						APIs.Memory.WriteS32(address, value, domain);
+						break;
+					default:
+						throw new InvalidOperationException($"Invalid size {size} for WriteSigned");
+					}
 					break;
-				case "FreezeByteRange":
-					// Can use MainForm.CheatList.Add i think
-					// (Or if that doesn't work just store freezes locally and write values each frame)
-					// TODO
+				}
+				case "WriteFloat": {
+					/*(long address, float value, bool isBigEndian, string domain = null)*/
+					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					var args = mc.Argument.Split(',');
+					long address = long.Parse(args[0]);
+					float value = float.Parse(args[1]);
+					bool isBigEndian = bool.Parse(args[2]);
+					string domain = (args.Length > 3) ? args[3] : APIs.Memory.MainMemoryName;
+					APIs.Memory.SetBigEndian(isBigEndian);
+					APIs.Memory.WriteFloat(address, value, domain);
 					break;
+				}
 				case "FreezeFloat":
 					// TODO
 					break;

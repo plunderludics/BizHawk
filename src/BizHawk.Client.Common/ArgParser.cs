@@ -58,12 +58,6 @@ namespace BizHawk.Client.Common
 			bool? acceptBackgroundInput = null;
 			bool? suppressPopups = null;
 			bool? mute = null;
-			string? writeTextureToSharedBuffer = null;
-			string? readKeyInputFromSharedBuffer = null;
-			string? readAnalogInputFromSharedBuffer = null;
-			string? shareAudioOverRpcBuffer = null;
-			string? unityCallMethodBuffer = null;
-			string? apiCallMethodBuffer = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -227,30 +221,6 @@ namespace BizHawk.Client.Common
 				{
 					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
 				}
-				else if (argDowncased.StartsWith("--write-texture-to-shared-buffer="))
-				{
-					writeTextureToSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--read-key-input-from-shared-buffer="))
-				{
-					readKeyInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--read-analog-input-from-shared-buffer="))
-				{
-					readAnalogInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--share-audio-over-rpc-buffer="))
-				{
-					shareAudioOverRpcBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--unity-call-method-buffer="))
-				{
-					unityCallMethodBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--api-call-method-buffer="))
-				{
-					apiCallMethodBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
 				else if (argDowncased.StartsWith("--userdata="))
 				{
 					userdataUnparsedPairs = new();
@@ -318,13 +288,7 @@ namespace BizHawk.Client.Common
 				headless: headless ?? false,
 				acceptBackgroundInput: acceptBackgroundInput,
 				suppressPopups: suppressPopups ?? false,
-				mute: mute,
-				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
-				readKeyInputFromSharedBuffer: readKeyInputFromSharedBuffer,
-				readAnalogInputFromSharedBuffer: readAnalogInputFromSharedBuffer,
-				shareAudioOverRpcBuffer: shareAudioOverRpcBuffer,
-				unityCallMethodBuffer: unityCallMethodBuffer,
-				apiCallMethodBuffer: apiCallMethodBuffer
+				mute: mute
 			);
 		}
 

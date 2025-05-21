@@ -63,12 +63,6 @@ namespace BizHawk.Client.Common
 		public readonly bool? acceptBackgroundInput;
 		public readonly bool suppressPopups;
 		public readonly bool? mute;
-		public readonly string? writeTextureToSharedBuffer;
-		public readonly string? readKeyInputFromSharedBuffer;
-		public readonly string? readAnalogInputFromSharedBuffer;
-		public readonly string? shareAudioOverRpcBuffer;
-		public readonly string? unityCallMethodBuffer;
-		public readonly string? apiCallMethodBuffer;
 
 		public ParsedCLIFlags(
 			int? cmdLoadSlot,
@@ -104,13 +98,7 @@ namespace BizHawk.Client.Common
 			bool headless,
 			bool? acceptBackgroundInput,
 			bool suppressPopups,
-			bool? mute,
-			string? writeTextureToSharedBuffer,
-			string? readKeyInputFromSharedBuffer,
-			string? readAnalogInputFromSharedBuffer,
-			string? shareAudioOverRpcBuffer,
-			string? unityCallMethodBuffer,
-			string? apiCallMethodBuffer
+			bool? mute
 		) {
 			this.cmdLoadSlot = cmdLoadSlot;
 			this.cmdLoadState = cmdLoadState;
@@ -146,12 +134,6 @@ namespace BizHawk.Client.Common
 			this.acceptBackgroundInput = acceptBackgroundInput;
 			this.suppressPopups = suppressPopups;
 			this.mute = mute;
-			this.writeTextureToSharedBuffer = writeTextureToSharedBuffer;
-			this.readKeyInputFromSharedBuffer = readKeyInputFromSharedBuffer;
-			this.readAnalogInputFromSharedBuffer = readAnalogInputFromSharedBuffer;
-			this.shareAudioOverRpcBuffer = shareAudioOverRpcBuffer;
-			this.unityCallMethodBuffer = unityCallMethodBuffer;
-			this.apiCallMethodBuffer = apiCallMethodBuffer;
 		}
 	}
 }

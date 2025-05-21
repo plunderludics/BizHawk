@@ -4996,7 +4996,7 @@ namespace BizHawk.Client.EmuHawk
 			// Same for mute
 			Config.SoundEnabled = _argParser.mute.HasValue ? !_argParser.mute.Value : Config.SoundEnabled;
 
-			inputProvider = Input.Instance; // TODO: Need to disable native input when UnityHawk plugin is handling input (or just make sure background input not accepted?)
+			inputProvider = Input.Instance;
 		}
 		
 		// Extension for savestates. Defaults to ".State" (as in original Bizhawk) but can be set via --savestate-extension flag

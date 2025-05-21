@@ -56,6 +56,7 @@ Microsoft.Extensions.FileSystemGlobbing \
 NLua \
 Plunderludics \
 Plunderludics.UnityHawk.Shared \
+Plunderludics.UnityHawk.SharedBuffers \
 SharedMemory \
 SharpCompress \
 System.Collections.Immutable \

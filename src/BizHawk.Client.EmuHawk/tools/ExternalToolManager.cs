@@ -39,11 +39,13 @@ namespace BizHawk.Client.EmuHawk
 				AsmFilename = asmFilename;
 			}
 
-			public void TryLoad(bool skipExtToolWarning = false)
+			// [UnityHawk: added show param to allow loading tool without showing window]
+			public void TryLoad(bool show = true, bool skipExtToolWarning = false)
 			{
 				var success = _extToolMan._loadCallback(
 					/*toolPath:*/ AsmFilename,
 					/*customFormTypeName:*/ _entryPointTypeName,
+					/*show:*/ show,
 					/*skipExtToolWarning:*/ _skipExtToolWarning || skipExtToolWarning);
 				if (!success || _skipExtToolWarning) return;
 				_skipExtToolWarning = true;
@@ -55,7 +57,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private readonly Func<(string SysID, string Hash)> _getLoadedRomInfoCallback;
 
-		private readonly Func<string, string, bool, bool> _loadCallback;
+		private readonly Func<string, string, bool, bool, bool> _loadCallback;
 
 		private FileSystemWatcher DirectoryMonitor;
 
@@ -66,7 +68,7 @@ namespace BizHawk.Client.EmuHawk
 		public ExternalToolManager(
 			Config config,
 			Func<(string SysID, string Hash)> getLoadedRomInfoCallback,
-			Func<string, string, bool, bool> loadCallback)
+			Func<string, string, bool, bool, bool> loadCallback)
 		{
 			_getLoadedRomInfoCallback = getLoadedRomInfoCallback;
 			_loadCallback = loadCallback;

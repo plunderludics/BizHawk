@@ -47,6 +47,7 @@ namespace Plunderludics.UnityHawk.Tool
 
 		public UnityHawkMainForm()
 		{
+			// Console.WriteLine("UnityHawkMainForm()");
 			this.text = new System.Windows.Forms.Label();
 			this.SuspendLayout();
 
@@ -55,7 +56,7 @@ namespace Plunderludics.UnityHawk.Tool
 			this.text.Name = "text";
 			this.text.Size = new System.Drawing.Size(100, 13);
 			this.text.TabIndex = 0;
-			this.text.Text = "UnityHawk :)";
+			this.text.Text = "UnityHawk :)"; // TODO could be nice to display some debug stuff here (are buffers open, etc)
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(284, 261);
@@ -135,6 +136,7 @@ namespace Plunderludics.UnityHawk.Tool
 		}
 
 		protected override void UpdateBefore() {
+			// Console.WriteLine("UnityHawk: UpdateBefore");
 			// Before frame
 			if (_inputBuffer != null) {
 				// Get input from input buffer and pass to emulator
@@ -161,6 +163,7 @@ namespace Plunderludics.UnityHawk.Tool
 		}
 
 		protected override void UpdateAfter() {
+			// Console.WriteLine("UnityHawk: UpdateAfter");
 			// After frame
 			// Send texture through texture buffer
 			if (_sharedTextureBuffer != null) {
@@ -179,7 +182,7 @@ namespace Plunderludics.UnityHawk.Tool
 		protected override void UpdatePaused() {
 			// Called when the emulator is paused
 			// Need to keep processing api commands so we can receive Unpause or FrameAdvance
-			Console.WriteLine("UnityHawk: Paused");
+			// Console.WriteLine("UnityHawk: Paused");
 			if (_apiCommandBuffer != null) {
 				ProcessApiCommands();
 			}

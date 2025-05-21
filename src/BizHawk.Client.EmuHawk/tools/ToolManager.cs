@@ -146,14 +146,14 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		/// <summary>Loads the external tool's entry form.</summary>
-		public IExternalToolForm LoadExternalToolForm(string toolPath, string customFormTypeName, bool focus = true, bool skipExtToolWarning = false)
+		public IExternalToolForm LoadExternalToolForm(string toolPath, string customFormTypeName, bool show = true, bool focus = true, bool skipExtToolWarning = false)
 		{
 			var existingTool = _tools.OfType<IExternalToolForm>().FirstOrDefault(t => t.GetType().Assembly.Location == toolPath);
 			if (existingTool != null)
 			{
 				if (existingTool.IsActive)
 				{
-					if (focus)
+					if (show && focus)
 					{
 						existingTool.Show();
 						existingTool.Focus();
@@ -181,7 +181,9 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			newTool.Restart();
-			newTool.Show();
+			if (show) {
+				newTool.Show();
+			}
 			return newTool;
 		}
 

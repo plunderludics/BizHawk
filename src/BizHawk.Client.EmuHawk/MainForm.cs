@@ -67,6 +67,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void MainForm_Load(object sender, EventArgs e)
 		{
+			Console.WriteLine("MainForm_Load()");
 			UpdateWindowTitle();
 
 			foreach (var (groupLabel, appliesTo, coreNames) in Config.CorePickerUIData.Select(static tuple => (GroupLabel: tuple.AppliesTo[0], tuple.AppliesTo, tuple.CoreNames))
@@ -189,19 +190,6 @@ namespace BizHawk.Client.EmuHawk
 			};
 			UpdateChecker.GlobalConfig = Config;
 			UpdateChecker.BeginCheck(); // Won't actually check unless enabled by user
-
-			// open requested ext. tool
-			var requestedExtToolDll = _argParser.openExtToolDll;
-			if (requestedExtToolDll != null)
-			{
-				var found = ExtToolManager.ToolStripItems.Where(static item => item.Enabled)
-					.Select(static item => (ExternalToolManager.MenuItemInfo) item.Tag)
-					.FirstOrNull(info => info.AsmFilename == requestedExtToolDll
-						|| Path.GetFileName(info.AsmFilename) == requestedExtToolDll
-						|| Path.GetFileNameWithoutExtension(info.AsmFilename) == requestedExtToolDll);
-				if (found is not null) found.Value.TryLoad(true); // [UnityHawk: skip confirmation for loading tool]
-				else Console.WriteLine($"requested ext. tool dll {requestedExtToolDll} could not be loaded");
-			}
 
 #if DEBUG
 			AddDebugMenu();
@@ -476,15 +464,16 @@ namespace BizHawk.Client.EmuHawk
 					? new SocketServer(NetworkingTakeScreenshot, _argParser.SocketProtocol, socketIP, socketPort)
 					: null
 			);
-			
+
 			UnityHawkSetup(); // [UnityHawk]
 
 			ExtToolManager = new(
 				Config,
 				() => (Emulator.SystemId, Game.Hash),
-				(toolPath, customFormTypeName, skipExtToolWarning) => Tools!.LoadExternalToolForm(
+				(toolPath, customFormTypeName, show, skipExtToolWarning) => Tools!.LoadExternalToolForm(
 					toolPath: toolPath,
 					customFormTypeName: customFormTypeName,
+					show: show,
 					skipExtToolWarning: skipExtToolWarning) is not null);
 			Tools = new ToolManager(this, Config, DisplayManager, ExtToolManager, InputManager, Emulator, MovieSession, Game);
 
@@ -769,6 +758,20 @@ namespace BizHawk.Client.EmuHawk
 #endif
 				}
 			}
+
+			// open requested ext. tool
+			// (do this outside MainForm_Load so that it still works in headless mode)
+			var requestedExtToolDll = _argParser.openExtToolDll;
+			if (requestedExtToolDll != null)
+			{
+				var found = ExtToolManager.ToolStripItems.Where(static item => item.Enabled)
+					.Select(static item => (ExternalToolManager.MenuItemInfo) item.Tag)
+					.FirstOrNull(info => info.AsmFilename == requestedExtToolDll
+						|| Path.GetFileName(info.AsmFilename) == requestedExtToolDll
+						|| Path.GetFileNameWithoutExtension(info.AsmFilename) == requestedExtToolDll);
+				if (found is not null) found.Value.TryLoad(show: !_argParser.headless, skipExtToolWarning: true); // [UnityHawk: skip confirmation for loading tool]
+				else Console.WriteLine($"requested ext. tool dll {requestedExtToolDll} could not be loaded");
+			}	
 		}
 
 		private readonly bool _suppressSyncSettingsWarning;
@@ -3311,7 +3314,6 @@ namespace BizHawk.Client.EmuHawk
 				UpdateToolsAfter();
 			}
 			else {
-				Console.WriteLine("UpdateToolsPaused");
 				Tools.UpdateToolsPaused();
 			}
 

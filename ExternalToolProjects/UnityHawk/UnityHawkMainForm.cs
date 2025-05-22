@@ -17,9 +17,13 @@ namespace Plunderludics.UnityHawk.Tool
 	[ExternalTool("UnityHawk", Description = "UnityHawk")]
 	public class UnityHawkMainForm : ToolFormBase, IExternalToolForm
 	{
-		// Supposed to use this for anything unsupported by APIs
+		// Supposed to use this syntax for anything unsupported by APIs
 		[RequiredService]
 		private IEmulator _emu { get; set; }
+
+		
+		[RequiredService]
+		private IMemoryDomains _memoryDomains { get; set; }
 
 		// (This gets magically set by EmuHawk somehow)
 		public ApiContainer _apiContainer { get; set; }
@@ -38,7 +42,9 @@ namespace Plunderludics.UnityHawk.Tool
 		private UnityHawkSound _unityHawkSound;
 
 		private Dictionary<string, bool> buttonState = new();  // Current button state - need to pass to JoypadApi every frame
-		private Dictionary<string, int?> analogState = new();  // Current analog axis state
+		private Dictionary<string, int?> analogState = new(); // Current analog state
+
+		private List<(long Addr, int Size, uint Value, string Domain)> _freezes = new(); // List of memory addresses to keep frozen
 
 		private Label text;
 
@@ -68,6 +74,9 @@ namespace Plunderludics.UnityHawk.Tool
 		/// When emuhawk opens, and whenever new rom is loaded
 		public override void Restart() {
 			Console.WriteLine("Restarting UnityHawk plugin...");
+
+			// Clear freezes
+			_freezes.Clear();
 			
 			// Open sharedmemory buffers
 			// TODO: could put these arg names in a shared dll?
@@ -160,6 +169,9 @@ namespace Plunderludics.UnityHawk.Tool
 			if (_apiCommandBuffer != null) {
 				ProcessApiCommands();
 			}
+
+			// Apply ram freezes (need to reset the value at the beginning of each frame)
+			ApplyFreezes();
 		}
 
 		protected override void UpdateAfter() {
@@ -293,11 +305,89 @@ namespace Plunderludics.UnityHawk.Tool
 					APIs.Memory.WriteFloat(address, value, domain);
 					break;
 				}
-				case "FreezeBytes": {
-					// Freezes bytes to whatever the current value is
+				case "Freeze": {
 					// (Do we need to provide a way to set a specific value?)
 					/*(long address, int size, string domain = null)*/
-					// MainForm.CheatList.Add();
+					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					// Console.WriteLine($"UnityHawk: Freeze {mc.Argument}");
+					var args = mc.Argument.Split(',');
+					long address = long.Parse(args[0]);
+					int size = int.Parse(args[1]);
+					string domain = (args.Length > 2) ? args[2] : APIs.Memory.MainMemoryName;
+					
+					// Need to know current value so we can freeze to that value (could also just take this as arg, idk)
+					// (Cheat constructor seems to take value as signed int?)
+					APIs.Memory.SetBigEndian(true);
+
+					uint currentValue = size switch {
+						1 => APIs.Memory.ReadU8(address, domain),
+						2 => APIs.Memory.ReadU16(address, domain),
+						3 => APIs.Memory.ReadU24(address, domain),
+						4 => APIs.Memory.ReadU32(address, domain),
+						_ => throw new InvalidOperationException($"Invalid size {size} for Freeze")
+					};
+
+					_freezes.Add((address, size, currentValue, domain));
+
+					// Previously tried implementing using Watch/CheatList but it does weird stuff for some reason:
+
+					// WatchSize watchSize = size switch {
+					// 	1 => WatchSize.Byte,
+					// 	2 => WatchSize.Word,
+					// 	4 => WatchSize.DWord,
+					// 	_ => throw new InvalidOperationException($"Invalid size {size} for Freeze")
+					// };
+
+					// MemoryDomain memoryDomain = _memoryDomains[domain];
+					// if (memoryDomain == null) {
+					// 	Console.WriteLine($"Warning: Freeze: Domain {domain} doesn't exist");
+					// 	break;
+					// }
+
+					// Watch w = Watch.GenerateWatch(
+					// 	domain: memoryDomain,
+					// 	address: address,
+					// 	size: watchSize,
+					// 	type: WatchDisplayType.Binary, // Only for display, doesn't actually matter
+					// 	bigEndian: true // Again only for display, doesn't matter
+					// );
+
+					// Console.WriteLine($"UnityHawk: Freezing {domain} {address} to {currentValue}");
+
+					// MainForm.CheatList.Add(new Cheat(w, currentValue));
+					
+					break;
+				}
+
+				case "Unfreeze": {
+					/*(long address, int size, string domain = null)*/
+					// Only unfreezes if a freeze was created for same (address, size, domain)
+					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					var args = mc.Argument.Split(',');
+					long address = long.Parse(args[0]);
+					int size = int.Parse(args[1]);
+					string domain = (args.Length > 2) ? args[2] : APIs.Memory.MainMemoryName;
+
+					_freezes.RemoveAll(
+						f => f.Addr == address &&
+					 	f.Domain == domain &&
+					 	f.Size == size
+					);
+
+					// MemoryDomain memoryDomain = _memoryDomains[domain];
+					// if (memoryDomain == null) {
+					// 	Console.WriteLine($"Warning: FreezeBytes: Domain {domain} doesn't exist");
+					// 	break;
+					// }
+
+					// Cheat existingCheat = MainForm.CheatList[memoryDomain, address];
+					// if (existingCheat is null) {
+					// 	Console.WriteLine($"Warning: Can't unfreeze {domain} {address} because not currently frozen");
+					// 	break;
+					// }
+
+					// MainForm.CheatList.Remove(existingCheat);
+
 					break;
 				}
 				default:
@@ -364,6 +454,29 @@ namespace Plunderludics.UnityHawk.Tool
 				default:
 					Console.WriteLine($"UnityHawk: Unknown API call {methodName} with args {argString}");
 					return null;
+			}
+		}
+
+		private void ApplyFreezes() {
+			// Apply all the freezes
+			foreach (var freeze in _freezes) {
+				(long addr, int size, uint value, string domain) = freeze;
+				switch (size) {
+					case 1:
+						APIs.Memory.WriteU8(addr, value, domain);
+						break;
+					case 2:
+						APIs.Memory.WriteU16(addr, value, domain);
+						break;
+					case 3:
+						APIs.Memory.WriteU24(addr, value, domain);
+						break;
+					case 4:
+						APIs.Memory.WriteU32(addr, value, domain);
+						break;
+					default:
+						throw new InvalidOperationException($"Invalid size {size} for freeze");
+				}
 			}
 		}
 	}

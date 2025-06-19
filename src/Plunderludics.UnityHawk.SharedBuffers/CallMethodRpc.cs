@@ -1,3 +1,5 @@
+// For calling C# methods in Unity from BizHawk lua
+
 using System;
 using System.Text;
 
@@ -7,7 +9,6 @@ using Plunderludics.UnityHawk.Shared;
 
 namespace Plunderludics.UnityHawk.SharedBuffers
 {
-	// For calling C# methods in Unity from BizHawk lua
 	public class CallMethodRpc {
 		private static CallMethodRpc _instance;
 		public static CallMethodRpc Instance => _instance; // hacky singleton for convenience
@@ -24,11 +25,11 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 			_callMethodRpc = new RpcBuffer(name: callMethodBufferName);
 		}
 
-		public byte[] CallMethod(string methodName, byte[] arg) {
+		public byte[] CallMethod(string methodName, string arg) {
 			// serialize (methodName, input) into a MethodCall struct
 			MethodCall methodCall = new MethodCall {
 				MethodName = methodName,
-				Argument = arg != null ? Encoding.ASCII.GetString(arg) : string.Empty
+				Argument = arg != null ? arg : string.Empty
 			};
 			byte[] bytes = Serialization.Serialize(methodCall);
 

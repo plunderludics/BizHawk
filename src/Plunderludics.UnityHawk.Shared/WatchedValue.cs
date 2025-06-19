@@ -1,8 +1,4 @@
-// Just a pair of strings (method name, argument)
-// Used for calling Unity methods from Lua (CallMethodRpc)
-// and for calling Bizhawk API methods from Unity (ApiCallRpc and ApiCommandBuffer)
-// method name and argument are limited to 256 chars which is a bit dumb but it's a lot easier that way
-
+// Used for sending watched memory values over rpc to unity
 // TODO: move into UnityHawk external tool project
 
 #nullable enable
@@ -15,7 +11,7 @@ using System.Runtime.InteropServices;
 namespace Plunderludics.UnityHawk.Shared
 {
 	[Serializable]
-	public struct MethodCall
+	public struct WatchedValue
 	{
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
 		public string MethodName;

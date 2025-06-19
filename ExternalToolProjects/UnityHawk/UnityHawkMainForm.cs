@@ -36,7 +36,7 @@ namespace Plunderludics.UnityHawk.Tool
 		protected override string WindowTitleStatic => "UnityHawk";
 
 		private SharedInputBuffer _inputBuffer;
-		private ApiCallRpc _apiCallRpc;
+		// private ApiCallRpc _apiCallRpc; // Disabled
 		private ApiCommandBuffer _apiCommandBuffer;
 		private SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound;
@@ -44,7 +44,8 @@ namespace Plunderludics.UnityHawk.Tool
 		private Dictionary<string, bool> buttonState = new();  // Current button state - need to pass to JoypadApi every frame
 		private Dictionary<string, int?> analogState = new(); // Current analog state
 
-		private List<(long Addr, int Size, uint Value, string Domain)> _freezes = new(); // List of memory addresses to keep frozen
+		private Dictionary<(long Addr, int Size, string Domain), uint> _freezes = new(); // List of memory addresses to keep frozen
+		private HashSet<(long Addr, int Size, bool IsBigEndian, WatchType Type, string Domain)> _watches = new(); // List of memory addresses that Unity wants to watch
 
 		private Label text;
 
@@ -76,12 +77,11 @@ namespace Plunderludics.UnityHawk.Tool
 			Console.WriteLine("Restarting UnityHawk plugin...");
 
 			// Clear freezes
-			_freezes.Clear();
+			_freezes.Clear(); // Hm, what if we're restarting with the same rom? Should we keep the freezes in that case?
 			
 			// Open sharedmemory buffers
-			// TODO: could put these arg names in a shared dll?
 			if (_inputBuffer == null) {
-				string inputBufferName = (string)APIs.UserData.Get("unityhawk-input-buffer");
+				string inputBufferName = (string)APIs.UserData.Get(Args.InputBuffer);
 				if (!string.IsNullOrEmpty(inputBufferName)) {
 					_inputBuffer = new(inputBufferName);
 				}
@@ -89,7 +89,7 @@ namespace Plunderludics.UnityHawk.Tool
 
 			// API command buffer is for write-only commands that don't require a return value, run in main thread before each framae
 			if (_apiCommandBuffer == null) {
-				string apiCommandBufferName = (string)APIs.UserData.Get("unityhawk-api-command-buffer");
+				string apiCommandBufferName = (string)APIs.UserData.Get(Args.ApiCommandBuffer);
 				if (apiCommandBufferName != null) {
 					// Init RPC buffer for API commands from unity
 					_apiCommandBuffer = new(apiCommandBufferName);
@@ -97,16 +97,17 @@ namespace Plunderludics.UnityHawk.Tool
 			}
 
 			// API call buffer is for read-only commands that require a return value (and run in separate thread w arbitrary timing)
-			if (_apiCallRpc == null) {
-				string apiCallRpcName = (string)APIs.UserData.Get("unityhawk-api-call-rpc");
-				if (!string.IsNullOrEmpty(apiCallRpcName)) {
-					_apiCallRpc = new(apiCallRpcName, ProcessApiRpcCall);
-				}
-			}
+			// (Disabled for thread-safety issues)
+			// if (_apiCallRpc == null) {
+			// 	string apiCallRpcName = (string)APIs.UserData.Get(Args.ApiCallRpc);
+			// 	if (!string.IsNullOrEmpty(apiCallRpcName)) {
+			// 		_apiCallRpc = new(apiCallRpcName, ProcessApiRpcCall);
+			// 	}
+			// }
 			
 			// For lua callbacks to unity
 			if (CallMethodRpc.Instance == null) {
-				string callMethodBufferName = (string)APIs.UserData.Get("unityhawk-lua-callbacks-buffer");
+				string callMethodBufferName = (string)APIs.UserData.Get(Args.CallMethodRpc);
 				if (callMethodBufferName != null) {
 					// Init RPC buffer for CallMethod calls to unity (from lua)
 					CallMethodRpc.Init(callMethodBufferName);
@@ -116,7 +117,7 @@ namespace Plunderludics.UnityHawk.Tool
 			// Texture buffer
 			_videoProvider = _emu.AsVideoProviderOrDefault();
 			// Need to init/re-init texture buffer here when rom changes because size depends on the video resolution of the platform
-			string texBufName = (string)APIs.UserData.Get("unityhawk-texture-buffer");
+			string texBufName = (string)APIs.UserData.Get(Args.TextureBuffer);
 			if (texBufName != null) {
 				// Init shared texture buffer for passing to unity
 				int[] texbuf = _videoProvider.GetVideoBuffer();
@@ -130,7 +131,7 @@ namespace Plunderludics.UnityHawk.Tool
 
 			// Audio buffer
 			_soundProvider = _emu.AsSoundProviderOrDefault();
-			string audioRpcName = (string)APIs.UserData.Get("unityhawk-audio-buffer");
+			string audioRpcName = (string)APIs.UserData.Get(Args.AudioRpc);
 			if (audioRpcName != null) {
 				GlobalConfig.SoundVolume = 0; // Hack to disable native sound: TODO unity should probably mute via cli arg instead
 				// (Don't set SoundEnabled = false, that disables the sound provider completely)
@@ -142,6 +143,8 @@ namespace Plunderludics.UnityHawk.Tool
 					_unityHawkSound.SetSoundProvider(_soundProvider);
 				}
 			}
+
+			// TODO send system id (and any other useful info) to unity over CallMethod rpc
 		}
 
 		protected override void UpdateBefore() {
@@ -169,7 +172,6 @@ namespace Plunderludics.UnityHawk.Tool
 			if (_apiCommandBuffer != null) {
 				ProcessApiCommands();
 			}
-
 			// Apply ram freezes (need to reset the value at the beginning of each frame)
 			ApplyFreezes();
 		}
@@ -186,6 +188,10 @@ namespace Plunderludics.UnityHawk.Tool
 				// (due to small unpredictable lag in the shared buffer write)
 				_sharedTextureBuffer.Write(pixels, width, height, APIs.Emulation.FrameCount());
 			}
+			
+			// Send any values that unity wants to watch over rpc
+			// (Do it after the frame means unity can check if frozen values were changed)
+			ProcessWatches();
 
 			// Send audio through audio buffer
 			_unityHawkSound?.Update();
@@ -208,34 +214,35 @@ namespace Plunderludics.UnityHawk.Tool
 				MethodCall mc = mcq.Value;
 				Console.WriteLine($"Receiving api command {mc}");
 				switch (mc.MethodName) {
-				// [Mmm these string constants should really go in a file shared between unity and bizhawk]
-				case "LoadRom":
+				case ApiCommands.LoadRom:
 					APIs.EmuClient.OpenRom(mc.Argument);
 					break;
-				case "LoadState":
+				case ApiCommands.LoadState:
 					bool success = APIs.EmuClient.LoadState(mc.Argument, isFullPath: true);
 					if (!success) {
 						Console.WriteLine($"Warning: Unity attempted to load state {mc.Argument} but it failed");
 					}
 					break;
-				case "SaveState":
+				case ApiCommands.SaveState:
 					APIs.EmuClient.SaveState(mc.Argument, isFullPath: true);
 					break;
-				case "Pause":
+				case ApiCommands.Pause:
 					APIs.EmuClient.Pause();
 					break;
-				case "Unpause":
+				case ApiCommands.Unpause:
 					APIs.EmuClient.Unpause();
 					break;
-				case "FrameAdvance":
+				case ApiCommands.FrameAdvance:
 					APIs.EmuClient.DoFrameAdvance();
 					break;
-				case "SetVolume":
+				case ApiCommands.SetVolume:
 					APIs.EmuClient.SetVolume(int.Parse(mc.Argument));
 					break;
-				case "WriteUnsigned": {
+				// Note: For Write, Freeze and Watch methods,
+				// `domain`, if not provided, defaults to the main memory domain (NOT the most recent used domain which is what MemoryApi does)
+				
+				case ApiCommands.WriteUnsigned: {
 					/*(long address, uint value, int size, bool isBigEndian, string domain = null)*/
-					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
 					var args = mc.Argument.Split(',');
 					long address = long.Parse(args[0]);
 					uint value = uint.Parse(args[1]);
@@ -263,9 +270,8 @@ namespace Plunderludics.UnityHawk.Tool
 					}
 					break;
 				}
-				case "WriteSigned": {
+				case ApiCommands.WriteSigned: {
 					/*(long address, int value, int size, bool isBigEndian, string domain = null)*/
-					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
 					var args = mc.Argument.Split(',');
 					long address = long.Parse(args[0]);
 					int value = int.Parse(args[1]);
@@ -293,9 +299,8 @@ namespace Plunderludics.UnityHawk.Tool
 					}
 					break;
 				}
-				case "WriteFloat": {
+				case ApiCommands.WriteFloat: {
 					/*(long address, float value, bool isBigEndian, string domain = null)*/
-					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
 					var args = mc.Argument.Split(',');
 					long address = long.Parse(args[0]);
 					float value = float.Parse(args[1]);
@@ -305,10 +310,43 @@ namespace Plunderludics.UnityHawk.Tool
 					APIs.Memory.WriteFloat(address, value, domain);
 					break;
 				}
-				case "Freeze": {
-					// (Do we need to provide a way to set a specific value?)
+
+				// WatchXXX methods a request for bizhawk to read the given address and send it to Unity via RPC after each frame
+				// (We do it like this to avoid thread-safety issues with a more straightforward ReadXXX method, see below)
+				// (I guess we could allow passing in an id for these? To get in the callback? But maybe not necessary)
+				case ApiCommands.Watch : {
+					/*(long address, int size, bool isBigEndian, WatchType type, string domain = null)*/
+					var args = mc.Argument.Split(',');
+					long address = long.Parse(args[0]);
+					int size = int.Parse(args[1]);
+					bool isBigEndian = bool.Parse(args[2]);
+					WatchType type = (WatchType)Enum.Parse(typeof(WatchType), args[3], ignoreCase: true);
+					string domain = (args.Length > 4) ? args[4] : null;
+
+					Console.WriteLine($"UnityHawk: Watching {domain} {address} size {size} type {type} big-endian {isBigEndian}");
+
+					_watches.Add((address, size, isBigEndian, type, domain));
+
+					break;
+				}
+
+				case ApiCommands.Unwatch: {					
+					/*(long address, int size, bool isBigEndian, WatchType type, string domain = null)*/
+					// Only unwatch if a watch was created for same (address, size, isBigEndian, type, domain)
+					var args = mc.Argument.Split(',');
+					long address = long.Parse(args[0]);
+					int size = int.Parse(args[1]);
+					bool isBigEndian = bool.Parse(args[2]);
+					WatchType type = (WatchType)Enum.Parse(typeof(WatchType), args[3], ignoreCase: true);
+					string domain = (args.Length > 4) ? args[4] : null;
+					
+					var key = (address, size, isBigEndian, type, domain);
+					_watches.Remove(key);
+					break;
+				}
+				case ApiCommands.Freeze: {
 					/*(long address, int size, string domain = null)*/
-					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+					// (Do we need to provide a way to freeze to a specific value?)
 					// Console.WriteLine($"UnityHawk: Freeze {mc.Argument}");
 					var args = mc.Argument.Split(',');
 					long address = long.Parse(args[0]);
@@ -327,7 +365,7 @@ namespace Plunderludics.UnityHawk.Tool
 						_ => throw new InvalidOperationException($"Invalid size {size} for Freeze")
 					};
 
-					_freezes.Add((address, size, currentValue, domain));
+					_freezes[(address, size, domain)] = currentValue;
 
 					// Previously tried implementing using Watch/CheatList but it does weird stuff for some reason:
 
@@ -358,21 +396,15 @@ namespace Plunderludics.UnityHawk.Tool
 					
 					break;
 				}
-
-				case "Unfreeze": {
+				case ApiCommands.Unfreeze: {
 					/*(long address, int size, string domain = null)*/
 					// Only unfreezes if a freeze was created for same (address, size, domain)
-					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
 					var args = mc.Argument.Split(',');
 					long address = long.Parse(args[0]);
 					int size = int.Parse(args[1]);
 					string domain = (args.Length > 2) ? args[2] : APIs.Memory.MainMemoryName;
 
-					_freezes.RemoveAll(
-						f => f.Addr == address &&
-					 	f.Domain == domain &&
-					 	f.Size == size
-					);
+					_freezes.Remove((address, size, domain));
 
 					// MemoryDomain memoryDomain = _memoryDomains[domain];
 					// if (memoryDomain == null) {
@@ -398,69 +430,101 @@ namespace Plunderludics.UnityHawk.Tool
 		}
 
 		// This is only for api calls that require a return value - others are handled on the main thread in UpdateValues
-		private string ProcessApiRpcCall(string methodName, string argString) {
-			switch (methodName) {
-				case "GetSystemId":
-					return APIs.Emulation.GetSystemId();
-				case "ReadUnsigned": {
-					/*(long address, int size, bool isBigEndian, string domain = null)*/
-					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
-					var args = argString.Split(',');
-					long address = long.Parse(args[0]);
-					int size = int.Parse(args[1]);
-					bool isBigEndian = bool.Parse(args[2]);
-					string domain = (args.Length > 3) ? args[3] : APIs.Memory.MainMemoryName;
+		// 2025-06-19: This whole setup seems to be a bad idea for thread safety reasons
+		// (Unity calls these via RPC at an arbitrary time on a separate thread, which might be while bizhawk is doing some other memory-related stuff)
+		// (At least I'm guessing that's what was happening, was having periodic crashes on Medal of Honor PSX when using ReadXXX methods)
+		// So instead of ReadXXX methods we have WatchXXX methods, and instead of GetSystemId we have a special rpc callback that bizhawk calls when a rom is loaded
 
-					APIs.Memory.SetBigEndian(isBigEndian); // (Idk why MemoryApi is weird like this..)
+		// private string ProcessApiRpcCall(string methodName, string argString) {
+		// 	switch (methodName) {
+		// 		case ApiCommands.GetSystemId:
+		// 			return APIs.Emulation.GetSystemId();
 
-					// Annoyingly MemoryApi has a ReadUnsigned method but only exposes the ReadU* methods..
-					return (size switch {
-						1 => APIs.Memory.ReadU8(address, domain).ToString(),
-						2 => APIs.Memory.ReadU16(address, domain).ToString(),
-						3 => APIs.Memory.ReadU24(address, domain).ToString(),
-						4 => APIs.Memory.ReadU32(address, domain).ToString(),
-						_ => throw new InvalidOperationException($"Invalid size {size} for ReadUnsigned")
-					});
-				}
-				case "ReadSigned": {
-					/*(long address, int size, bool isBigEndian, string domain = null)*/
-					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
-					var args = argString.Split(',');
-					long address = long.Parse(args[0]);
-					int size = int.Parse(args[1]);
-					bool isBigEndian = bool.Parse(args[2]);
-					string domain = (args.Length > 3) ? args[3] : APIs.Memory.MainMemoryName;
+		// 		case "ReadUnsigned": {
+		// 			/*(long address, int size, bool isBigEndian, string domain = null)*/
+		// 			// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+		// 			var args = argString.Split(',');
+		// 			long address = long.Parse(args[0]);
+		// 			int size = int.Parse(args[1]);
+		// 			bool isBigEndian = bool.Parse(args[2]);
+		// 			string domain = (args.Length > 3) ? args[3] : APIs.Memory.MainMemoryName;
 
-					APIs.Memory.SetBigEndian(isBigEndian);
+		// 			APIs.Memory.SetBigEndian(isBigEndian); // (Idk why MemoryApi is weird like this..)
 
-					return (size switch {
-						1 => APIs.Memory.ReadS8(address, domain).ToString(),
-						2 => APIs.Memory.ReadS16(address, domain).ToString(),
-						3 => APIs.Memory.ReadS24(address, domain).ToString(),
-						4 => APIs.Memory.ReadS32(address, domain).ToString(),
-						_ => throw new InvalidOperationException($"Invalid size {size} for ReadUnsigned")
-					});
-				}
-				case "ReadFloat": {
-					/*(long address, bool isBigEndian, string domain = null)*/
-					// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
-					var args = argString.Split(',');
-					long address = long.Parse(args[0]);
-					bool isBigEndian = bool.Parse(args[1]);
-					string domain = (args.Length > 2) ? args[2] : APIs.Memory.MainMemoryName;
+		// 			// Annoyingly MemoryApi has a ReadUnsigned method but only exposes the ReadU* methods..
+		// 			return (size switch {
+		// 				1 => APIs.Memory.ReadU8(address, domain).ToString(),
+		// 				2 => APIs.Memory.ReadU16(address, domain).ToString(),
+		// 				3 => APIs.Memory.ReadU24(address, domain).ToString(),
+		// 				4 => APIs.Memory.ReadU32(address, domain).ToString(),
+		// 				_ => throw new InvalidOperationException($"Invalid size {size} for ReadUnsigned")
+		// 			});
+		// 		}
+		// 		case "ReadSigned": {
+		// 			/*(long address, int size, bool isBigEndian, string domain = null)*/
+		// 			// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+		// 			var args = argString.Split(',');
+		// 			long address = long.Parse(args[0]);
+		// 			int size = int.Parse(args[1]);
+		// 			bool isBigEndian = bool.Parse(args[2]);
+		// 			string domain = (args.Length > 3) ? args[3] : APIs.Memory.MainMemoryName;
 
-					return APIs.Memory.ReadFloat(address, domain).ToString();
-				}
-				default:
-					Console.WriteLine($"UnityHawk: Unknown API call {methodName} with args {argString}");
-					return null;
+		// 			APIs.Memory.SetBigEndian(isBigEndian);
+
+		// 			return (size switch {
+		// 				1 => APIs.Memory.ReadS8(address, domain).ToString(),
+		// 				2 => APIs.Memory.ReadS16(address, domain).ToString(),
+		// 				3 => APIs.Memory.ReadS24(address, domain).ToString(),
+		// 				4 => APIs.Memory.ReadS32(address, domain).ToString(),
+		// 				_ => throw new InvalidOperationException($"Invalid size {size} for ReadUnsigned")
+		// 			});
+		// 		}
+		// 		case "ReadFloat": {
+		// 			/*(long address, bool isBigEndian, string domain = null)*/
+		// 			// Domain defaults to main memory domain (NOT the most recent used domain which is what MemoryApi does)
+		// 			var args = argString.Split(',');
+		// 			long address = long.Parse(args[0]);
+		// 			bool isBigEndian = bool.Parse(args[1]);
+		// 			string domain = (args.Length > 2) ? args[2] : APIs.Memory.MainMemoryName;
+
+		// 			return APIs.Memory.ReadFloat(address, domain).ToString();
+		// 		}
+		// 		default:
+		// 			Console.WriteLine($"UnityHawk: Unknown API call {methodName} with args {argString}");
+		// 			return null;
+		// 	}
+		// }
+
+		private void ProcessWatches() {
+			// Process all the watches and send them to unity
+   			foreach (var watch in _watches) {
+				(long addr, int size, bool isBigEndian, WatchType type, string domain) = watch;
+				string actualDomain = domain ?? APIs.Memory.MainMemoryName; // Default to main memory domain if not provided
+				// Assume unsigned for now TODO fix
+				APIs.Memory.SetBigEndian(isBigEndian);
+				uint value = size switch {
+					1 => APIs.Memory.ReadU8(addr, domain),
+					2 => APIs.Memory.ReadU16(addr, domain),
+					3 => APIs.Memory.ReadU24(addr, domain),
+					4 => APIs.Memory.ReadU32(addr, domain),
+					_ => throw new InvalidOperationException($"Invalid size {size} for watch")
+				};
+
+				// Send the value to unity via rpc
+				// (Sort of abuse CallMethodRpc here to avoid having to have a separate rpc buffer)
+				string arg = $"{addr},{size},{isBigEndian},{type},{domain},{value}";
+
+				Console.WriteLine($"UnityHawk: Sending watch {domain} {addr} size {size} type {type} value {value}");
+
+				_ = CallMethodRpc.Instance.CallMethod(SpecialCommands.ReceiveWatchedValue, arg); // Ignore return value from unity
 			}
 		}
 
 		private void ApplyFreezes() {
 			// Apply all the freezes
-			foreach (var freeze in _freezes) {
-				(long addr, int size, uint value, string domain) = freeze;
+			foreach (var kvp in _freezes) {
+				var (addr, size, domain) = kvp.Key;
+				uint value = kvp.Value;
 				switch (size) {
 					case 1:
 						APIs.Memory.WriteU8(addr, value, domain);

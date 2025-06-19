@@ -21,8 +21,7 @@ namespace BizHawk.Client.Common
 		[LuaMethod("callmethod", "Calls a method registered in Unity and returns the result. Supports a single string arg and string return value")]
 		public string CallMethod(string methodName, string arg) {
 			Console.WriteLine($"CallMethod {methodName} {arg}");
-			var argBytes = Encoding.ASCII.GetBytes(arg);
-			var retBytes = CallMethodRpc.Instance.CallMethod(methodName, argBytes);
+			var retBytes = CallMethodRpc.Instance.CallMethod(methodName, arg);
 			return retBytes == null ? null : Encoding.ASCII.GetString(retBytes);
 		}
 	}

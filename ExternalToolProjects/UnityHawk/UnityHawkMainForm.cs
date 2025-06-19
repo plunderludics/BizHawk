@@ -240,7 +240,7 @@ namespace Plunderludics.UnityHawk.Tool
 					break;
 				// Note: For Write, Freeze and Watch methods,
 				// `domain`, if not provided, defaults to the main memory domain (NOT the most recent used domain which is what MemoryApi does)
-				
+				// TODO hm maybe WriteXXX should all be merged into one Write method with a type parameter
 				case ApiCommands.WriteUnsigned: {
 					/*(long address, uint value, int size, bool isBigEndian, string domain = null)*/
 					var args = mc.Argument.Split(',');
@@ -323,13 +323,16 @@ namespace Plunderludics.UnityHawk.Tool
 					WatchType type = (WatchType)Enum.Parse(typeof(WatchType), args[3], ignoreCase: true);
 					string domain = (args.Length > 4) ? args[4] : null;
 
+					if (type == WatchType.Float && size != 4) {
+						throw new InvalidOperationException($"Invalid size {size} for WatchType.Float");
+					}
+
 					Console.WriteLine($"UnityHawk: Watching {domain} {address} size {size} type {type} big-endian {isBigEndian}");
 
 					_watches.Add((address, size, isBigEndian, type, domain));
 
 					break;
 				}
-
 				case ApiCommands.Unwatch: {					
 					/*(long address, int size, bool isBigEndian, WatchType type, string domain = null)*/
 					// Only unwatch if a watch was created for same (address, size, isBigEndian, type, domain)
@@ -344,6 +347,7 @@ namespace Plunderludics.UnityHawk.Tool
 					_watches.Remove(key);
 					break;
 				}
+
 				case ApiCommands.Freeze: {
 					/*(long address, int size, string domain = null)*/
 					// (Do we need to provide a way to freeze to a specific value?)
@@ -500,14 +504,33 @@ namespace Plunderludics.UnityHawk.Tool
    			foreach (var watch in _watches) {
 				(long addr, int size, bool isBigEndian, WatchType type, string domain) = watch;
 				string actualDomain = domain ?? APIs.Memory.MainMemoryName; // Default to main memory domain if not provided
-				// Assume unsigned for now TODO fix
 				APIs.Memory.SetBigEndian(isBigEndian);
-				uint value = size switch {
-					1 => APIs.Memory.ReadU8(addr, domain),
-					2 => APIs.Memory.ReadU16(addr, domain),
-					3 => APIs.Memory.ReadU24(addr, domain),
-					4 => APIs.Memory.ReadU32(addr, domain),
-					_ => throw new InvalidOperationException($"Invalid size {size} for watch")
+				string value = type switch
+				{
+					// (This is kind of overkill since we're reading the same bytes in each case,
+					//  but this way don't have to worry about bit conversion and just trust bizhawk)
+					WatchType.Unsigned => (size switch
+					{
+						1 => APIs.Memory.ReadU8(addr, actualDomain),
+						2 => APIs.Memory.ReadU16(addr, actualDomain),
+						3 => APIs.Memory.ReadU24(addr, actualDomain),
+						4 => APIs.Memory.ReadU32(addr, actualDomain),
+						_ => throw new InvalidOperationException($"Invalid size {size} for unsigned watch")
+					}).ToString(),
+					WatchType.Signed => (size switch
+					{
+						1 => APIs.Memory.ReadS8(addr, actualDomain),
+						2 => APIs.Memory.ReadS16(addr, actualDomain),
+						3 => APIs.Memory.ReadS24(addr, actualDomain),
+						4 => APIs.Memory.ReadS32(addr, actualDomain),
+						_ => throw new InvalidOperationException($"Invalid size {size} for signed watch")
+					}).ToString(),
+					WatchType.Float => (size switch
+					{
+						4 => APIs.Memory.ReadFloat(addr, actualDomain),
+						_ => throw new InvalidOperationException($"Invalid size {size} for float watch")
+					}).ToString("R"), // Full-precision
+					_ => throw new InvalidOperationException($"Unknown WatchType {type}")
 				};
 
 				// Send the value to unity via rpc

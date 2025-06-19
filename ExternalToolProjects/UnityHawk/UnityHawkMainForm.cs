@@ -514,7 +514,7 @@ namespace Plunderludics.UnityHawk.Tool
 				// (Sort of abuse CallMethodRpc here to avoid having to have a separate rpc buffer)
 				string arg = $"{addr},{size},{isBigEndian},{type},{domain},{value}";
 
-				Console.WriteLine($"UnityHawk: Sending watch {domain} {addr} size {size} type {type} value {value}");
+				// Console.WriteLine($"UnityHawk: Sending watch {domain} {addr} size {size} type {type} value {value}");
 
 				_ = CallMethodRpc.Instance.CallMethod(SpecialCommands.ReceiveWatchedValue, arg); // Ignore return value from unity
 			}

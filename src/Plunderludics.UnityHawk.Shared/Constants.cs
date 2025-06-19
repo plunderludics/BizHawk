@@ -37,8 +37,10 @@ public static class ApiCommands {
 //        - that way they would run on the main thread in unity as well)
 public static class SpecialCommands {
 	public const string ReceiveWatchedValue = "_UnityHawk_ReceiveWatchedValue";
+	public const string OnRomLoaded = "_UnityHawk_OnRomLoaded";
 
 	public static readonly string[] All = {
-		ReceiveWatchedValue
+		ReceiveWatchedValue,
+		OnRomLoaded
 	};
 }

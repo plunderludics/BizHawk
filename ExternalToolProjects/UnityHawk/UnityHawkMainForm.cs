@@ -144,7 +144,7 @@ namespace Plunderludics.UnityHawk.Tool
 				}
 			}
 
-			// TODO send system id (and any other useful info) to unity over CallMethod rpc
+			OnRomLoaded(); // Notify unity that rom was loaded
 		}
 
 		protected override void UpdateBefore() {
@@ -565,6 +565,12 @@ namespace Plunderludics.UnityHawk.Tool
 						throw new InvalidOperationException($"Invalid size {size} for freeze");
 				}
 			}
+		}
+
+		private void OnRomLoaded() {
+			// Notify unity that a rom was loaded, and pass over whatever important metadata (just SystemId for now)
+			string arg = $"{APIs.Emulation.GetSystemId()}";
+			_ = CallMethodRpc.Instance.CallMethod(SpecialCommands.OnRomLoaded, arg);
 		}
 	}
 }

@@ -16,7 +16,7 @@ namespace Plunderludics.UnityHawk.Shared
 	{
 		// For simplicity, use this for both axis and button input: 0 is unpressed, > 0 is pressed
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-		public string name; // E.g. "P1 A"
+		public string name; // E.g. "P1 A" (This must include the controller prefix!)
 		public int value;
 		public int controller; // Starts from 1
 		public bool isAnalog;

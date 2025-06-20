@@ -159,14 +159,25 @@ namespace Plunderludics.UnityHawk.Tool
 					if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
 						analogState[ie.name] = ie.value;
 					} else {
-						buttonState[ie.name] = ie.value > 0; // TODO should store the controller here I guess (or store string like "P1 A")
+						buttonState[ie.name] = ie.value > 0;
 					}
 				}
 			}
 
 			// Send input state to JoypadApi (need to do this every frame)
-			APIs.Joypad.Set(buttonState, 1); // TODO: support controllers other than 1
-			APIs.Joypad.SetAnalog(analogState, 1); // TODO: support controllers other than 1
+
+			// (Instead of sending the full controller state [Joypad.Set(buttonState)],
+			//  we only send input for pressed buttons -
+			//  this means interacting through the bizhawk window
+			//  still works which is convenient for dev)
+			foreach (var button in buttonState) {
+				if (button.Value) {
+					APIs.Joypad.Set(button.Key, button.Value);
+				}
+			}
+			// For analog just override, so native input won't work
+			// (api has no way to add two input sources)
+			APIs.Joypad.SetAnalog(analogState);
 
 			// Process api commands from unity
 			if (_apiCommandBuffer != null) {

@@ -369,6 +369,7 @@ namespace Plunderludics.UnityHawk.Tool
 						_ => throw new InvalidOperationException($"Invalid size {size} for Freeze")
 					};
 
+					Console.WriteLine($"UnityHawk: Freezing {domain} {address} to uint {currentValue}");
 					_freezes[(address, size, domain)] = currentValue;
 
 					// Previously tried implementing using Watch/CheatList but it does weird stuff for some reason:
@@ -548,6 +549,9 @@ namespace Plunderludics.UnityHawk.Tool
 			foreach (var kvp in _freezes) {
 				var (addr, size, domain) = kvp.Key;
 				uint value = kvp.Value;
+				// Console.WriteLine($"UnityHawk: Applying freeze ({domain} {addr} to uint {value})");
+				// (At freeze time we assumed big-endian uint so do the same here)
+				APIs.Memory.SetBigEndian(true);
 				switch (size) {
 					case 1:
 						APIs.Memory.WriteU8(addr, value, domain);

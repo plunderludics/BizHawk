@@ -41,8 +41,8 @@ namespace Plunderludics.UnityHawk.Tool
 		private SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound;
 
-		private Dictionary<string, bool> buttonState = new();  // Current button state - need to pass to JoypadApi every frame
-		private Dictionary<string, int?> analogState = new(); // Current analog state
+		private Dictionary<(string, int?), bool> buttonState = new(); // Current button state - need to pass to JoypadApi every frame
+		private Dictionary<(string, int?), int?> analogState = new(); // Current analog state
 
 		private Dictionary<(long Addr, int Size, string Domain), uint> _freezes = new(); // List of memory addresses to keep frozen
 		private HashSet<(long Addr, int Size, bool IsBigEndian, WatchType Type, string Domain)> _watches = new(); // List of memory addresses that Unity wants to watch
@@ -155,15 +155,14 @@ namespace Plunderludics.UnityHawk.Tool
 				InputEvent? mie;
 				while ((mie = _inputBuffer.Read()).HasValue) {
 					InputEvent ie = mie.Value;
-					
+					int? controller = ie.controller > 0 ? ie.controller : null; // 0 is null controller
 					if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
-						analogState[ie.name] = ie.value;
+						analogState[(ie.name, controller)] = ie.value;
 					} else {
-						buttonState[ie.name] = ie.value > 0;
+						buttonState[(ie.name, controller)] = ie.value > 0;
 					}
 				}
 			}
-
 			// Send input state to JoypadApi (need to do this every frame)
 
 			// (Instead of sending the full controller state [Joypad.Set(buttonState)],
@@ -171,13 +170,18 @@ namespace Plunderludics.UnityHawk.Tool
 			//  this means interacting through the bizhawk window
 			//  still works which is convenient for dev)
 			foreach (var button in buttonState) {
-				if (button.Value) {
-					APIs.Joypad.Set(button.Key, button.Value);
+				(string name, int? controller) = button.Key;
+				bool pressed = button.Value;
+				if (pressed) {
+					APIs.Joypad.Set(name, pressed, controller);
 				}
 			}
-			// For analog just override, so native input won't work
+			// For analog just override (so native input won't work)
 			// (api has no way to add two input sources)
-			APIs.Joypad.SetAnalog(analogState);
+			foreach (var axis in analogState) {
+				(string name, int? controller) = axis.Key;
+				APIs.Joypad.SetAnalog(name, axis.Value, controller);
+			}
 
 			// Process api commands from unity
 			if (_apiCommandBuffer != null) {

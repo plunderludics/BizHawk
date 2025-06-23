@@ -158,6 +158,8 @@ namespace Plunderludics.UnityHawk.Tool
 					int? controller = ie.controller > 0 ? ie.controller : null; // 0 is null controller
 					if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
 						analogState[(ie.name, controller)] = ie.value;
+						// Hm, if multiple analog input values come within the same frame, we currently drop all but the latest one
+						// TODO: maybe should be averaging or some more complicated smoothing type thing
 					} else {
 						buttonState[(ie.name, controller)] = ie.value > 0;
 					}

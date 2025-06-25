@@ -69,6 +69,9 @@ namespace BizHawk.Client.EmuHawk
 				case ToolFormUpdateType.FastPostFrame:
 					FastUpdateAfter();
 					break;
+				case ToolFormUpdateType.Paused: // [added for UnityHawk]
+					UpdatePaused();
+					break;
 			}
 		}
 
@@ -77,6 +80,7 @@ namespace BizHawk.Client.EmuHawk
 		protected virtual void GeneralUpdate() { }
 		protected virtual void FastUpdateBefore() { }
 		protected virtual void FastUpdateAfter() { }
+		protected virtual void UpdatePaused() { } // [added for UnityHawk]
 
 		public FileInfo OpenFileDialog(string currentFile, string path, FilesystemFilterSet filterSet)
 		{

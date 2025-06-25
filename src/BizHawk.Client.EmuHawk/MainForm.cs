@@ -67,6 +67,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void MainForm_Load(object sender, EventArgs e)
 		{
+			Console.WriteLine("MainForm_Load()");
 			UpdateWindowTitle();
 
 			foreach (var (groupLabel, appliesTo, coreNames) in Config.CorePickerUIData.Select(static tuple => (GroupLabel: tuple.AppliesTo[0], tuple.AppliesTo, tuple.CoreNames))
@@ -189,19 +190,6 @@ namespace BizHawk.Client.EmuHawk
 			};
 			UpdateChecker.GlobalConfig = Config;
 			UpdateChecker.BeginCheck(); // Won't actually check unless enabled by user
-
-			// open requested ext. tool
-			var requestedExtToolDll = _argParser.openExtToolDll;
-			if (requestedExtToolDll != null)
-			{
-				var found = ExtToolManager.ToolStripItems.Where(static item => item.Enabled)
-					.Select(static item => (ExternalToolManager.MenuItemInfo) item.Tag)
-					.FirstOrNull(info => info.AsmFilename == requestedExtToolDll
-						|| Path.GetFileName(info.AsmFilename) == requestedExtToolDll
-						|| Path.GetFileNameWithoutExtension(info.AsmFilename) == requestedExtToolDll);
-				if (found is not null) found.Value.TryLoad();
-				else Console.WriteLine($"requested ext. tool dll {requestedExtToolDll} could not be loaded");
-			}
 
 #if DEBUG
 			AddDebugMenu();
@@ -477,12 +465,15 @@ namespace BizHawk.Client.EmuHawk
 					: null
 			);
 
+			UnityHawkSetup(); // [UnityHawk]
+
 			ExtToolManager = new(
 				Config,
 				() => (Emulator.SystemId, Game.Hash),
-				(toolPath, customFormTypeName, skipExtToolWarning) => Tools!.LoadExternalToolForm(
+				(toolPath, customFormTypeName, show, skipExtToolWarning) => Tools!.LoadExternalToolForm(
 					toolPath: toolPath,
 					customFormTypeName: customFormTypeName,
+					show: show,
 					skipExtToolWarning: skipExtToolWarning) is not null);
 			Tools = new ToolManager(this, Config, DisplayManager, ExtToolManager, InputManager, Emulator, MovieSession, Game);
 
@@ -600,47 +591,6 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			if (Config.MainFormStayOnTop) TopMost = true;
-
-
-
-			// [UnityHawk]
-			// Process cli args and set up shared buffers
-
-			if (_argParser.firmwareDir != null) {
-				// Override firmware directory
-				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
-			}
-
-			// Override config if acceptBackgroundInput cli arg is provided
-			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput ?? Config.AcceptBackgroundInput;
-			// Same for mute
-			Config.SoundEnabled = _argParser.mute.HasValue ? !_argParser.mute.Value : Config.SoundEnabled;
-
-			string callMethodBufferName = _argParser.unityCallMethodBuffer;
-			if (callMethodBufferName != null) {
-				// Init RPC buffer for CallMethod calls to unity (from lua)
-				CallMethodRpc.Init(callMethodBufferName);
-			}
-
-			string apiBufferName = _argParser.apiCallMethodBuffer;
-			if (apiBufferName != null) {
-				// Init RPC buffer for Bizhawk API calls from unity
-				_apiCallBuffer = new ApiCallBuffer(apiBufferName);
-			}
-
-			string keyInputBufferName = _argParser.readKeyInputFromSharedBuffer;
-			string analogInputBufferName = _argParser.readAnalogInputFromSharedBuffer;
-			if (keyInputBufferName != null || analogInputBufferName != null) {
-				// Get key presses from Unity via shared buffer
-				inputProvider = new UnityHawkInput(keyInputBufferName, analogInputBufferName);
-			} else {
-				// Use native OS input
-				inputProvider = Input.Instance;
-			}
-
-			// [end UnityHawk]
-
-
 
 			if (_argParser.cmdRom != null)
 			{
@@ -808,6 +758,20 @@ namespace BizHawk.Client.EmuHawk
 #endif
 				}
 			}
+
+			// open requested ext. tool
+			// (do this outside MainForm_Load so that it still works in headless mode)
+			var requestedExtToolDll = _argParser.openExtToolDll;
+			if (requestedExtToolDll != null)
+			{
+				var found = ExtToolManager.ToolStripItems.Where(static item => item.Enabled)
+					.Select(static item => (ExternalToolManager.MenuItemInfo) item.Tag)
+					.FirstOrNull(info => info.AsmFilename == requestedExtToolDll
+						|| Path.GetFileName(info.AsmFilename) == requestedExtToolDll
+						|| Path.GetFileNameWithoutExtension(info.AsmFilename) == requestedExtToolDll);
+				if (found is not null) found.Value.TryLoad(show: !_argParser.headless, skipExtToolWarning: true); // [UnityHawk: skip confirmation for loading tool]
+				else Console.WriteLine($"requested ext. tool dll {requestedExtToolDll} could not be loaded");
+			}	
 		}
 
 		private readonly bool _suppressSyncSettingsWarning;
@@ -843,12 +807,7 @@ namespace BizHawk.Client.EmuHawk
 
 			for (; ; )
 			{
-				if (_apiCallBuffer != null) {
-					// First do any pending api call requests from unity
-					ProcessUnityHawkApiCalls(_apiCallBuffer);
-				}
-
-				inputProvider.Update();
+				Input.Instance.Update();
 
 				// handle events and dispatch as a hotkey action, or a hotkey button, or an input button
 				// ...but prepare haptics first, those get read in ProcessInput
@@ -890,15 +849,6 @@ namespace BizHawk.Client.EmuHawk
 				StepRunLoop_Throttle();
 
 				Render();
-
-				if (_sharedTextureBuffer != null) {
-					int[] pixels = _currentVideoProvider.GetVideoBuffer();
-					int width =  _currentVideoProvider.BufferWidth;
-					int height =  _currentVideoProvider.BufferHeight;
-					// Pass current frame index along with texture to make it possible to sync with lua rpc calls
-					// (due to small unpredictable lag in the shared buffer write)
-					_sharedTextureBuffer.Write(pixels, width, height, Emulator.Frame);
-				}
 				
 				// HACK: RAIntegration might peek at memory during messages
 				// we need this to allow memory access here, otherwise it will deadlock
@@ -1087,8 +1037,6 @@ namespace BizHawk.Client.EmuHawk
 
 		private new Config Config => _getGlobalConfig();
 
-		private IInput inputProvider; // a bit messy, but can be either Input or UnityHawkInput
-
 		public Action<string> LoadGlobalConfigFromFile { get; set; }
 
 		private readonly Func<string> _getConfigPath;
@@ -1117,12 +1065,6 @@ namespace BizHawk.Client.EmuHawk
 			get => _sound;
 			set => _updateGlobalSound(_sound = value);
 		}
-
-		// [UnityHawk]
-		// Buffers for communication with Unity process via shared memory
-		ApiCallBuffer _apiCallBuffer = null;
-		SharedTextureBuffer _sharedTextureBuffer;
-		private UnityHawkSound _unityHawkSound; // [Should probably refactor this to be an interface shared between Sound and UnityHawkSound]
 
 		public CheatCollection CheatList { get; }
 
@@ -1165,7 +1107,7 @@ namespace BizHawk.Client.EmuHawk
 
 			// loop through all available events
 			InputEvent ie;
-			while ((ie = inputProvider.DequeueEvent()) != null)
+			while ((ie = Input.Instance.DequeueEvent()) != null)
 			{
 				// useful debugging:
 				// Console.WriteLine(ie);
@@ -1266,7 +1208,7 @@ namespace BizHawk.Client.EmuHawk
 			//also handle axes
 			//we'll need to isolate the mouse coordinates so we can translate them
 			KeyValuePair<string, int>? mouseX = null, mouseY = null;
-			foreach (var f in inputProvider.GetAxisValues())
+			foreach (var f in Input.Instance.GetAxisValues())
 			{
 				if (f.Key == "WMouse X")
 					mouseX = f;
@@ -2119,7 +2061,6 @@ namespace BizHawk.Client.EmuHawk
 				bool useAsyncMode = _currentSoundProvider.CanProvideAsync && !Config.SoundThrottle;
 				_currentSoundProvider.SetSyncMode(useAsyncMode ? SyncSoundMode.Async : SyncSoundMode.Sync);
 				Sound.SetInputPin(_currentSoundProvider);
-				// TODO should probably update UnityHawkSound if necessary too - currently won't support changing the loaded game at runtime though
 			}
 		}
 
@@ -3372,14 +3313,11 @@ namespace BizHawk.Client.EmuHawk
 				// Tools will want to be updated after rewind (load state), but we only need to manually do this if we did not frame advance.
 				UpdateToolsAfter();
 			}
-
-			// [UnityHawk]
-			if (_unityHawkSound != null) {
-				_unityHawkSound.Update();
-			} else {
-				// Only update native sound if not sharing audio via rpc
-				Sound.UpdateSound(atten, DisableSecondaryThrottling);
+			else {
+				Tools.UpdateToolsPaused();
 			}
+
+			Sound.UpdateSound(atten, DisableSecondaryThrottling);
 		}
 
 		private void CalcFramerateAndUpdateDisplay(long currentTimestamp, bool isRewinding, bool isFastForwarding)
@@ -4129,35 +4067,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void OnRomChanged()
 		{
-			// [UnityHawk]
-			// Need to init/re-init texture buffer here because size depends on the video resolution of the platform
-			InitSharedTextureBuffer();
-			// Same w audio buffer, has to be re-initialized for new emulator
-			if (_argParser.shareAudioOverRpcBuffer != null) {
-				// Init rpc buffer for passing audio to unity
-				if (_unityHawkSound == null) {
-					_unityHawkSound = new (_argParser.shareAudioOverRpcBuffer, _currentSoundProvider);
-				} else {
-					_unityHawkSound.SetSoundProvider(_currentSoundProvider);
-				}
-			}
-			// Override the savestate save directory in the config (needs to be here since the key depends on the platform)
-			if (_argParser.savestateSaveDir != null) {
-				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
-			}
-			// Override the ram watch save directory in the config 
-			if (_argParser.ramWatchSaveDir != null) {
-				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
-				Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
-			}
-
-			if (!_argParser.headless && _argParser.ramWatchFile != null) {
-				Tools.Load<RamWatch>();
-				Tools.RamWatch.LoadWatchFile(new FileInfo(_argParser.ramWatchFile), true);
-			}
-
-			// [end UnityHawk]
+			UnityHawkOnRomChanged(); // [UnityHawk]
 
 			OSD.Fps = "0 fps";
 			UpdateWindowTitle();
@@ -5038,67 +4948,50 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		// [UnityHawk methods]
+		private void UnityHawkSetup() {
+			// Process cli args and set up shared buffers
+
+			if (_argParser.firmwareDir != null) {
+				// Override firmware directory
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Firmware"].Path = _argParser.firmwareDir;
+			}
+
+			if (_argParser.extToolsDir != null) {
+				// Override external tools directory (necessary because of the weird way ExternalToolManager is set up)
+				Config.PathEntries[PathEntryCollection.GLOBAL, "External Tools"].Path = _argParser.extToolsDir;
+			}
+
+			// Override config if acceptBackgroundInput cli arg is provided
+			Config.AcceptBackgroundInput = _argParser.acceptBackgroundInput ?? Config.AcceptBackgroundInput;
+			// Same for mute
+			Config.SoundEnabled = _argParser.mute.HasValue ? !_argParser.mute.Value : Config.SoundEnabled;
+		}
+
+		private void UnityHawkOnRomChanged() {
+			// (Could move this stuff into external tool (userdata config instead of cli args), but does it belong there? Feels like in principle this could be useful outside of UnityHawk)
+
+			// Override the savestate save directory in the config (needs to be here since the key depends on the platform)
+			if (_argParser.savestateSaveDir != null) {
+				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+				Config.PathEntries[Emulator.SystemId, "Savestates"].Path = _argParser.savestateSaveDir;
+			}
+			// Override the ram watch save directory in the config 
+			if (_argParser.ramWatchSaveDir != null) {
+				// [Warning! Bizhawk will attempt to create this directory, and will crash if it doesn't have permission]
+				Config.PathEntries[PathEntryCollection.GLOBAL, "Watch (.wch)"].Path = _argParser.ramWatchSaveDir;
+			}
+			// Load specified ram watch file
+			if (!_argParser.headless && _argParser.ramWatchFile != null) {
+				Tools.Load<RamWatch>();
+				Tools.RamWatch.LoadWatchFile(new FileInfo(_argParser.ramWatchFile), true);
+			}
+		}
+		
 		// Extension for savestates. Defaults to ".State" (as in original Bizhawk) but can be set via --savestate-extension flag
 		private string SaveStateExtension() {
 			return _argParser.savestateExtension ?? "State";
 		}
-		private void InitSharedTextureBuffer() {
-			string texBufName = _argParser.writeTextureToSharedBuffer;
-			if (texBufName != null) {
-				// Init shared texture buffer for passing to unity
-				int[] texbuf = _currentVideoProvider.GetVideoBuffer();
-				if (_sharedTextureBuffer == null) {
-					_sharedTextureBuffer = new(texBufName, texbuf.Length);
-				} else {
-					// If buffer already exists, resize it to fit new emulator
-					_sharedTextureBuffer.SetSize(texbuf.Length);
-				}
-			}
-		}
 
-		// [This should probably go in a new file but whatever]
-		private void ProcessUnityHawkApiCalls(ApiCallBuffer apiCallBuffer) {
-			Plunderludics.UnityHawk.MethodCall? mcq;
-			while ((mcq = apiCallBuffer.Read()).HasValue) {
-				Plunderludics.UnityHawk.MethodCall mc = mcq.Value;
-				// Console.WriteLine($"Unity attempting api call {mc}");
-				switch (mc.MethodName) {
-				// [Mmm these string constants should really go in a file shared between unity and bizhawk]
-				case "LoadRom":
-					string romPath = mc.Argument;
-					// Load the rom using the same logic as when it's provided on the command line
-					// [This code is copied 3 times rn :/ TODO refactor]
-					Console.WriteLine($"LoadSample: Looking for rom in {romPath}");
-					var ioa = OpenAdvancedSerializer.ParseWithLegacy(romPath);
-					if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
-					_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
-					if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {romPath}");
-
-					break;
-				case "LoadState":
-					LoadState(mc.Argument, "placeholderStateName", suppressOSD: true);
-					break;
-				case "SaveState":
-					SaveState(mc.Argument, "placeholderStateName", fromLua: false, suppressOSD: true);
-					break;
-				case "Unpause":
-					UnpauseEmulator();
-					break;
-				case "Pause":
-					PauseEmulator();
-					break;
-				case "FrameAdvance":
-					FrameAdvance();
-					break;
-				default:
-					Console.WriteLine($"Warning: Unity attempting to call unsupported bizhawk api method {mc.MethodName}");
-					break;
-				}
-				// [TODO: would be good to return the bool success value for OpenRom()]
-				// Previous implementation using reflection:
-				// typeof(IMainFormForApi).GetMethod(methodCall.MethodName).Invoke(_api, new object[] {methodCall.Argument});
-			}
-		}
-		// [end UnityHawk methods]
+		// [end UnityHawk]
 	}
 }

@@ -3,7 +3,7 @@ using System;
 using BizHawk.Emulation.Common;
 using Plunderludics.UnityHawk.SharedBuffers;
 
-namespace BizHawk.Client.Common
+namespace Plunderludics.UnityHawk.Tool
 {
 	public class UnityHawkSound
 	{

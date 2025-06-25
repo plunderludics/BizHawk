@@ -1,3 +1,5 @@
+// TODO this probably belongs within the UnityHawk external tool project
+
 using System;
 using System.Linq;
 using System.Collections.Generic;

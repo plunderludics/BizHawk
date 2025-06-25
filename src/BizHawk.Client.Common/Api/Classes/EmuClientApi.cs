@@ -103,11 +103,18 @@ namespace BizHawk.Client.Common
 
 		public bool IsTurbo() => _mainForm.IsTurboing;
 
-		public bool LoadState(string name)
-			=> _mainForm.LoadState(
-				path: Path.Combine(_config.PathEntries.SaveStateAbsolutePath(Game.System), $"{name}.State"),
+		public bool LoadState(string name, bool isFullPath = false)
+		{
+			// [UnityHawk] annoying hack to allow loading directly from path
+			var path = name;
+			if (!isFullPath) {
+				path = Path.Combine(_config.PathEntries.SaveStateAbsolutePath(Game.System), $"{name}.State");
+			}
+			return _mainForm.LoadState(
+				path: path,
 				userFriendlyStateName: name,
 				suppressOSD: false);
+		}
 
 		public void OnBeforeQuickLoad(object sender, string quickSaveSlotName, out bool eventHandled)
 		{
@@ -153,7 +160,14 @@ namespace BizHawk.Client.Common
 
 		public void SaveRam() => _mainForm.FlushSaveRAM();
 
-		public void SaveState(string name) => _mainForm.SaveState(Path.Combine(_config.PathEntries.SaveStateAbsolutePath(Game.System), $"{name}.State"), name, fromLua: false);
+		public void SaveState(string name, bool isFullPath = false) {
+			// [UnityHawk] annoying hack to allow loading directly from path
+			var path = name;
+			if (!isFullPath) {
+				path = Path.Combine(_config.PathEntries.SaveStateAbsolutePath(Game.System), $"{name}.State");
+			}
+			_mainForm.SaveState(path, name, fromLua: false);
+		}
 
 		public int ScreenHeight() => _displayManager.GetPanelNativeSize().Height;
 

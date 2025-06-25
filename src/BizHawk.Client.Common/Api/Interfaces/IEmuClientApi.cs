@@ -89,7 +89,7 @@ namespace BizHawk.Client.Common
 		/// </summary>
 		/// <param name="name">Savestate friendly name</param>
 		/// <returns><see langword="true"/> iff succeeded</returns>
-		bool LoadState(string name);
+		bool LoadState(string name, bool isFullPath = false);
 
 		/// <summary>
 		/// Raised before a quickload is done (just after pressing shortcut button)
@@ -140,7 +140,7 @@ namespace BizHawk.Client.Common
 		/// Save a state with specified name
 		/// </summary>
 		/// <param name="name">Savestate friendly name</param>
-		void SaveState(string name);
+		void SaveState(string name, bool isFullPath = false);
 
 		int ScreenHeight();
 

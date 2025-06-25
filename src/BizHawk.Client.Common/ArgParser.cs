@@ -49,6 +49,7 @@ namespace BizHawk.Client.Common
 			// [UnityHawk]
 			string? customWindowTitle = null;
 			string? firmwareDir = null;
+			string? extToolsDir = null;
 			string? savestateSaveDir = null;
 			string? savestateExtension = null;
 			string? ramWatchFile = null;
@@ -57,12 +58,6 @@ namespace BizHawk.Client.Common
 			bool? acceptBackgroundInput = null;
 			bool? suppressPopups = null;
 			bool? mute = null;
-			string? writeTextureToSharedBuffer = null;
-			string? readKeyInputFromSharedBuffer = null;
-			string? readAnalogInputFromSharedBuffer = null;
-			string? shareAudioOverRpcBuffer = null;
-			string? unityCallMethodBuffer = null;
-			string? apiCallMethodBuffer = null;
 
 			for (var i = 0; i < args.Length; i++)
 			{
@@ -198,6 +193,10 @@ namespace BizHawk.Client.Common
 					// - dll path matches given string; or dll filename matches given string with or without `.dll`
 					openExtToolDll = arg.Substring(20);
 				}
+				else if (argDowncased.StartsWith("--ext-tools-dir="))
+				{
+					extToolsDir = arg.Substring(arg.IndexOf('=') + 1);
+				}
 				else if (argDowncased.StartsWith("--firmware="))
 				{
 					firmwareDir = arg.Substring(arg.IndexOf('=') + 1);
@@ -221,30 +220,6 @@ namespace BizHawk.Client.Common
 				else if (argDowncased.StartsWith("--windowtitle="))
 				{
 					customWindowTitle = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--write-texture-to-shared-buffer="))
-				{
-					writeTextureToSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--read-key-input-from-shared-buffer="))
-				{
-					readKeyInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--read-analog-input-from-shared-buffer="))
-				{
-					readAnalogInputFromSharedBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--share-audio-over-rpc-buffer="))
-				{
-					shareAudioOverRpcBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--unity-call-method-buffer="))
-				{
-					unityCallMethodBuffer = arg.Substring(arg.IndexOf('=') + 1);
-				}
-				else if (argDowncased.StartsWith("--api-call-method-buffer="))
-				{
-					apiCallMethodBuffer = arg.Substring(arg.IndexOf('=') + 1);
 				}
 				else if (argDowncased.StartsWith("--userdata="))
 				{
@@ -305,6 +280,7 @@ namespace BizHawk.Client.Common
 				// [UnityHawk]
 				customWindowTitle: customWindowTitle,
 				firmwareDir: firmwareDir,
+				extToolsDir: extToolsDir,
 				savestateSaveDir: savestateSaveDir,
 				savestateExtension: savestateExtension,
 				ramWatchFile: ramWatchFile,
@@ -312,13 +288,7 @@ namespace BizHawk.Client.Common
 				headless: headless ?? false,
 				acceptBackgroundInput: acceptBackgroundInput,
 				suppressPopups: suppressPopups ?? false,
-				mute: mute,
-				writeTextureToSharedBuffer: writeTextureToSharedBuffer,
-				readKeyInputFromSharedBuffer: readKeyInputFromSharedBuffer,
-				readAnalogInputFromSharedBuffer: readAnalogInputFromSharedBuffer,
-				shareAudioOverRpcBuffer: shareAudioOverRpcBuffer,
-				unityCallMethodBuffer: unityCallMethodBuffer,
-				apiCallMethodBuffer: apiCallMethodBuffer
+				mute: mute
 			);
 		}
 

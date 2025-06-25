@@ -64,6 +64,7 @@ namespace BizHawk.Client.Common
 
 		public void Set(string button, bool? state = null, int? controller = null)
 		{
+			// Console.WriteLine($"Set {button} {state} {controller}");
 			try
 			{
 				var buttonToSet = controller == null ? button : $"P{controller} {button}";
@@ -83,9 +84,10 @@ namespace BizHawk.Client.Common
 				//and here's where the overrides managed by this API are pushed in
 				_inputManager.ActiveController.Overrides(_inputManager.ButtonOverrideAdapter);
 			}
-			catch
+			catch (Exception e)
 			{
 				// ignored
+				Console.WriteLine($"Error {e}");
 			}
 		}
 

@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 
 namespace Plunderludics.UnityHawk.Shared
 {
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 	public struct InputEvent 
 	{
 		// For simplicity, use this for both axis and button input: 0 is unpressed, > 0 is pressed

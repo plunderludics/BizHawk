@@ -21,6 +21,7 @@ public static class ApiCommands {
 	public const string Unpause = "Unpause";
 	public const string FrameAdvance = "FrameAdvance";
 	public const string SetVolume = "SetVolume";
+	public const string SetSpeedPercent = "SetSpeedPercent";
 	public const string WriteUnsigned = "WriteUnsigned";
 	public const string WriteSigned = "WriteSigned";
 	public const string WriteFloat = "WriteFloat";

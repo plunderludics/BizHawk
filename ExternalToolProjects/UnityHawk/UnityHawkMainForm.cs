@@ -255,6 +255,10 @@ namespace Plunderludics.UnityHawk.Tool
 				case ApiCommands.SetVolume:
 					APIs.EmuClient.SetVolume(int.Parse(mc.Argument));
 					break;
+				case ApiCommands.SetSpeedPercent:
+					// arg: int percentage (>=0)
+					GlobalConfig.SpeedPercent = int.Parse(mc.Argument); // No api for this, set config directly
+					break;
 				// Note: For Write, Freeze and Watch methods,
 				// `domain`, if not provided, defaults to the main memory domain (NOT the most recent used domain which is what MemoryApi does)
 				// TODO hm maybe WriteXXX should all be merged into one Write method with a type parameter

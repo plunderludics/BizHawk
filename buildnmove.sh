@@ -17,6 +17,9 @@ echo building for $buildConfig
 packageDir="../unity-hawk/Packages/org.plunderludics.UnityHawk"
 bizhawkDir="$packageDir/BizHawk~"
 
+# TODO we should probably clean the bizhawk dir before building so that old dlls etc don't get left in there
+# But currently still use the config.ini in the bizhawkdir so won't make this change yet
+
 mkdir -p $bizhawkDir/dll $bizhawkDir/gamedb $bizhawkDir/ExternalTools
 
 # For Mac:

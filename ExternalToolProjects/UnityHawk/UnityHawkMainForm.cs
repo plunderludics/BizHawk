@@ -41,8 +41,8 @@ namespace Plunderludics.UnityHawk.Tool
 		private SharedTextureBuffer _sharedTextureBuffer;
 		private UnityHawkSound _unityHawkSound;
 
-		private Dictionary<string, bool> buttonState = new();  // Current button state - need to pass to JoypadApi every frame
-		private Dictionary<string, int?> analogState = new(); // Current analog state
+		private Dictionary<(string, int?), bool> buttonState = new(); // Current button state - need to pass to JoypadApi every frame
+		private Dictionary<(string, int?), int?> analogState = new(); // Current analog state
 
 		private Dictionary<(long Addr, int Size, string Domain), uint> _freezes = new(); // List of memory addresses to keep frozen
 		private HashSet<(long Addr, int Size, bool IsBigEndian, WatchType Type, string Domain)> _watches = new(); // List of memory addresses that Unity wants to watch
@@ -155,18 +155,35 @@ namespace Plunderludics.UnityHawk.Tool
 				InputEvent? mie;
 				while ((mie = _inputBuffer.Read()).HasValue) {
 					InputEvent ie = mie.Value;
-					
+					int? controller = ie.controller > 0 ? ie.controller : null; // 0 is null controller
 					if (ie.isAnalog) { // [We could maybe get this from the API somehow, but easier to just get unity to tell us]
-						analogState[ie.name] = ie.value;
+						analogState[(ie.name, controller)] = ie.value;
+						// Hm, if multiple analog input values come within the same frame, we currently drop all but the latest one
+						// TODO: maybe should be averaging or some more complicated smoothing type thing
 					} else {
-						buttonState[ie.name] = ie.value > 0; // TODO should store the controller here I guess (or store string like "P1 A")
+						buttonState[(ie.name, controller)] = ie.value > 0;
 					}
 				}
 			}
-
 			// Send input state to JoypadApi (need to do this every frame)
-			APIs.Joypad.Set(buttonState, 1); // TODO: support controllers other than 1
-			APIs.Joypad.SetAnalog(analogState, 1); // TODO: support controllers other than 1
+
+			// (Instead of sending the full controller state [Joypad.Set(buttonState)],
+			//  we only send input for pressed buttons -
+			//  this means interacting through the bizhawk window
+			//  still works which is convenient for dev)
+			foreach (var button in buttonState) {
+				(string name, int? controller) = button.Key;
+				bool pressed = button.Value;
+				if (pressed) {
+					APIs.Joypad.Set(name, pressed, controller);
+				}
+			}
+			// For analog just override (so native input won't work)
+			// (api has no way to add two input sources)
+			foreach (var axis in analogState) {
+				(string name, int? controller) = axis.Key;
+				APIs.Joypad.SetAnalog(name, axis.Value, controller);
+			}
 
 			// Process api commands from unity
 			if (_apiCommandBuffer != null) {
@@ -237,6 +254,10 @@ namespace Plunderludics.UnityHawk.Tool
 					break;
 				case ApiCommands.SetVolume:
 					APIs.EmuClient.SetVolume(int.Parse(mc.Argument));
+					break;
+				case ApiCommands.SetSpeedPercent:
+					// arg: int percentage (>=0)
+					GlobalConfig.SpeedPercent = int.Parse(mc.Argument); // No api for this, set config directly
 					break;
 				// Note: For Write, Freeze and Watch methods,
 				// `domain`, if not provided, defaults to the main memory domain (NOT the most recent used domain which is what MemoryApi does)
@@ -369,6 +390,7 @@ namespace Plunderludics.UnityHawk.Tool
 						_ => throw new InvalidOperationException($"Invalid size {size} for Freeze")
 					};
 
+					Console.WriteLine($"UnityHawk: Freezing {domain} {address} to uint {currentValue}");
 					_freezes[(address, size, domain)] = currentValue;
 
 					// Previously tried implementing using Watch/CheatList but it does weird stuff for some reason:
@@ -548,6 +570,9 @@ namespace Plunderludics.UnityHawk.Tool
 			foreach (var kvp in _freezes) {
 				var (addr, size, domain) = kvp.Key;
 				uint value = kvp.Value;
+				// Console.WriteLine($"UnityHawk: Applying freeze ({domain} {addr} to uint {value})");
+				// (At freeze time we assumed big-endian uint so do the same here)
+				APIs.Memory.SetBigEndian(true);
 				switch (size) {
 					case 1:
 						APIs.Memory.WriteU8(addr, value, domain);

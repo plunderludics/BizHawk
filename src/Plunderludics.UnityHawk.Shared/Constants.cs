@@ -22,7 +22,7 @@ public static class ApiCommands {
 	public const string FrameAdvance = nameof(FrameAdvance);
 	public const string SetVolume = nameof(SetVolume);
 	public const string SetSoundOn = nameof(SetSoundOn);
-  public const string SetSpeedPercent = nameof(SetSpeedPercent);
+	public const string SetSpeedPercent = nameof(SetSpeedPercent);
 	public const string WriteUnsigned = nameof(WriteUnsigned);
 	public const string WriteSigned = nameof(WriteSigned);
 	public const string WriteFloat = nameof(WriteFloat);

@@ -238,6 +238,9 @@ namespace Plunderludics.UnityHawk.Tool
 				case ApiCommands.SetVolume:
 					APIs.EmuClient.SetVolume(int.Parse(mc.Argument));
 					break;
+				case ApiCommands.SetSoundOn:
+					APIs.EmuClient.SetSoundOn(bool.Parse(mc.Argument));
+					break;
 				// Note: For Write, Freeze and Watch methods,
 				// `domain`, if not provided, defaults to the main memory domain (NOT the most recent used domain which is what MemoryApi does)
 				// TODO hm maybe WriteXXX should all be merged into one Write method with a type parameter

@@ -21,6 +21,8 @@ public static class ApiCommands {
 	public const string Unpause = nameof(Unpause);
 	public const string FrameAdvance = nameof(FrameAdvance);
 	public const string SetVolume = nameof(SetVolume);
+	public const string SetSoundOn = nameof(SetSoundOn);
+  public const string SetSpeedPercent = nameof(SetSpeedPercent);
 	public const string WriteUnsigned = nameof(WriteUnsigned);
 	public const string WriteSigned = nameof(WriteSigned);
 	public const string WriteFloat = nameof(WriteFloat);
@@ -28,7 +30,6 @@ public static class ApiCommands {
 	public const string Unfreeze = nameof(Unfreeze);
 	public const string Watch = nameof(Watch);
 	public const string Unwatch = nameof(Unwatch);
-	public const string SetSoundOn = nameof(SetSoundOn);
 }
 
 // Idk what to call these but these are sent from bizhawk to unity over the CallMethod rpc buffer

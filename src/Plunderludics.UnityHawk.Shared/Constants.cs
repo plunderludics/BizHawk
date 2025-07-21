@@ -28,7 +28,7 @@ public static class ApiCommands {
 	public const string Unfreeze = nameof(Unfreeze);
 	public const string Watch = nameof(Watch);
 	public const string Unwatch = nameof(Unwatch);
-	public const string SetSoundOn = nameof(Unwatch);
+	public const string SetSoundOn = nameof(SetSoundOn);
 }
 
 // Idk what to call these but these are sent from bizhawk to unity over the CallMethod rpc buffer

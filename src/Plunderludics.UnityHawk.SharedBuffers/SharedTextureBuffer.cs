@@ -29,10 +29,13 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 		}
 #pragma warning restore CS8618
 		public void Write(int[] pixels, int width, int height, int frame) {
+			// Very weird but we have to write the pixels before writing the metadata
+			// or the metadata all gets overwritten (maybe some bug in SharedArray.Write when startIndex != 0?)
+			_sharedArray.Write(pixels, TextureBufferLayout.PixelDataStartIndex);
+			
 			_sharedArray[TextureBufferLayout.WidthIndex] = width;
 			_sharedArray[TextureBufferLayout.HeightIndex] = height;
 			_sharedArray[TextureBufferLayout.FrameIndex] = frame;
-			_sharedArray.Write(pixels, TextureBufferLayout.PixelDataStartIndex);
 		}
 
 		public void SetSize(int bufferSize) {

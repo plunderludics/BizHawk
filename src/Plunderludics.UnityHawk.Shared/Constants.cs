@@ -14,21 +14,22 @@ public static class Args {
 // API commands (write-only commands from unity to bizhawk)
 // This could be an enum I guess but doesn't really matter
 public static class ApiCommands {
-	public const string LoadRom = "LoadRom";
-	public const string LoadState = "LoadState";
-	public const string SaveState = "SaveState";
-	public const string Pause = "Pause";
-	public const string Unpause = "Unpause";
-	public const string FrameAdvance = "FrameAdvance";
-	public const string SetVolume = "SetVolume";
-	public const string SetSpeedPercent = "SetSpeedPercent";
-	public const string WriteUnsigned = "WriteUnsigned";
-	public const string WriteSigned = "WriteSigned";
-	public const string WriteFloat = "WriteFloat";
-	public const string Freeze = "Freeze";
-	public const string Unfreeze = "Unfreeze";
-	public const string Watch = "Watch";
-	public const string Unwatch = "Unwatch";
+	public const string LoadRom = nameof(LoadRom);
+	public const string LoadState = nameof(LoadState);
+	public const string SaveState = nameof(SaveState);
+	public const string Pause = nameof(Pause);
+	public const string Unpause = nameof(Unpause);
+	public const string FrameAdvance = nameof(FrameAdvance);
+	public const string SetVolume = nameof(SetVolume);
+	public const string SetSoundOn = nameof(SetSoundOn);
+	public const string SetSpeedPercent = nameof(SetSpeedPercent);
+	public const string WriteUnsigned = nameof(WriteUnsigned);
+	public const string WriteSigned = nameof(WriteSigned);
+	public const string WriteFloat = nameof(WriteFloat);
+	public const string Freeze = nameof(Freeze);
+	public const string Unfreeze = nameof(Unfreeze);
+	public const string Watch = nameof(Watch);
+	public const string Unwatch = nameof(Unwatch);
 }
 
 // Idk what to call these but these are sent from bizhawk to unity over the CallMethod rpc buffer

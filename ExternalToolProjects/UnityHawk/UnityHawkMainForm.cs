@@ -255,6 +255,9 @@ namespace Plunderludics.UnityHawk.Tool
 				case ApiCommands.SetVolume:
 					APIs.EmuClient.SetVolume(int.Parse(mc.Argument));
 					break;
+				case ApiCommands.SetSoundOn:
+					APIs.EmuClient.SetSoundOn(bool.Parse(mc.Argument));
+					break;
 				case ApiCommands.SetSpeedPercent:
 					// arg: int percentage (>=0)
 					GlobalConfig.SpeedPercent = int.Parse(mc.Argument); // No api for this, set config directly

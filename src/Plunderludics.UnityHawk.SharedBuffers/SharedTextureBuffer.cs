@@ -13,6 +13,10 @@ using SharedMemory;
 namespace Plunderludics.UnityHawk.SharedBuffers
 {
 	public class SharedTextureBuffer {
+		// We use a simple array for the texture buffer rather than a circular buffer
+		// because the unity client is only interested in the latest frame - no point storing intermediates
+		// And we also want the buffer size to be variable
+		// It is a bit messy this way though because we store metadata alongside pixels
 		private SharedArray<int> _sharedArray;
 		private int _index;
 		private string _name;
@@ -25,16 +29,15 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 		}
 #pragma warning restore CS8618
 		public void Write(int[] pixels, int width, int height, int frame) {
-			// [This should probably be a Serialize call applied to a custom struct which can be shared with Unity]
-			_sharedArray.Write(pixels, 0);
-			_sharedArray[_sharedArray.Length - 3] = width;
-			_sharedArray[_sharedArray.Length - 2] = height;
-			_sharedArray[_sharedArray.Length - 1] = frame;
+			_sharedArray[TextureBufferLayout.WidthIndex] = width;
+			_sharedArray[TextureBufferLayout.HeightIndex] = height;
+			_sharedArray[TextureBufferLayout.FrameIndex] = frame;
+			_sharedArray.Write(pixels, TextureBufferLayout.PixelDataStartIndex);
 		}
 
 		public void SetSize(int bufferSize) {
 			// Not allowed to re-open a shared buffer with same name as a previous one, so add a counter to the name
-			// [Same logic happens in UnityHawk Emulator.cs - TODO this logic should be moved to shared code]
+			// [Same logic happens in UnityHawk SharedTextureBuffer.cs - TODO this logic should be moved to shared code]
 			string trueName = $"{_name}-{_index}";
 
 			Console.WriteLine($"Init texture buffer {trueName}");

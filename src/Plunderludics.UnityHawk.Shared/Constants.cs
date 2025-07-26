@@ -45,3 +45,11 @@ public static class SpecialCommands {
 		OnRomLoaded
 	};
 }
+
+public static class TextureBufferLayout {
+	public const int WidthIndex = 0;
+	public const int HeightIndex = 1;
+	public const int FrameIndex = 2;
+	// The rest of the buffer is for pixel data
+	public const int PixelDataStartIndex = 3; // Start of pixel data in the shared array
+}

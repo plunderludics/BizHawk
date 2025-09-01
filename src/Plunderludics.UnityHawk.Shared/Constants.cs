@@ -46,3 +46,10 @@ public static class SpecialCommands {
 		OnRomLoaded
 	};
 }
+
+public static class TextureBufferLayout {
+	public const int WidthIndexFromEnd = 0;
+	public const int HeightIndexFromEnd = 1;
+	public const int FrameIndexFromEnd = 2;
+	public const int MetadataLength = 3; // 3 ints
+}

@@ -201,9 +201,10 @@ namespace Plunderludics.UnityHawk.Tool
 				int[] pixels = _videoProvider.GetVideoBuffer();
 				int width =  _videoProvider.BufferWidth;
 				int height =  _videoProvider.BufferHeight;
+				int frame = APIs.Emulation.FrameCount();
 				// Pass current frame index along with texture to make it possible to sync with lua rpc calls
 				// (due to small unpredictable lag in the shared buffer write)
-				_sharedTextureBuffer.Write(pixels, width, height, APIs.Emulation.FrameCount());
+				_sharedTextureBuffer.Write(pixels, width, height, frame);
 			}
 			
 			// Send any values that unity wants to watch over rpc

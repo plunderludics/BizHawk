@@ -25,11 +25,13 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 		}
 #pragma warning restore CS8618
 		public void Write(int[] pixels, int width, int height, int frame) {
-			// [This should probably be a Serialize call applied to a custom struct which can be shared with Unity]
-			_sharedArray.Write(pixels, 0);
-			_sharedArray[_sharedArray.Length - 3] = width;
-			_sharedArray[_sharedArray.Length - 2] = height;
-			_sharedArray[_sharedArray.Length - 1] = frame;
+			// _sharedArray.Write seems to be totally broken when startindex != 0 (or I don't understand something)
+			// So our only option if we don't want to allocate an array every frame is to just use the last 3 elements
+			// of the buffer to store our metadata. Ugly but it's fine because the buffer always seems to be oversized
+			_sharedArray.Write(pixels, startIndex: 0);
+			_sharedArray[_sharedArray.Length - 1 - TextureBufferLayout.WidthIndexFromEnd] = width;
+			_sharedArray[_sharedArray.Length - 1 - TextureBufferLayout.HeightIndexFromEnd] = height;
+			_sharedArray[_sharedArray.Length - 1 - TextureBufferLayout.FrameIndexFromEnd] = frame;
 		}
 
 		public void SetSize(int bufferSize) {

@@ -46,6 +46,7 @@ namespace Plunderludics.UnityHawk.Tool
 
 		private Dictionary<(long Addr, int Size, string Domain), uint> _freezes = new(); // List of memory addresses to keep frozen
 		private HashSet<(long Addr, int Size, bool IsBigEndian, WatchType Type, string Domain)> _watches = new(); // List of memory addresses that Unity wants to watch
+		private Dictionary<(long Addr, int Size, bool IsBigEndian, WatchType Type, string Domain), string> _previousWatchValues = new(); // Track previous values to detect changes
 
 		private Label text;
 
@@ -76,8 +77,11 @@ namespace Plunderludics.UnityHawk.Tool
 		public override void Restart() {
 			Console.WriteLine("Restarting UnityHawk plugin...");
 
-			// Clear freezes
-			_freezes.Clear(); // Hm, what if we're restarting with the same rom? Should we keep the freezes in that case?
+			// Clear freezes and watches
+			// TODO: what if we're restarting with the same rom? Should we keep the watches+freezes in that case?
+			_freezes.Clear();
+			_watches.Clear();
+			_previousWatchValues.Clear();
 			
 			// Open sharedmemory buffers
 			if (_inputBuffer == null) {
@@ -147,6 +151,12 @@ namespace Plunderludics.UnityHawk.Tool
 			OnRomLoaded(); // Notify unity that rom was loaded
 		}
 
+		protected override void FastUpdateBefore() {
+			// Keep unityhawk running in turbo mode
+			// TODO allow configuring this?
+			UpdateBefore();
+		}
+
 		protected override void UpdateBefore() {
 			// Console.WriteLine("UnityHawk: UpdateBefore");
 			// Before frame
@@ -191,6 +201,11 @@ namespace Plunderludics.UnityHawk.Tool
 			}
 			// Apply ram freezes (need to reset the value at the beginning of each frame)
 			ApplyFreezes();
+		}
+
+		protected override void FastUpdateAfter() {
+			// Keep unityhawk running in turbo mode
+			UpdateAfter();
 		}
 
 		protected override void UpdateAfter() {
@@ -370,6 +385,7 @@ namespace Plunderludics.UnityHawk.Tool
 					
 					var key = (address, size, isBigEndian, type, domain);
 					_watches.Remove(key);
+					_previousWatchValues.Remove(key); // Clear previous value when unwatching
 					break;
 				}
 
@@ -526,12 +542,12 @@ namespace Plunderludics.UnityHawk.Tool
 		// }
 
 		private void ProcessWatches() {
-			// Process all the watches and send them to unity
+			// Process all the watches and send them to unity only when values change
    			foreach (var watch in _watches) {
 				(long addr, int size, bool isBigEndian, WatchType type, string domain) = watch;
 				string actualDomain = domain ?? APIs.Memory.MainMemoryName; // Default to main memory domain if not provided
 				APIs.Memory.SetBigEndian(isBigEndian);
-				string value = type switch
+				string currentValue = type switch
 				{
 					// (This is kind of overkill since we're reading the same bytes in each case,
 					//  but this way don't have to worry about bit conversion and just trust bizhawk)
@@ -559,13 +575,19 @@ namespace Plunderludics.UnityHawk.Tool
 					_ => throw new InvalidOperationException($"Unknown WatchType {type}")
 				};
 
-				// Send the value to unity via rpc
-				// (Sort of abuse CallMethodRpc here to avoid having to have a separate rpc buffer)
-				string arg = $"{addr},{size},{isBigEndian},{type},{domain},{value}";
+				// Check if the value has changed since last frame
+				if (!_previousWatchValues.TryGetValue(watch, out string previousValue) || currentValue != previousValue) {
+					// Value has changed (or this is the first time we're reading it), send to unity
+                	// (Sort of abuse CallMethodRpc here to avoid having to have a separate rpc buffer)
+					string arg = $"{addr},{size},{isBigEndian},{type},{domain},{currentValue}";
 
-				// Console.WriteLine($"UnityHawk: Sending watch {domain} {addr} size {size} type {type} value {value}");
+					// Console.WriteLine($"UnityHawk: Sending watch {domain} {addr} size {size} type {type} value {currentValue} (changed from {previousValue})");
 
-				_ = CallMethodRpc.Instance.CallMethod(SpecialCommands.ReceiveWatchedValue, arg); // Ignore return value from unity
+					_ = CallMethodRpc.Instance.CallMethod(SpecialCommands.ReceiveWatchedValue, arg); // Ignore return value from unity
+					
+					// Update the previous value for next frame
+					_previousWatchValues[watch] = currentValue;
+				}
 			}
 		}
 

@@ -94,7 +94,7 @@ namespace Plunderludics.UnityHawk.Tool
 			// API command buffer is for write-only commands that don't require a return value, run in main thread before each framae
 			if (_apiCommandBuffer == null) {
 				string apiCommandBufferName = (string)APIs.UserData.Get(Args.ApiCommandBuffer);
-				if (apiCommandBufferName != null) {
+				if (!string.IsNullOrEmpty(apiCommandBufferName)) {
 					// Init RPC buffer for API commands from unity
 					_apiCommandBuffer = new(apiCommandBufferName);
 				}
@@ -112,7 +112,7 @@ namespace Plunderludics.UnityHawk.Tool
 			// For lua callbacks to unity
 			if (CallMethodRpc.Instance == null) {
 				string callMethodBufferName = (string)APIs.UserData.Get(Args.CallMethodRpc);
-				if (callMethodBufferName != null) {
+				if (!string.IsNullOrEmpty(callMethodBufferName)) {
 					// Init RPC buffer for CallMethod calls to unity (from lua)
 					CallMethodRpc.Init(callMethodBufferName);
 				}
@@ -122,7 +122,7 @@ namespace Plunderludics.UnityHawk.Tool
 			_videoProvider = _emu.AsVideoProviderOrDefault();
 			// Need to init/re-init texture buffer here when rom changes because size depends on the video resolution of the platform
 			string texBufName = (string)APIs.UserData.Get(Args.TextureBuffer);
-			if (texBufName != null) {
+			if (!string.IsNullOrEmpty(texBufName)) {
 				// Init shared texture buffer for passing to unity
 				int[] texbuf = _videoProvider.GetVideoBuffer();
 				if (_sharedTextureBuffer == null) {
@@ -136,7 +136,7 @@ namespace Plunderludics.UnityHawk.Tool
 			// Audio buffer
 			_soundProvider = _emu.AsSoundProviderOrDefault();
 			string audioRpcName = (string)APIs.UserData.Get(Args.AudioRpc);
-			if (audioRpcName != null) {
+			if (!string.IsNullOrEmpty(audioRpcName)) {
 				GlobalConfig.SoundVolume = 0; // Hack to disable native sound: TODO unity should probably mute via cli arg instead
 				// (Don't set SoundEnabled = false, that disables the sound provider completely)
 

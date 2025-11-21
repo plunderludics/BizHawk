@@ -570,7 +570,6 @@ namespace BizHawk.Client.EmuHawk
 				DragDrop += FormDragDrop;
 			};
 
-<<<<<<< ours
 			Closing += (o, e) =>
 			{
 				if (Tools.AskSave())

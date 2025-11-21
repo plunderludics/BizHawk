@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 
+using Plunderludics.UnityHawk.Shared;
+
 using SharedMemory;
 
 namespace Plunderludics.UnityHawk.SharedBuffers

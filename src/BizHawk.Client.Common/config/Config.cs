@@ -469,8 +469,5 @@ namespace BizHawk.Client.Common
 		public bool ScaleOSDWithSystemScale { get; set; } = true;
 
 		public int RelativeMouseSensitivity { get; set; } = 100;
-		
-		public bool SaveConfigOnClose { get; set; } = true; // [UnityHawk]
-
 	}
 }

@@ -578,9 +578,7 @@ namespace BizHawk.Client.EmuHawk
 					MovieSession.StopMovie();
 					Tools.Close();
 					CloseGame();
-					if (Config.SaveConfigOnClose) {
-						SaveConfig();
-					}
+					SaveConfig();
 				}
 				else
 				{
@@ -2514,11 +2512,6 @@ namespace BizHawk.Client.EmuHawk
 
 			CommitCoreSettingsToConfig();
 			ConfigService.Save(path, Config);
-		}
-
-		private void ToggleSaveConfigOnClose()
-		{
-			Config.SaveConfigOnClose ^= true;
 		}
 
 		private void ToggleFps()

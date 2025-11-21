@@ -664,7 +664,6 @@ namespace BizHawk.Client.EmuHawk
 
 		private void ConfigSubMenu_DropDownOpened(object sender, EventArgs e)
 		{
-			SaveConfigOnClose.Checked = Config.SaveConfigOnClose;
 			ControllersMenuItem.Enabled = Emulator.ControllerDefinition.Any();
 			RewindOptionsMenuItem.Enabled = Emulator.HasSavestates();
 		}
@@ -980,11 +979,6 @@ namespace BizHawk.Client.EmuHawk
 		{
 			Config.InputHotkeyOverrideOptions = Config.InputPriority.HOTKEY;
 			UpdateKeyPriorityIcon();
-		}
-
-		private void SaveConfigOnCloseToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-			ToggleSaveConfigOnClose();
 		}
 
 		private void SaveConfigMenuItem_Click(object sender, EventArgs e)

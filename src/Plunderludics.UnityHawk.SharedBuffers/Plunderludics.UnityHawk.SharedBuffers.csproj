@@ -13,7 +13,7 @@ Used by the UnityHawk external tool and also UnityHawkLuaLibrary (within Bizhawk
 		<Nullable>disable</Nullable>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="SharedMemory" Version="2.3.2" />
+		<PackageReference Include="SharedMemory" />
 		<ProjectReference Include="$(ProjectDir)../Plunderludics.UnityHawk.Shared/Plunderludics.UnityHawk.Shared.csproj" />
 		<Analyzer Remove="@(Analyzer)" />  <!-- disable ReflectionCache to avoid the Bizhawk.Common dependency -->
 	</ItemGroup>

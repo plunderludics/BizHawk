@@ -273,14 +273,6 @@ namespace BizHawk.Client.EmuHawk
 
 		private void SaveNamedStateMenuItem_Click(object sender, EventArgs e) => SaveStateAs();
 
-		
-		private void SaveSampleMenuItem_Click(object sender, EventArgs e) {
-			using var form = new SaveSample(this, Config, Game, Emulator, MovieSession, Tools);
-			this.ShowDialogWithTempMute(form);
-		}
-
-		private void LoadSampleMenuItem_Click(object sender, EventArgs e) => LoadSample();
-
 		private void QuickLoadstateMenuItem_Click(object sender, EventArgs e)
 			=> LoadQuickSave(int.Parse(((ToolStripMenuItem) sender).Text));
 

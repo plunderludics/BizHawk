@@ -4228,45 +4228,6 @@ namespace BizHawk.Client.EmuHawk
 			return LoadState(path: path, userFriendlyStateName: quickSlotName, suppressOSD: suppressOSD);
 		}
 
-		private string GetSamplePath() {
-			var initDir = Config.PathEntries.SaveStateAbsolutePath(Game.System);
-			return this.ShowFileOpenDialog(initDir: initDir); 
-		}
-
-		// Loads a (plunderludics) sample, ie a directory containing savestate, config, lua, and a rom (or a rompath.txt pointing to a rom)
-		// (format will probably change in future)
-		public bool LoadSample() {
-			// TODO tweak initDir, maybe have a config for it
-			var samplePath = GetSamplePath();
-	
-			if (samplePath is null || !File.Exists(samplePath)) return false;
-
-			// Read the sample dir to get the necessary filenames (rom, config, etc)
-			Sample s = Sample.LoadFromDir(samplePath);
-
-			// Actually load the files into bizhawk
-			// Load the rom using the same logic as when it's provided on the command line
-			Console.WriteLine($"LoadSample: Looking for rom in {s.RomPath}");
-			var ioa = OpenAdvancedSerializer.ParseWithLegacy(s.RomPath);
-			if (ioa is OpenAdvanced_OpenRom oaor) ioa = new OpenAdvanced_OpenRom { Path = oaor.Path.MakeAbsolute() }; // fixes #3224; should this be done for all the IOpenAdvanced types? --yoshi
-			_ = LoadRom(ioa.SimplePath, new LoadRomArgs { OpenAdvanced = ioa });
-			if (Game.IsNullInstance()) ShowMessageBox(owner: null, $"Failed to load {s.RomPath}");
-	
-			if (s.ConfigPath != null) LoadConfigFile(s.ConfigPath);
-			if (s.SaveStatePath != null) LoadState(s.SaveStatePath, Path.GetFileName(s.SaveStatePath));
-
-			if (s.LuaScriptPaths.Length > 0) {
-				Tools.Load<LuaConsole>();
-				Tools.LuaConsole.RemoveAllLuaFiles();
-			}
-
-			foreach (string luaScriptPath in s.LuaScriptPaths) {
-				Tools.LuaConsole.LoadLuaFile(luaScriptPath);
-			}
-
-			return true;
-		}
-
 		public void SaveState(string path, string userFriendlyStateName, bool fromLua = false, bool suppressOSD = false)
 		{
 			if (!Emulator.HasSavestates())

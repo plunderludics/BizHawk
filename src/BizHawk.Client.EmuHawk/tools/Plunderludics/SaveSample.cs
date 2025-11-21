@@ -1,6 +1,4 @@
-﻿// TODO: Would be cleaner if LoadSample/SaveSample move into the UnityHawk external tool
-
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;

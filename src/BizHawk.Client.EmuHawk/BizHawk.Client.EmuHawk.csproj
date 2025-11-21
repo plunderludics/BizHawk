@@ -23,7 +23,6 @@
 		<Reference Include="NLua, Version=1.4.1.0, Culture=neutral, PublicKeyToken=null, processorArchitecture=MSIL" SpecificVersion="false" HintPath="$(ProjectDir)../../References/NLua.dll" Private="true" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="$(ProjectDir)../Plunderludics/Plunderludics.csproj" />
 		<!-- <ProjectReference Include="$(ProjectDir)../Plunderludics.UnityHawk.SharedBuffers/Plunderludics.UnityHawk.SharedBuffers.csproj" /> -->
 		<ProjectReference Include="$(ProjectDir)../BizHawk.Bizware.Audio/BizHawk.Bizware.Audio.csproj" />
 		<ProjectReference Include="$(ProjectDir)../BizHawk.Bizware.Input/BizHawk.Bizware.Input.csproj" />

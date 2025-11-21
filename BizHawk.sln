@@ -41,8 +41,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BizHawk.Tests.Common", "src
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BizHawk.Tests.Emulation.Common", "src\BizHawk.Tests.Emulation.Common\BizHawk.Tests.Emulation.Common.csproj", "{D95E2B42-757A-4D19-8A76-84C6350BAD8D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plunderludics", "src\Plunderludics\Plunderludics.csproj", "{71A921EB-A846-4A76-885E-343F5BD1CC75}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plunderludics.UnityHawk", "src\Plunderludics.UnityHawk\Plunderludics.UnityHawk.csproj", "{62FF7B32-A9B7-413B-AFF0-F7CA789E0FFC}"
 EndProject
 Global

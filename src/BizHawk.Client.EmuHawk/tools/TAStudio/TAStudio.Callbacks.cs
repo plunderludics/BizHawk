@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 
 namespace BizHawk.Client.EmuHawk
@@ -14,25 +13,5 @@ namespace BizHawk.Client.EmuHawk
 		public Action<int> BranchLoadedCallback { get; set; }
 		public Action<int> BranchSavedCallback { get; set; }
 		public Action<int> BranchRemovedCallback { get; set; }
-
-		private void GreenzoneInvalidated(int index)
-		{
-			GreenzoneInvalidatedCallback?.Invoke(index);
-		}
-
-		private void BranchLoaded(int index)
-		{
-			BranchLoadedCallback?.Invoke(index);
-		}
-
-		private void BranchSaved(int index)
-		{
-			BranchSavedCallback?.Invoke(index);
-		}
-
-		private void BranchRemoved(int index)
-		{
-			BranchRemovedCallback?.Invoke(index);
-		}
 	}
 }

@@ -1,6 +1,6 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using BizHawk.Common.NumberExtensions;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -18,7 +18,7 @@ namespace BizHawk.Client.Common
 		/// </summary>
 		/// <param name="domain"><see cref="MemoryDomain"/> where you want to track</param>
 		/// <param name="address">The address you want to track</param>
-		/// <param name="type">How you you want to display the value See <see cref="WatchDisplayType"/></param>
+		/// <param name="type">selected format for displaying the value</param>
 		/// <param name="bigEndian">Specify the endianess. true for big endian</param>
 		/// <param name="note">A custom note about the <see cref="Watch"/></param>
 		/// <param name="value">Current value</param>
@@ -36,25 +36,21 @@ namespace BizHawk.Client.Common
 		/// <summary>
 		/// Gets a list of <see cref="WatchDisplayType"/> for a <see cref="DWordWatch"/>
 		/// </summary>
-		public static IEnumerable<WatchDisplayType> ValidTypes
-		{
-			get
-			{
-				yield return WatchDisplayType.Unsigned;
-				yield return WatchDisplayType.Signed;
-				yield return WatchDisplayType.Hex;
-				yield return WatchDisplayType.Binary;
-				yield return WatchDisplayType.FixedPoint_20_12;
-				yield return WatchDisplayType.FixedPoint_16_16;
-				yield return WatchDisplayType.Float;
-			}
-		}
+		public static readonly IReadOnlyList<WatchDisplayType> ValidTypes = [
+			WatchDisplayType.Unsigned,
+			WatchDisplayType.Signed,
+			WatchDisplayType.Hex,
+			WatchDisplayType.Binary,
+			WatchDisplayType.FixedPoint_20_12,
+			WatchDisplayType.FixedPoint_16_16,
+			WatchDisplayType.Float,
+		];
 
 		/// <summary>
 		/// Get a list of <see cref="WatchDisplayType"/> that can be used for a <see cref="DWordWatch"/>
 		/// </summary>
 		/// <returns>An enumeration that contains all valid <see cref="WatchDisplayType"/></returns>
-		public override IEnumerable<WatchDisplayType> AvailableTypes()
+		public override IReadOnlyList<WatchDisplayType> AvailableTypes()
 		{
 			return ValidTypes;
 		}
@@ -63,9 +59,7 @@ namespace BizHawk.Client.Common
 		/// Reset the previous value; set it to the current one
 		/// </summary>
 		public override void ResetPrevious()
-		{
-			_previous = GetWord();
-		}
+			=> _previous = GetDWord();
 
 		/// <summary>
 		/// Try to sets the value into the <see cref="MemoryDomain"/>
@@ -84,8 +78,9 @@ namespace BizHawk.Client.Common
 					WatchDisplayType.Hex => uint.Parse(value, NumberStyles.HexNumber),
 					WatchDisplayType.FixedPoint_20_12 => (uint)(double.Parse(value, NumberFormatInfo.InvariantInfo) * 4096.0),
 					WatchDisplayType.FixedPoint_16_16 => (uint)(double.Parse(value, NumberFormatInfo.InvariantInfo) * 65536.0),
-					WatchDisplayType.Float => BitConverter.ToUInt32(BitConverter.GetBytes(float.Parse(value, NumberFormatInfo.InvariantInfo)), 0),
-					_ => 0
+					WatchDisplayType.Float => NumberExtensions.ReinterpretAsUInt32(float.Parse(value, NumberFormatInfo.InvariantInfo)),
+					WatchDisplayType.Binary => Convert.ToUInt32(value, 2),
+					_ => 0,
 				};
 
 				PokeDWord(val);
@@ -133,8 +128,7 @@ namespace BizHawk.Client.Common
 		{
 			string FormatFloat()
 			{
-				var bytes = BitConverter.GetBytes(val);
-				var _float = BitConverter.ToSingle(bytes, 0);
+				var _float = NumberExtensions.ReinterpretAsF32(val);
 				return _float.ToString(NumberFormatInfo.InvariantInfo);
 			}
 
@@ -158,7 +152,7 @@ namespace BizHawk.Client.Common
 				WatchDisplayType.FixedPoint_16_16 => ((int)val / 65536.0).ToString("0.######", NumberFormatInfo.InvariantInfo),
 				WatchDisplayType.Float => FormatFloat(),
 				WatchDisplayType.Binary => FormatBinary(),
-				_ => val.ToString()
+				_ => val.ToString(),
 			};
 		}
 
@@ -191,7 +185,7 @@ namespace BizHawk.Client.Common
 		/// <summary>
 		/// Get the previous value
 		/// </summary>
-		public override int Previous => (int)_previous;
+		public override uint Previous => _previous;
 
 		/// <summary>
 		/// Get a string representation of the previous value

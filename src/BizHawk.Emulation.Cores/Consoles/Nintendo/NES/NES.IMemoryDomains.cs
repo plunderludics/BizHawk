@@ -3,7 +3,7 @@ using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
 {
-	public partial class NES
+	public sealed partial class NES
 	{
 		public MemoryDomainList _memoryDomains;
 		private bool _memoryDomainsSetup = false;
@@ -27,9 +27,10 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			domains.Add(SystemBus);
 			domains.Add(PPUBus);
 			domains.Add(CIRAMdomain);
+			domains.Add(new MemoryDomainByteArray("PALRAM", MemoryDomain.Endian.Little, ppu.PALRAM, writable: true, wordSize: 1));
 			domains.Add(OAMdoman);
 
-			if (!(Board is FDS) && Board.SaveRam != null)
+			if (Board is not FDS && Board.SaveRam != null)
 			{
 				var BatteryRam = new MemoryDomainByteArray("Battery RAM", MemoryDomain.Endian.Little, Board.SaveRam, true, 1);
 				domains.Add(BatteryRam);

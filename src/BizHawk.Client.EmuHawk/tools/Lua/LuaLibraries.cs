@@ -1,23 +1,24 @@
-﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 
 using NLua;
+using NLua.Native;
 
-using BizHawk.Common;
-using BizHawk.Emulation.Common;
 using BizHawk.Client.Common;
+using BizHawk.Common;
+using BizHawk.Common.StringExtensions;
+using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
 	public class LuaLibraries : ILuaLibraries
 	{
+		public static readonly bool IsAvailable = LuaNativeMethodLoader.EnsureNativeMethodsLoaded();
+
 		public LuaLibraries(
 			LuaFileList scriptList,
 			LuaFunctionList registeredFuncList,
@@ -29,8 +30,16 @@ namespace BizHawk.Client.EmuHawk
 			IEmulator emulator,
 			IGameInfo game)
 		{
+			if (!IsAvailable)
+			{
+				throw new InvalidOperationException("The Lua dynamic library was not able to be loaded");
+			}
+
 			void EnumerateLuaFunctions(string name, Type type, LuaLibraryBase instance)
 			{
+				var libraryDesc = type.GetCustomAttributes(typeof(DescriptionAttribute), false).Cast<DescriptionAttribute>()
+					.Select(static descAttr => descAttr.Description)
+					.FirstOrDefault() ?? string.Empty;
 				if (instance != null) _lua.NewTable(name);
 				foreach (var method in type.GetMethods())
 				{
@@ -38,10 +47,10 @@ namespace BizHawk.Client.EmuHawk
 					if (foundAttrs.Length == 0) continue;
 					if (instance != null) _lua.RegisterFunction($"{name}.{((LuaMethodAttribute)foundAttrs[0]).Name}", instance, method);
 					LibraryFunction libFunc = new(
-						name,
-						type.GetCustomAttributes(typeof(DescriptionAttribute), false).Cast<DescriptionAttribute>()
-							.Select(descAttr => descAttr.Description).FirstOrDefault() ?? string.Empty,
-						method
+						library: name,
+						libraryDescription: libraryDesc,
+						method,
+						suggestInREPL: instance != null
 					);
 					Docs.Add(libFunc);
 				}
@@ -60,24 +69,38 @@ namespace BizHawk.Client.EmuHawk
 
 			// Register lua libraries
 			foreach (var lib in Client.Common.ReflectionCache.Types.Concat(EmuHawk.ReflectionCache.Types)
-				.Where(t => typeof(LuaLibraryBase).IsAssignableFrom(t) && t.IsSealed && ServiceInjector.IsAvailable(serviceProvider, t)))
+				.Where(static t => typeof(LuaLibraryBase).IsAssignableFrom(t) && t.IsSealed))
 			{
 				if (VersionInfo.DeveloperBuild
 					|| lib.GetCustomAttribute<LuaLibraryAttribute>(inherit: false)?.Released is not false)
 				{
+					if (!ServiceInjector.IsAvailable(serviceProvider, lib))
+					{
+						Util.DebugWriteLine($"couldn't instantiate {lib.Name}, adding to docs only");
+						EnumerateLuaFunctions(
+							lib.Name.RemoveSuffix("LuaLibrary").ToLowerInvariant(), // why tf aren't we doing this for all of them? or grabbing it from an attribute?
+							lib,
+							instance: null);
+						continue;
+					}
+
 					var instance = (LuaLibraryBase)Activator.CreateInstance(lib, this, _apiContainer, (Action<string>)LogToLuaConsole);
 					if (!ServiceInjector.UpdateServices(serviceProvider, instance, mayCache: true)) throw new Exception("Lua lib has required service(s) that can't be fulfilled");
 
-					// TODO: make EmuHawk libraries have a base class with common properties such as this
-					// and inject them here
 					if (instance is ClientLuaLibrary clientLib)
 					{
 						clientLib.MainForm = _mainForm;
 					}
 					else if (instance is ConsoleLuaLibrary consoleLib)
 					{
+						consoleLib.AllAPINames = new(() => string.Join("\n", Docs.Select(static lf => lf.Name)) + "\n"); // Docs may not be fully populated now, depending on order of ReflectionCache.Types, but definitely will be when this is read
 						consoleLib.Tools = _mainForm.Tools;
 						_logToLuaConsoleCallback = consoleLib.Log;
+					}
+					else if (instance is EventsLuaLibrary eventsLib)
+					{
+						eventsLib.CreateAndRegisterNamedFunction = CreateAndRegisterNamedFunction;
+						eventsLib.RemoveNamedFunctionMatching = RemoveNamedFunctionMatching;
 					}
 					else if (instance is FormsLuaLibrary formsLib)
 					{
@@ -153,11 +176,11 @@ namespace BizHawk.Client.EmuHawk
 
 		private EmulationLuaLibrary EmulationLuaLibrary => (EmulationLuaLibrary)Libraries[typeof(EmulationLuaLibrary)];
 
-		public string EngineName => "NLua+Lua";
-
 		public bool IsRebootingCore { get; set; }
 
 		public bool IsUpdateSupressed { get; set; }
+
+		public bool IsInInputOrMemoryCallback { get; set; }
 
 		private readonly IDictionary<Type, LuaLibraryBase> Libraries = new Dictionary<Type, LuaLibraryBase>();
 
@@ -182,7 +205,11 @@ namespace BizHawk.Client.EmuHawk
 			foreach (var lib in Libraries.Values)
 			{
 				lib.APIs = _apiContainer;
-				Debug.Assert(ServiceInjector.UpdateServices(newServiceProvider, lib, mayCache: true));
+				if (!ServiceInjector.UpdateServices(newServiceProvider, lib, mayCache: true))
+				{
+					throw new Exception("Lua lib has required service(s) that can't be fulfilled");
+				}
+
 				lib.Restarted();
 			}
 		}
@@ -193,8 +220,6 @@ namespace BizHawk.Client.EmuHawk
 
 		public void CallSaveStateEvent(string name)
 		{
-			using var luaAutoUnlockHack = GuiAPI.ThisIsTheLuaAutoUnlockHack();
-
 			try
 			{
 				foreach (var lf in RegisteredFunctions.Where(static l => l.Event == NamedLuaFunction.EVENT_TYPE_SAVESTATE).ToList())
@@ -210,8 +235,6 @@ namespace BizHawk.Client.EmuHawk
 
 		public void CallLoadStateEvent(string name)
 		{
-			using var luaAutoUnlockHack = GuiAPI.ThisIsTheLuaAutoUnlockHack();
-
 			try
 			{
 				foreach (var lf in RegisteredFunctions.Where(static l => l.Event == NamedLuaFunction.EVENT_TYPE_LOADSTATE).ToList())
@@ -228,8 +251,6 @@ namespace BizHawk.Client.EmuHawk
 		public void CallFrameBeforeEvent()
 		{
 			if (IsUpdateSupressed) return;
-
-			using var luaAutoUnlockHack = GuiAPI.ThisIsTheLuaAutoUnlockHack();
 
 			try
 			{
@@ -248,8 +269,6 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (IsUpdateSupressed) return;
 
-			using var luaAutoUnlockHack = GuiAPI.ThisIsTheLuaAutoUnlockHack();
-
 			try
 			{
 				foreach (var lf in RegisteredFunctions.Where(static l => l.Event == NamedLuaFunction.EVENT_TYPE_POSTFRAME).ToList())
@@ -265,8 +284,6 @@ namespace BizHawk.Client.EmuHawk
 
 		public void CallExitEvent(LuaFile lf)
 		{
-			using var luaAutoUnlockHack = GuiAPI.ThisIsTheLuaAutoUnlockHack();
-
 			foreach (var exitCallback in RegisteredFunctions
 				.Where(l => l.Event == NamedLuaFunction.EVENT_TYPE_ENGINESTOP
 					&& (l.LuaFile.Path == lf.Path || ReferenceEquals(l.LuaFile.Thread, lf.Thread)))
@@ -285,31 +302,29 @@ namespace BizHawk.Client.EmuHawk
 				closeCallback.Call();
 			}
 
-			RegisteredFunctions.Clear(_mainForm.Emulator);
+			RegisteredFunctions.Clear();
 			ScriptList.Clear();
 			FormsLibrary.DestroyAll();
 			_lua.Dispose();
 			_lua = null;
 		}
 
-		public INamedLuaFunction CreateAndRegisterNamedFunction(
+		private INamedLuaFunction CreateAndRegisterNamedFunction(
 			LuaFunction function,
 			string theEvent,
 			Action<string> logCallback,
 			LuaFile luaFile,
 			string name = null)
 		{
-			var nlf = new NamedLuaFunction(function, theEvent, logCallback, luaFile,
-				() => { _lua.NewThread(out var thread); return thread; }, name);
+			var nlf = new NamedLuaFunction(function, theEvent, logCallback, luaFile, () => _lua.NewThread(), this, name);
 			RegisteredFunctions.Add(nlf);
 			return nlf;
 		}
 
-		public bool RemoveNamedFunctionMatching(Func<INamedLuaFunction, bool> predicate)
+		private bool RemoveNamedFunctionMatching(Func<INamedLuaFunction, bool> predicate)
 		{
-			var nlf = (NamedLuaFunction)RegisteredFunctions.FirstOrDefault(predicate);
-			if (nlf == null) return false;
-			RegisteredFunctions.Remove(nlf, _mainForm.Emulator);
+			if (RegisteredFunctions.FirstOrDefault(predicate) is not NamedLuaFunction nlf) return false;
+			RegisteredFunctions.Remove(nlf);
 			return true;
 		}
 
@@ -317,20 +332,39 @@ namespace BizHawk.Client.EmuHawk
 		{
 			var content = File.ReadAllText(file);
 			var main = _lua.LoadString(content, "main");
-			_lua.NewThread(main, out var ret);
-			return ret;
+			return _lua.NewThread(main);
 		}
 
 		public void SpawnAndSetFileThread(string pathToLoad, LuaFile lf)
 			=> lf.Thread = SpawnCoroutine(pathToLoad);
 
-		public void ExecuteString(string command)
-			=> _lua.DoString(command);
+		public object[] ExecuteString(string command)
+		{
+			const string ChunkName = "input"; // shows up in error messages
+
+			// Use LoadString to separate parsing and execution, to tell syntax errors and runtime errors apart
+			LuaFunction func;
+			try
+			{
+				// Adding a return is necessary to get out return values of functions and turn expressions ("1+1" etc.) into valid statements
+				func = _lua.LoadString($"return {command}", ChunkName);
+			}
+			catch (Exception)
+			{
+				// command may be a valid statement without the added "return"
+				// if previous attempt couldn't be parsed, run the raw command
+				return _lua.DoString(command, ChunkName);
+			}
+
+			using (func)
+			{
+				return func.Call();
+			}
+		}
 
 		public (bool WaitForFrame, bool Terminated) ResumeScript(LuaFile lf)
 		{
 			_currThread = lf.Thread;
-			using var luaAutoUnlockHack = GuiAPI.ThisIsTheLuaAutoUnlockHack();
 
 			try
 			{
@@ -343,7 +377,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					LuaStatus.OK => (WaitForFrame: false, Terminated: true),
 					LuaStatus.Yield => (WaitForFrame: FrameAdvanceRequested, Terminated: false),
-					_ => throw new InvalidOperationException($"{nameof(_currThread.Resume)}() returned {execResult}?")
+					_ => throw new InvalidOperationException($"{nameof(_currThread.Resume)}() returned {execResult}?"),
 				};
 
 				FrameAdvanceRequested = false;

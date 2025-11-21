@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using BizHawk.Client.Common;
@@ -9,9 +8,9 @@ namespace BizHawk.Client.EmuHawk
 	{
 		private const string IdColumnName = "ID";
 		private const string UndoColumnName = "Undo Step";
-		
+
 		private readonly TAStudio _tastudio;
-		private string _lastUndoAction;
+		private int _lastUndoAction;
 		private IMovieChangeLog Log => _tastudio.CurrentTasMovie.ChangeLog;
 
 		public UndoHistoryForm(TAStudio owner)
@@ -23,11 +22,8 @@ namespace BizHawk.Client.EmuHawk
 			HistoryView.QueryItemBkColor += HistoryView_QueryItemBkColor;
 
 			HistoryView.AllColumns.Clear();
-			HistoryView.AllColumns.AddRange(new[]
-			{
-				new RollColumn { Name = IdColumnName, Text = IdColumnName, UnscaledWidth = 40, Type = ColumnType.Text },
-				new RollColumn { Name = UndoColumnName, Text = UndoColumnName, UnscaledWidth = 280, Type = ColumnType.Text }
-			});
+			HistoryView.AllColumns.Add(new(name: IdColumnName, widthUnscaled: 40, text: IdColumnName));
+			HistoryView.AllColumns.Add(new(name: UndoColumnName, widthUnscaled: 280, text: UndoColumnName));
 
 			MaxStepsNum.Value = Log.MaxSteps;
 		}
@@ -35,7 +31,7 @@ namespace BizHawk.Client.EmuHawk
 		private void HistoryView_QueryItemText(int index, RollColumn column, out string text, ref int offsetX, ref int offsetY)
 		{
 			text = column.Name == UndoColumnName
-				? Log.Names[index]
+				? Log.GetActionName(index)
 				: index.ToString();
 		}
 
@@ -53,15 +49,15 @@ namespace BizHawk.Client.EmuHawk
 
 		public void UpdateValues()
 		{
-			HistoryView.RowCount = Log.Names.Count;
-			if (AutoScrollCheck.Checked && _lastUndoAction != Log.NextUndoStepName)
+			HistoryView.RowCount = Log.Count;
+			if (AutoScrollCheck.Checked && _lastUndoAction != Log.UndoIndex)
 			{
-				HistoryView.ScrollToIndex(Log.UndoIndex);
+				HistoryView.ScrollToIndex(Math.Max(Log.UndoIndex, 0));
 				HistoryView.DeselectAll();
 				HistoryView.SelectRow(Log.UndoIndex - 1, true);
 			}
 
-			_lastUndoAction = Log.NextUndoStepName;
+			_lastUndoAction = Log.UndoIndex;
 
 			HistoryView.Refresh();
 		}
@@ -74,14 +70,12 @@ namespace BizHawk.Client.EmuHawk
 
 		private void UndoButton_Click(object sender, EventArgs e)
 		{
-			_tastudio.UndoExternal();
-			_tastudio.RefreshDialog();
+			Log.Undo();
 		}
 
 		private void RedoButton_Click(object sender, EventArgs e)
 		{
 			_tastudio.RedoExternal();
-			_tastudio.RefreshDialog();
 		}
 
 		private int SelectedItem
@@ -89,20 +83,15 @@ namespace BizHawk.Client.EmuHawk
 
 		private void UndoToHere(int index)
 		{
-			int earliestFrame = int.MaxValue;
-			while (Log.UndoIndex > index)
+			_tastudio.CurrentTasMovie.SingleInvalidation(() =>
 			{
-				int frame = Log.Undo();
-				if (frame < earliestFrame)
-					earliestFrame = frame;
-			}
+				while (Log.UndoIndex > index)
+				{
+					Log.Undo();
+				}
+			});
 
 			UpdateValues();
-
-			// potentially rewind, then update display for TAStudio
-			if (_tastudio.Emulator.Frame > earliestFrame)
-				_tastudio.GoToFrame(earliestFrame);
-			_tastudio.RefreshDialog();
 		}
 
 		private void HistoryView_DoubleClick(object sender, EventArgs e)
@@ -140,20 +129,15 @@ namespace BizHawk.Client.EmuHawk
 
 		private void RedoHereMenuItem_Click(object sender, EventArgs e)
 		{
-			int earliestFrame = int.MaxValue;
-			while (Log.UndoIndex < SelectedItem)
+			_tastudio.CurrentTasMovie.SingleInvalidation(() =>
 			{
-				int frame = Log.Redo();
-				if (earliestFrame < frame)
-					earliestFrame = frame;
-			}
+				while (Log.UndoIndex < SelectedItem)
+				{
+					Log.Redo();
+				}
+			});
 
 			UpdateValues();
-
-			// potentially rewind, then update display for TAStudio
-			if (_tastudio.Emulator.Frame > earliestFrame)
-				_tastudio.GoToFrame(earliestFrame);
-			_tastudio.RefreshDialog();
 		}
 
 		private void ClearHistoryToHereMenuItem_Click(object sender, EventArgs e)
@@ -168,7 +152,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void MaxStepsNum_ValueChanged(object sender, EventArgs e)
 		{
-			Log.MaxSteps = (int)MaxStepsNum.Value;
+			_tastudio.Settings.MaxUndoSteps = Log.MaxSteps = (int)MaxStepsNum.Value;
 		}
 	}
 }

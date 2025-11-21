@@ -1,9 +1,10 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using Newtonsoft.Json;
-using BizHawk.Bizware.BizwareGL;
+
+using BizHawk.Bizware.Graphics;
 using BizHawk.Common.IOExtensions;
 
 namespace BizHawk.Client.Common
@@ -58,12 +59,9 @@ namespace BizHawk.Client.Common
 	{
 		private readonly ITasMovie _movie;
 
-		private readonly IQuickBmpFile _quickBmpFile;
-
-		public TasBranchCollection(ITasMovie movie, IQuickBmpFile quickBmpFile)
+		public TasBranchCollection(ITasMovie movie)
 		{
 			_movie = movie;
-			_quickBmpFile = quickBmpFile;
 		}
 
 		public int Current { get; set; } = -1;
@@ -87,12 +85,11 @@ namespace BizHawk.Client.Common
 		{
 			int index = IndexOf(old);
 			newBranch.Uuid = old.Uuid;
-			if (newBranch.UserText == "")
-			{
-				newBranch.UserText = old.UserText;
-			}
-
+			if (newBranch.UserText.Length is 0) newBranch.UserText = old.UserText;
 			this[index] = newBranch;
+			if (!_movie.IsReserved(old.Frame))
+				_movie.TasStateManager.Unreserve(old.Frame);
+
 			_movie.FlagChanges();
 		}
 
@@ -122,6 +119,9 @@ namespace BizHawk.Client.Common
 			var result = base.Remove(item);
 			if (result)
 			{
+				if (!_movie.IsReserved(item!.Frame))
+					_movie.TasStateManager.Unreserve(item.Frame);
+
 				_movie.FlagChanges();
 			}
 
@@ -155,14 +155,14 @@ namespace BizHawk.Client.Common
 				bs.PutLump(nframebuffer, s =>
 				{
 					var vp = new BitmapBufferVideoProvider(b.OSDFrameBuffer);
-					_quickBmpFile.Save(vp, s, b.OSDFrameBuffer.Width, b.OSDFrameBuffer.Height);
-				});
+					QuickBmpFile.Save(vp, s, b.OSDFrameBuffer.Width, b.OSDFrameBuffer.Height);
+				}, zstdCompress: false);
 
 				bs.PutLump(ncoreframebuffer, s =>
 				{
 					var vp = new BitmapBufferVideoProvider(b.CoreFrameBuffer);
-					_quickBmpFile.Save(vp, s, b.CoreFrameBuffer.Width, b.CoreFrameBuffer.Height);
-				});
+					QuickBmpFile.Save(vp, s, b.CoreFrameBuffer.Width, b.CoreFrameBuffer.Height);
+				}, zstdCompress: false);
 
 				bs.PutLump(nmarkers, tw => tw.WriteLine(b.Markers.ToString()));
 
@@ -241,13 +241,13 @@ namespace BizHawk.Client.Common
 
 				bl.GetLump(nframebuffer, abort: true, (s, _) =>
 				{
-					_quickBmpFile.LoadAuto(s, out var vp);
+					QuickBmpFile.LoadAuto(s, out var vp);
 					b.OSDFrameBuffer = new BitmapBuffer(vp.BufferWidth, vp.BufferHeight, vp.GetVideoBuffer());
 				});
 
 				bl.GetLump(ncoreframebuffer, abort: false, (s, _) =>
 				{
-					_quickBmpFile.LoadAuto(s, out var vp);
+					QuickBmpFile.LoadAuto(s, out var vp);
 					b.CoreFrameBuffer = new BitmapBuffer(vp.BufferWidth, vp.BufferHeight, vp.GetVideoBuffer());
 				});
 
@@ -293,14 +293,19 @@ namespace BizHawk.Client.Common
 	{
 		public static int IndexOfFrame(this IList<TasBranch> list, int frame)
 		{
-			var branch = list
-				.Where(b => b.Frame == frame)
-				.OrderByDescending(b => b.TimeStamp)
-				.FirstOrDefault();
+			// intentionally not using linq here because this is called many times per frame
+			int index = -1;
+			var timeStamp = DateTime.MinValue;
+			for (int i = 0; i < list.Count; i++)
+			{
+				if (list[i].Frame == frame && list[i].TimeStamp > timeStamp)
+				{
+					index = i;
+					timeStamp = list[i].TimeStamp;
+				}
+			}
 
-			return branch == null
-				? -1
-				: list.IndexOf(branch);
+			return index;
 		}
 
 		// TODO: stop relying on the index value of a branch

@@ -1,9 +1,9 @@
-﻿using System;
 using System.IO;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
-using BizHawk.Common;
+
+using BizHawk.Common.StringExtensions;
 
 //check out ccd2iso linux program?
 //https://wiki.archlinux.org/index.php/CD_Burning#TOC.2FCUE.2FBIN_for_mixed-mode_disks advice here
@@ -68,7 +68,7 @@ namespace BizHawk.Emulation.DiscSystem
 			{
 				EntryNum = entryNum;
 			}
-			
+
 			/// <summary>
 			/// these should be 0-indexed
 			/// </summary>
@@ -188,12 +188,12 @@ namespace BizHawk.Emulation.DiscSystem
 			{
 				var line = sr.ReadLine();
 				if (line is null) break;
-				if (line == string.Empty) continue;
-				if (line.StartsWith("["))
+				if (line.Length is 0) continue;
+				if (line.StartsWith('['))
 				{
 					currSection = new()
 					{
-						Name = line.Trim('[', ']').ToUpper()
+						Name = line.Trim('[', ']').ToUpperInvariant(),
 					};
 					sections.Add(currSection);
 				}
@@ -204,7 +204,7 @@ namespace BizHawk.Emulation.DiscSystem
 					var parts = line.Split('=');
 					if (parts.Length != 2)
 						throw new CCDParseException("Malformed or unexpected CCD format: parsing item into two parts");
-					if (parts[0].ToUpper() == "FLAGS")
+					if ("FLAGS".EqualsIgnoreCase(parts[0]))
 					{
 						// flags are a space-separated collection of symbolic constants:
 						// https://www.gnu.org/software/ccd2cue/manual/html_node/FLAGS-_0028Compact-Disc-fields_0029.html#FLAGS-_0028Compact-Disc-fields_0029
@@ -212,11 +212,11 @@ namespace BizHawk.Emulation.DiscSystem
 						continue;
 					}
 					int val;
-					if (parts[1].StartsWith("0x") || parts[1].StartsWith("0X"))
+					if (parts[1].StartsWithIgnoreCase("0x"))
 						val = int.Parse(parts[1].Substring(2), NumberStyles.HexNumber);
 					else
 						val = int.Parse(parts[1]);
-					currSection[parts[0].ToUpper()] = val;
+					currSection[parts[0].ToUpperInvariant()] = val;
 				}
 			}
 
@@ -267,7 +267,7 @@ namespace BizHawk.Emulation.DiscSystem
 			for (var i = 2; i < sections.Count; i++)
 			{
 				var section = sections[i];
-				if (section.Name.StartsWith("SESSION"))
+				if (section.Name.StartsWithOrdinal("SESSION"))
 				{
 					var sesnum = int.Parse(section.Name.Split(' ')[1]);
 					var session = new CCDSession(sesnum);
@@ -277,12 +277,12 @@ namespace BizHawk.Emulation.DiscSystem
 					session.PregapMode = section.FetchOrDefault(0, "PREGAPMODE");
 					session.PregapSubcode = section.FetchOrDefault(0, "PREGAPSUBC");
 				}
-				else if (section.Name.StartsWith("ENTRY"))
+				else if (section.Name.StartsWithOrdinal("ENTRY"))
 				{
 					var entryNum = int.Parse(section.Name.Split(' ')[1]);
 					var entry = new CCDTocEntry(entryNum);
 					ccdf.TOCEntries.Add(entry);
-					
+
 					entry.Session = section.FetchOrFail("SESSION");
 					entry.Point = section.FetchOrFail("POINT");
 					entry.ADR = section.FetchOrFail("ADR");
@@ -304,7 +304,7 @@ namespace BizHawk.Emulation.DiscSystem
 					if (new Timestamp(entry.PMin, entry.PSec, entry.PFrame).Sector != entry.PLBA + 150)
 						throw new CCDParseException("Warning: inconsistency in CCD PLBA vs computed P MSF");
 				}
-				else if (section.Name.StartsWith("TRACK"))
+				else if (section.Name.StartsWithOrdinal("TRACK"))
 				{
 					var entryNum = int.Parse(section.Name.Split(' ')[1]);
 					var track = new CCDTrack(entryNum);
@@ -313,7 +313,7 @@ namespace BizHawk.Emulation.DiscSystem
 					foreach (var (k, v) in section)
 					{
 						if (k == "MODE") track.Mode = v;
-						else if (k.StartsWith("INDEX")) track.Indexes[int.Parse(k.Split(' ')[1])] = v;
+						else if (k.StartsWithOrdinal("INDEX")) track.Indexes[int.Parse(k.Split(' ')[1])] = v;
 					}
 				}
 			}
@@ -338,7 +338,7 @@ namespace BizHawk.Emulation.DiscSystem
 			{
 				CcdPath = path,
 				ImgPath = Path.ChangeExtension(path, ".img"),
-				SubPath = Path.ChangeExtension(path, ".sub")
+				SubPath = Path.ChangeExtension(path, ".sub"),
 			};
 			try
 			{
@@ -379,12 +379,12 @@ namespace BizHawk.Emulation.DiscSystem
 				for (var i = 1; i < disc.Sessions.Count; i++)
 				{
 					var session = disc.Sessions[i];
-					
+
 					sw.WriteLine("[Session {0}]", i);
 					sw.WriteLine("PreGapMode=2");
 					sw.WriteLine("PreGapSubC=1");
 					sw.WriteLine();
-					
+
 					for (var j = 0; j < session.RawTOCEntries.Count; j++)
 					{
 						var entry = session.RawTOCEntries[j];
@@ -412,12 +412,12 @@ namespace BizHawk.Emulation.DiscSystem
 						sw.WriteLine("PLBA={0}", entry.QData.AP_Timestamp - 150); //remember to adapt the absolute MSF to an LBA (this field is redundant...)
 						sw.WriteLine();
 					}
-					
+
 					//this is nonsense, really. the whole CCD track list shouldn't be needed.
 					//but in order to make a high quality CCD which can be inspected by various other tools, we need it
 					//now, regarding the indexes.. theyre truly useless. having indexes written out with the tracks is bad news.
 					//index information is only truly stored in subQ
-					for (var tnum = session.FirstInformationTrack.Number; tnum <= session.LastInformationTrack.Number; tnum++)
+					for (var tnum = 1; tnum <= session.InformationTrackCount; tnum++)
 					{
 						var track = session.Tracks[tnum];
 						sw.WriteLine("[TRACK {0}]", track.Number);
@@ -437,8 +437,8 @@ namespace BizHawk.Emulation.DiscSystem
 			var buf2448 = new byte[2448];
 			var dsr = new DiscSectorReader(disc);
 
-			using var imgFile = File.OpenWrite(imgPath);
-			using var subFile = File.OpenWrite(subPath);
+			using var imgFile = File.Create(imgPath);
+			using var subFile = File.Create(subPath);
 			var nLBA = disc.Sessions[disc.Sessions.Count - 1].LeadoutLBA;
 			for (var lba = 0; lba < nLBA; lba++)
 			{
@@ -456,7 +456,7 @@ namespace BizHawk.Emulation.DiscSystem
 				var imgBlob = (IBlob) job.Disc.DisposableResources[0];
 				var subBlob = (IBlob) job.Disc.DisposableResources[1];
 				//Read_2442(job.LBA, job.DestBuffer2448, job.DestOffset);
-				
+
 				//read the IMG data if needed
 				if ((job.Parts & ESectorSynthPart.UserAny) != 0)
 				{
@@ -560,7 +560,7 @@ namespace BizHawk.Emulation.DiscSystem
 				ino.BCDValue = entry.Point switch
 				{
 					0xA0 or 0xA1 or 0xA2 => (byte)entry.Point,
-					_ => ino.BCDValue
+					_ => ino.BCDValue,
 				};
 
 				var q = new SubchannelQ
@@ -578,13 +578,17 @@ namespace BizHawk.Emulation.DiscSystem
 					q_crc = 0, //meaningless
 				};
 
-				disc.Sessions[curSession].RawTOCEntries.Add(new() { QData = q });
+				disc.Sessions[curSession].RawTOCEntries.Add(new()
+				{
+					QData = q,
+					AbsoluteTimestamp = MSF.ToInt(entry.PMin, entry.PSec, entry.PFrame),
+				});
 			}
 
 			//analyze the RAWTocEntries to figure out what type of track track 1 is
 			var tocSynth = new Synthesize_DiscTOC_From_RawTOCEntries_Job(disc.Session1.RawTOCEntries);
 			tocSynth.Run();
-			
+
 			//Add sectors for the mandatory track 1 pregap, which isn't stored in the CCD file
 			//We reuse some CUE code for this.
 			//If we load other formats later we might should abstract this even further (to a synthesizer job)
@@ -597,7 +601,7 @@ namespace BizHawk.Emulation.DiscSystem
 					SessionFormat.Type20_CDXA => CUE.CueTrackType.Mode2_2352,
 					SessionFormat.Type10_CDI => CUE.CueTrackType.CDI_2352,
 					SessionFormat.Type00_CDROM_CDDA => CUE.CueTrackType.Mode1_2352,
-					_ => pregapTrackType
+					_ => pregapTrackType,
 				};
 			}
 
@@ -606,7 +610,7 @@ namespace BizHawk.Emulation.DiscSystem
 				var ss_gap = new CUE.SS_Gap()
 				{
 					Policy = IN_DiscMountPolicy,
-					TrackType = pregapTrackType
+					TrackType = pregapTrackType,
 				};
 				disc._Sectors.Add(ss_gap);
 

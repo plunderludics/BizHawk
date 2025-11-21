@@ -436,7 +436,8 @@ static uint32_t crc32_fold_pclmulqdq_final(crc32_fold *crc) {
 	return crc->value;
 }
 
-__attribute__((target("sse4.1,pclmul"))) __attribute__((visibility("hidden")))
+__attribute__((target("sse4.1,pclmul")))
+__attribute__((visibility("hidden")))
 uint32_t crc32_pclmulqdq(uint32_t crc32, const uint8_t *buf, uint32_t len) {
 	// For lens < 64, crc32_braid method is faster.
 	if (len < 64)

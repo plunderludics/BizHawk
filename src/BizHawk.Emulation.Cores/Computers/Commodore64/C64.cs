@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,8 +14,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 		[CoreConstructor(VSystemID.Raw.C64)]
 		public C64(CoreLoadParameters<C64Settings, C64SyncSettings> lp)
 		{
-			PutSyncSettings((C64SyncSettings)lp.SyncSettings ?? new C64SyncSettings());
-			PutSettings((C64Settings)lp.Settings ?? new C64Settings());
+			PutSyncSettings(lp.SyncSettings ?? new C64SyncSettings());
+			PutSettings(lp.Settings ?? new C64Settings());
 
 			var ser = new BasicServiceProvider(this);
 			ServiceProvider = ser;
@@ -37,6 +36,12 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 			}
 
 			InitMedia(_roms[_currentDisk]);
+
+			if (_board.CartPort.SaveRam is { } cartSaveRam)
+			{
+				ser.Register<ISaveRam>(cartSaveRam);
+			}
+
 			HardReset();
 
 			switch (SyncSettings.VicType)
@@ -164,7 +169,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 
 		private int _frame;
 		private readonly ITraceable _tracer;
-		
+
 		// Power stuff
 		private bool _powerPressed;
 		private bool _resetPressed;
@@ -253,7 +258,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 			var result = names.Select(n => CoreComm.CoreFileProvider.GetFirmware(new("C64", n))).FirstOrDefault(b => b != null && b.Length == length);
 			if (result == null)
 			{
-				throw new MissingFirmwareException($"At least one of these firmwares is required: {string.Join(", ", names)}");
+				throw new MissingFirmwareException($"At least one of these firmware options is required: {string.Join(", ", names)}");
 			}
 
 			return result;
@@ -330,6 +335,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 					if (cart != null)
 					{
 						_board.CartPort.Connect(cart);
+						if (_board.CartPort.SaveRam != null)
+						{
+						}
 					}
 					break;
 				case C64Format.TAP:

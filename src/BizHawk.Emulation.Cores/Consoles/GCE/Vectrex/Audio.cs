@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
 using BizHawk.Common.NumberExtensions;
@@ -158,7 +156,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 
 			// do not write to input ports, controller input is directly assigned seperately
 			if (port_sel < 14) { Register[port_sel] = value; }
-			
+
 			sync_psg_state();
 
 			if (port_sel == 13)
@@ -288,7 +286,6 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 				if (env_vol_B == 0)
 				{
 					v += (short)(sound_out_B ? VolumeTable[vol_B] : 0);
-
 				}
 				else
 				{
@@ -370,11 +367,6 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 		{
 			_blip.Clear();
 			master_audio_clock = 0;
-		}
-
-		private void GetSamples(short[] samples)
-		{
-
 		}
 
 		public void DisposeSound()

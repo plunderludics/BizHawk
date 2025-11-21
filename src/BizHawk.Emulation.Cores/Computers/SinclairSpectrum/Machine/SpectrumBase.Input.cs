@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 {
@@ -66,7 +67,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				// non matrix keys
 				foreach (string k in KeyboardDevice.NonMatrixKeys)
 				{
-					if (!k.StartsWith("Key"))
+					if (!k.StartsWithOrdinal("Key"))
 						continue;
 
 					bool currState = Spectrum._controller.IsPressed(k);
@@ -144,7 +145,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 			if (Spectrum._controller.IsPressed(Record))
 			{
-
+				//TODO
 			}
 			if (Spectrum._controller.IsPressed(NextTape))
 			{
@@ -337,4 +338,3 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 		}
 	}
 }
-

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using BizHawk.Common;
@@ -47,7 +46,7 @@ namespace BizHawk.Client.EmuHawk
 				ErrorOnLoad, // error method thrown on load
 				FalseOnLoad, // RomLoader returned false with no other information
 				ExceptOnAdv, // exception thrown on frame advance
-				Success // load fully complete
+				Success, // load fully complete
 			}
 
 			public EStatus Status { get; set; } // what happened
@@ -64,12 +63,17 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		public BatchRunner(Config config, CoreComm comm, IEnumerable<string> files, int numFrames)
+		public BatchRunner(
+			CoreComm comm,
+			Config config,
+			IDialogParent dialogParent,
+			IEnumerable<string> files,
+			int numFrames)
 		{
 			_files = new List<string>(files);
 			_numFrames = numFrames;
 
-			_ldr = new RomLoader(config);
+			_ldr = new RomLoader(config, dialogParent);
 			_ldr.OnLoadError += OnLoadError;
 			_ldr.ChooseArchive = ChooseArchive;
 			_comm = comm;
@@ -145,7 +149,7 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			if (result == false)
+			if (!result)
 			{
 				_current.Status = Result.EStatus.FalseOnLoad;
 				_results.Add(_current);
@@ -168,7 +172,7 @@ namespace BizHawk.Client.EmuHawk
 					try
 					{
 						emu.FrameAdvance(controller, true);
-						
+
 						// some cores really really really like it if you drain their audio every frame
 						if (emu.HasSoundProvider())
 						{

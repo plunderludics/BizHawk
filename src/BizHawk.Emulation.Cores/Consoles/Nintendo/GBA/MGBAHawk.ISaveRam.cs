@@ -1,4 +1,3 @@
-﻿using System;
 using System.IO;
 using System.Text;
 
@@ -10,7 +9,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBA
 	{
 		private readonly byte[] _saveScratch = new byte[262144];
 
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			int len = LibmGBA.BizGetSaveRam(Core, _saveScratch, _saveScratch.Length);
 			if (len == _saveScratch.Length)

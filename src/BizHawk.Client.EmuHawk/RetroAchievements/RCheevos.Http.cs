@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,6 +29,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private volatile bool _isActive;
 		private readonly Thread _httpThread;
+		private readonly AutoResetEvent _threadThrottle = new(false);
 
 		/// <summary>
 		/// Base class for all HTTP requests to rcheevos servers
@@ -108,10 +108,10 @@ namespace BizHawk.Client.EmuHawk
 				}
 
 				var apiTask = request.post_data != IntPtr.Zero
-					? HttpPost(request.URL, request.PostData)
+					? HttpPost(request.URL, request.PostData, request.ContentType)
 					: HttpGet(request.URL);
 
-				apiTask.ContinueWith(async t =>
+				_ = apiTask.ContinueWith(async t =>
 				{
 					var result = await t;
 					if (result is null) // likely a timeout
@@ -154,6 +154,29 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
+		private void PushRequest(RCheevoHttpRequest request)
+		{
+			_inactiveHttpRequests.Push(request);
+			_threadThrottle.Set();
+		}
+
+		private void PushRequests(IEnumerable<RCheevoHttpRequest> requests)
+		{
+			if (requests is RCheevoHttpRequest[] requestsArray)
+			{
+				_inactiveHttpRequests.PushRange(requestsArray);
+			}
+			else
+			{
+				foreach (var request in requests)
+				{
+					_inactiveHttpRequests.Push(request);
+				}
+			}
+
+			_threadThrottle.Set();
+		}
+
 		private void HttpRequestThreadProc()
 		{
 			while (_isActive)
@@ -180,14 +203,26 @@ namespace BizHawk.Client.EmuHawk
 
 					return shouldRemove;
 				});
+
+				_threadThrottle.WaitOne(100000); // the default HTTP client timeout is 10 seconds
 			}
 
 			// typically I'd rather do this Dispose()
 			// but the Wait() semantics mean we can't do that on the UI thread
+			// so this thread is responsible for disposing
+
+			// add any remaining requests, we don't want a user to miss out on an achievement due to closing the emulator too soon...
+			while (_inactiveHttpRequests.TryPop(out var request))
+			{
+				request.DoRequest();
+				_activeHttpRequests.Add(request);
+			}
+
 			foreach (var request in _activeHttpRequests)
 			{
 				if (request is ImageRequest) continue; // THIS IS BAD, I KNOW (but don't want the user to wait for useless ImageRequests to finish)
-				request.Dispose(); // implicitly waits for the request to finish or timeout
+				// (probably wouldn't be so many ImageRequests anyways if we cache them on disk)
+				request.Dispose(); // implicitly waits for the request to finish or timeout (hope it doesn't timeout)
 			}
 		}
 
@@ -207,11 +242,11 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		private static async Task<byte[]> HttpPost(string url, string post)
+		private static async Task<byte[]> HttpPost(string url, string post, string type)
 		{
 			try
 			{
-				using var content = new StringContent(post, Encoding.UTF8, "application/x-www-form-urlencoded");
+				using var content = new StringContent(post, Encoding.UTF8, type ?? "application/x-www-form-urlencoded");
 				using var response = await _http.PostAsync(url, content).ConfigureAwait(false);
 				return response.IsSuccessStatusCode
 					? await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false)

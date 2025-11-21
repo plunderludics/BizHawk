@@ -1,5 +1,7 @@
-﻿using BizHawk.Emulation.Common;
+using BizHawk.Common.StringExtensions;
+using BizHawk.Emulation.Common;
 
+#pragma warning disable MA0089
 namespace BizHawk.Client.Common.cheats
 {
 	public class GameSharkDecoder
@@ -26,7 +28,7 @@ namespace BizHawk.Client.Common.cheats
 				VSystemID.Raw.SAT => Saturn(code),
 				VSystemID.Raw.SMS => Sms(code),
 				VSystemID.Raw.SNES => Snes(code),
-				_ => new InvalidCheatCode("Cheat codes not currently supported on this system")
+				_ => new InvalidCheatCode("Cheat codes not currently supported on this system"),
 			};
 		}
 
@@ -43,14 +45,15 @@ namespace BizHawk.Client.Common.cheats
 #if false
 			VSystemID.Raw.SAT => "Work Ram High", // Work RAM High may be incorrect?
 #endif
-			_ => null
+			_ => null,
 
 		};
 
 		private static IDecodeResult GameBoy(string code)
 		{
 			// Game Genie
-			if (code.LastIndexOf("-") == 7 && code.IndexOf("-") == 3)
+			if ((code.Length is 11 && code[3] is '-' && code[7] is '-')
+				|| (code.Length is 7 && code[3] is '-'))
 			{
 				return GbGgGameGenieDecoder.Decode(code);
 			}
@@ -87,7 +90,7 @@ namespace BizHawk.Client.Common.cheats
 			{
 				// Problem: I don't know what the Non-FF Style codes are.
 				// TODO: Fix that.
-				if (code.StartsWith("FF") == false)
+				if (!code.StartsWithOrdinal("FF"))
 				{
 					return new InvalidCheatCode("This Action Replay Code, is not yet supported.");
 				}
@@ -109,13 +112,13 @@ namespace BizHawk.Client.Common.cheats
 		private static IDecodeResult Sms(string code)
 		{
 			// Game Genie
-			if (code.LastIndexOf("-") == 7 && code.IndexOf("-") == 3)
+			if (code.LastIndexOf("-", StringComparison.Ordinal) == 7 && code.IndexOf("-", StringComparison.Ordinal) == 3)
 			{
 				return GbGgGameGenieDecoder.Decode(code);
 			}
 
 			// Action Replay
-			if (code.IndexOf("-") == 3 && code.Length == 9)
+			if (code.IndexOf("-", StringComparison.Ordinal) == 3 && code.Length == 9)
 			{
 				return SmsActionReplayDecoder.Decode(code);
 			}
@@ -133,10 +136,11 @@ namespace BizHawk.Client.Common.cheats
 
 			if (code.Length == 8)
 			{
-				return GbGameSharkDecoder.Decode(code);
+				return SnesActionReplayDecoder.Decode(code);
 			}
-			
+
 			return new InvalidCheatCode($"Unknown code type: {code}");
 		}
 	}
 }
+#pragma warning restore MA0089

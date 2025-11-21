@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
@@ -65,6 +64,5 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			prg_bank_32k &= prg_bank_mask_32k;
 			chr_bank_mask_8k &= chr_bank_mask_8k;
 		}
-
 	}
 }

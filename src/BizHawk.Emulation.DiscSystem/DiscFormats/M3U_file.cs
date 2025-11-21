@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using System.Collections.Generic;
 
+using BizHawk.Common.StringExtensions;
+
 namespace BizHawk.Emulation.DiscSystem
 {
 	public class M3U_File
@@ -21,14 +23,14 @@ namespace BizHawk.Emulation.DiscSystem
 				var line = sr.ReadLine();
 				if (line == null)
 					break;
-				if (line.StartsWith("#"))
+				if (line.StartsWith('#'))
 				{
 					if (line == "#EXTM3U")
 					{
 						ext = true;
 						continue;
 					}
-					if (line.StartsWith("#EXTINF:"))
+					if (line.StartsWithOrdinal("#EXTINF:"))
 					{
 						//TODO - maybe we shouldn't be so harsh. should probably add parse options.
 						if (!ext) continue;
@@ -52,7 +54,7 @@ namespace BizHawk.Emulation.DiscSystem
 				{
 					Path = line,
 					Runtime = runtime,
-					Title = title
+					Title = title,
 				};
 				Entries.Add(e);
 				runtime = -1;
@@ -91,5 +93,3 @@ namespace BizHawk.Emulation.DiscSystem
 		}
 	}
 }
-
-

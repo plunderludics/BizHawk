@@ -1,6 +1,4 @@
-﻿using System;
 using System.IO;
-using System.Linq;
 using BizHawk.Common.PathExtensions;
 using BizHawk.Emulation.DiscSystem.CUE;
 
@@ -92,7 +90,7 @@ namespace BizHawk.Emulation.DiscSystem
 					var tracksSynth = new Synthesize_DiscTracks_From_DiscTOC_Job(OUT_Disc, session);
 					tracksSynth.Run();
 				}
-				
+
 				//insert a synth provider to take care of the leadout track
 				//currently, we let mednafen take care of its own leadout track (we'll make that controllable later)
 				//TODO: This currently doesn't work well with multisessions (only the last session can have a leadout read with the current model)
@@ -102,7 +100,7 @@ namespace BizHawk.Emulation.DiscSystem
 					var ss_leadout = new SS_Leadout
 					{
 						SessionNumber = OUT_Disc.Sessions.Count - 1,
-						Policy = IN_DiscMountPolicy
+						Policy = IN_DiscMountPolicy,
 					};
 					bool Condition(int lba) => lba >= OUT_Disc.Sessions[OUT_Disc.Sessions.Count - 1].LeadoutLBA;
 					new ConditionalSectorSynthProvider().Install(OUT_Disc, Condition, ss_leadout);
@@ -133,7 +131,7 @@ namespace BizHawk.Emulation.DiscSystem
 				var cfr = new CueFileResolver();
 				var cueContext = new CUE_Context { DiscMountPolicy = IN_DiscMountPolicy, Resolver = cfr };
 
-				if (!cfr.IsHardcodedResolve) cfr.SetBaseDirectory(cueDirPath);
+				cfr.SetBaseDirectory(cueDirPath);
 
 				// parse the cue file
 				var parseJob = new ParseCueJob(cueContent);
@@ -149,7 +147,7 @@ namespace BizHawk.Emulation.DiscSystem
 				}
 				if (!string.IsNullOrEmpty(parseJob.OUT_Log)) Console.WriteLine(parseJob.OUT_Log);
 				ConcatenateJobLog(parseJob);
-				if (!okParse) return;
+				if (!okParse || parseJob.OUT_ErrorLevel) return;
 
 				// compile the cue file
 				// includes resolving required bin files and finding out what would processing would need to happen in order to load the cue
@@ -196,6 +194,9 @@ namespace BizHawk.Emulation.DiscSystem
 				case ".cdi":
 					OUT_Disc = CDI_Format.LoadCDIToDisc(IN_FromPath, IN_DiscMountPolicy);
 					break;
+				case ".chd":
+					OUT_Disc = CHD_Format.LoadCHDToDisc(IN_FromPath, IN_DiscMountPolicy);
+					break;
 				case ".cue":
 					LoadCue(dir, File.ReadAllText(IN_FromPath));
 					break;
@@ -205,8 +206,13 @@ namespace BizHawk.Emulation.DiscSystem
 					//TODO try it both ways and check the disc type to use whichever one succeeds in identifying a disc type
 					LoadCue(cueDirPath: dir, cueContent: GenerateCue(binFilename: file, binFilePath: IN_FromPath));
 					break;
+				case ".toc":
+					throw new NotSupportedException(".TOC not supported yet");
 				case ".mds":
 					OUT_Disc = MDS_Format.LoadMDSToDisc(IN_FromPath, IN_DiscMountPolicy);
+					break;
+				case ".nrg":
+					OUT_Disc = NRG_Format.LoadNRGToDisc(IN_FromPath, IN_DiscMountPolicy);
 					break;
 			}
 

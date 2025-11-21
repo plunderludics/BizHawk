@@ -21,8 +21,6 @@ namespace BizHawk.Client.Common
 
 		public readonly int _autoDumpLength;
 
-		public readonly bool printVersion;
-
 		public readonly string? cmdDumpName;
 
 		public readonly bool _autoCloseOnDump;
@@ -31,11 +29,13 @@ namespace BizHawk.Client.Common
 
 		public readonly bool startFullscreen;
 
+		public readonly bool GDIPlusRequested;
+
 		public readonly string? luaScript;
 
 		public readonly bool luaConsole;
 
-		public readonly (string IP, int Port)? SocketAddress;
+		public readonly (string IP, ushort Port)? SocketAddress;
 
 		public readonly ProtocolType SocketProtocol;
 
@@ -72,14 +72,14 @@ namespace BizHawk.Client.Common
 			string? cmdDumpType,
 			HashSet<int>? currAviWriterFrameList,
 			int autoDumpLength,
-			bool printVersion,
 			string? cmdDumpName,
 			bool autoCloseOnDump,
 			bool chromeless,
 			bool startFullscreen,
+			bool gdiPlusRequested,
 			string? luaScript,
 			bool luaConsole,
-			(string IP, int Port)? socketAddress,
+			(string IP, ushort Port)? socketAddress,
 			string? mmfFilename,
 			(string? UrlGet, string? UrlPost)? httpAddresses,
 			bool? audiosync,
@@ -107,11 +107,11 @@ namespace BizHawk.Client.Common
 			this.cmdDumpType = cmdDumpType;
 			_currAviWriterFrameList = currAviWriterFrameList;
 			_autoDumpLength = autoDumpLength;
-			this.printVersion = printVersion;
 			this.cmdDumpName = cmdDumpName;
 			_autoCloseOnDump = autoCloseOnDump;
 			_chromeless = chromeless;
 			this.startFullscreen = startFullscreen;
+			GDIPlusRequested = gdiPlusRequested;
 			this.luaScript = luaScript;
 			this.luaConsole = luaConsole;
 			SocketAddress = socketAddress;

@@ -84,9 +84,8 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 			long dPerSecond = (long)(frameSize * dRate);
 			DriveCyclesPerMs = dPerSecond / 1000;
 
-			long TStatesPerDriveCycle = (long)((double)_machine.GateArray.Z80ClockSpeed / DriveClock);
+			long TStatesPerDriveCycle = (long)(_machine.GateArray.Z80ClockSpeed / DriveClock);
 			StatesPerDriveTick = TStatesPerDriveCycle;
-
 		}
 
 		/// <summary>

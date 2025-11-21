@@ -1,6 +1,6 @@
-﻿using BizHawk.BizInvoke;
-using System;
 using System.Runtime.InteropServices;
+
+using BizHawk.BizInvoke;
 
 namespace BizHawk.Emulation.Cores.Waterbox
 {

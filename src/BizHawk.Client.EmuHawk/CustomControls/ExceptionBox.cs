@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -86,6 +85,5 @@ namespace BizHawk.Client.EmuHawk
 				e.Graphics.DrawString(this.Text, this.Font, br, rc, fmt);
 			}
 		}
-
 	}
 }

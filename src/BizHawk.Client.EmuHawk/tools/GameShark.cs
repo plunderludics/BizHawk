@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 
 using BizHawk.Emulation.Common;
@@ -44,7 +43,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				try
 				{
-					var code = l.ToUpper();
+					var code = l.ToUpperInvariant().Trim();
 					var decoder = new GameSharkDecoder(MemoryDomains, Emulator.SystemId);
 					var result = decoder.Decode(code);
 					var domain = decoder.CheatDomain();
@@ -63,7 +62,8 @@ namespace BizHawk.Client.EmuHawk
 				}
 				catch (Exception ex)
 				{
-					DialogController.ShowMessageBox($"An Error occured: {ex.GetType()}", "Error", EMsgBoxIcon.Error);
+					using ExceptionBox dialog = new(ex);
+					this.ShowDialogAsChild(dialog);
 				}
 			}
 

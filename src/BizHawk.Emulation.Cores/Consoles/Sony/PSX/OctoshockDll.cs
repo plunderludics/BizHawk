@@ -1,6 +1,5 @@
 //TODO - make sure msvc builds with 32bit enums and get rid of the extra marshalling fluff here
 
-using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -298,10 +297,10 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 
 		[DllImport(dd, CallingConvention = cc)]
 		public static extern int shock_GetGPUUnlagged(IntPtr psx);
-		
+
 		[DllImport(dd, CallingConvention = cc)]
 		public static extern int shock_PeekMemory(IntPtr psx, uint address, out byte value);
-		
+
 		[DllImport(dd, CallingConvention = cc)]
 		public static extern int shock_PokeMemory(IntPtr psx, uint address, byte value);
 	}

@@ -5,18 +5,16 @@
 
 //TODO - ok, think about this. we MUST load a state with the CDC completely intact. no quickly changing discs. that's madness.
 //well, I could savestate the disc index and validate the disc collection when loading a state.
-//the big problem is, it's completely at odds with the slider-based disc changing model. 
-//but, maybe it can be reconciled with that model by using the disc ejection to our advantage. 
+//the big problem is, it's completely at odds with the slider-based disc changing model.
+//but, maybe it can be reconciled with that model by using the disc ejection to our advantage.
 //perhaps moving the slider is meaningless if the disc is ejected--it only affects what disc is inserted when the disc gets inserted!! yeah! this might could save us!
 //not exactly user friendly but maybe we can build it from there with a custom UI.. a disk-changer? dunno if that would help
 
-using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 using Newtonsoft.Json;
 
@@ -30,7 +28,9 @@ using BizHawk.Emulation.DiscSystem;
 namespace BizHawk.Emulation.Cores.Sony.PSX
 {
 	[PortedCore(CoreNames.Octoshock, "Mednafen Team")]
-	public unsafe partial class Octoshock : IEmulator, IVideoProvider, ISoundProvider, ISaveRam, IStatable, IDriveLight, ISettable<Octoshock.Settings, Octoshock.SyncSettings>, IRegionable, IInputPollable, IRomInfo
+	public unsafe partial class Octoshock : IEmulator, IInputPollable, IRegionable, ISaveRam,
+		ISettable<Octoshock.Settings, Octoshock.SyncSettings>, ISoundProvider, IStatable, IVideoProvider,
+		IDriveLight, IRedumpDiscChecksumInfo
 	{
 		public Octoshock(CoreComm comm, PSF psf, Octoshock.Settings settings, Octoshock.SyncSettings syncSettings)
 		{
@@ -44,45 +44,15 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 		[CoreConstructor(VSystemID.Raw.PSX)]
 		public Octoshock(CoreLoadParameters<Octoshock.Settings, Octoshock.SyncSettings> lp)
 		{
-			string romDetails;
-			if (lp.Discs.Count > 0)
-			{
-				string DiscHashWarningText(GameInfo game, string discHash)
-				{
-					if (game == null || game.IsRomStatusBad() || game.Status == RomStatus.NotInDatabase)
-					{
-						return "Disc could not be identified as known-good. Look for a better rip.";
-					}
-					else
-					{
-						return $"Disc was identified (99.99% confidently) as known good with disc id hash CRC32:{discHash}\n"
-							+ "Nonetheless it could be an unrecognized romhack or patched version.\n"
-							+ $"According to redump.org, the ideal hash for entire disc is: CRC32:{game.GetStringValue("dh")}\n"
-							+ "The file you loaded hasn't been hashed entirely (it would take too long)\n"
-							+ "Compare it with the full hash calculated by the PSX menu's Hash Discs tool";
-					}
-				}
-
-				var sw = new StringWriter();
-				foreach (var d in lp.Discs)
-				{
-					var discHash = new DiscHasher(d.DiscData).Calculate_PSX_BizIDHash();
-					sw.WriteLine(Path.GetFileName(d.DiscName));
-					sw.WriteLine(DiscHashWarningText(Database.CheckDatabase(discHash), discHash));
-					sw.WriteLine("-------------------------");
-				}
-				romDetails = sw.ToString();
-			}
-			else
-			{
-				romDetails = "PSX exe";
-			}
-
 			Load(
 				lp.Comm,
 				lp.Discs.Select(d => d.DiscData).ToList(),
 				lp.Discs.Select(d => d.DiscName).ToList(),
-				lp.Roms.FirstOrDefault()?.RomData, lp.Settings, lp.SyncSettings, null, romDetails);
+				lp.Roms.FirstOrDefault()?.RomData,
+				lp.Settings,
+				lp.SyncSettings,
+				null,
+				DiscChecksumUtils.GenQuickRomDetails(lp.Discs));
 			OctoshockDll.shock_PowerOn(psx);
 		}
 
@@ -94,8 +64,8 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 			ConnectTracer();
 			DriveLightEnabled = true;
 
-			_Settings = (Settings)settings ?? new Settings();
-			_SyncSettings = (SyncSettings)syncSettings ?? new SyncSettings();
+			_Settings = settings ?? new Settings();
+			_SyncSettings = syncSettings ?? new SyncSettings();
 
 			Discs = discs;
 
@@ -181,7 +151,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 				}
 			}
 
-			//TODO - known bad firmwares are a no-go. we should refuse to boot them. (that's the mednafen policy)
+			//TODO - known bad firmware is a no-go. we should refuse to boot them. (that's the mednafen policy)
 			var firmware = comm.CoreFileProvider.GetFirmwareOrThrow(new("PSX", firmwareRegion), $"A PSX `{firmwareRegion}` region bios file is required");
 
 			//create the instance
@@ -334,7 +304,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 						});
 
 
-					if (type == OctoshockDll.ePeripheralType.DualShock || type == OctoshockDll.ePeripheralType.DualAnalog)
+					if (type is OctoshockDll.ePeripheralType.DualShock or OctoshockDll.ePeripheralType.DualAnalog)
 					{
 						definition.BoolButtons.Add("P" + pnum + " L3");
 						definition.BoolButtons.Add("P" + pnum + " R3");
@@ -362,8 +332,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 			ControllerDefinition = CreateControllerDefinition(_SyncSettings);
 		}
 
-		private int[] frameBuffer = new int[0];
-		private Random rand = new Random();
+		private int[] frameBuffer = [ ];
 
 		//we can only have one active core at a time, due to the lib being so static.
 		//so we'll track the current one here and detach the previous one whenever a new one is booted up.
@@ -377,6 +346,8 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 			if (disposed) return;
 
 			disposed = true;
+
+			_memoryCallbacks.ActiveChanged -= RefreshMemCallbacks;
 
 			//discs arent bound to shock core instances, but they may be mounted. kill the core instance first to effectively dereference the disc
 			OctoshockDll.shock_Destroy(psx);
@@ -483,6 +454,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 
 		public bool DriveLightEnabled { get; private set; }
 		public bool DriveLightOn { get; private set; }
+		public string DriveLightIconDescription => "CD Drive Activity";
 
 		private void Attach()
 		{
@@ -498,21 +470,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 		}
 
 		public string CalculateDiscHashes()
-		{
-			var sb = new StringBuilder();
-			try
-			{
-				foreach (var disc in Discs)
-				{
-					sb.Append($"{new DiscHasher(disc).Calculate_PSX_RedumpHash():X8} {disc.Name}\r\n");
-				}
-			}
-			catch
-			{
-				// ignored
-			}
-			return sb.ToString();
-		}
+			=> DiscChecksumUtils.CalculateDiscHashesImpl(Discs);
 
 		public void ResetCounters()
 		{
@@ -534,7 +492,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 
 					int portNum = (port + 1) + ((multiport + 1) << 4);
 					int slot = port * 4 + multiport;
-					
+
 					//no input to set
 					if (fioCfg.Devices8[slot] == OctoshockDll.ePeripheralType.None)
 						continue;
@@ -584,7 +542,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 						if (_controller.IsPressed(pstring + "Square")) buttons |= 32768;
 
 						byte left_x = 0, left_y = 0, right_x = 0, right_y = 0;
-						if (fioCfg.Devices8[slot] == OctoshockDll.ePeripheralType.DualShock || fioCfg.Devices8[slot] == OctoshockDll.ePeripheralType.DualAnalog)
+						if (fioCfg.Devices8[slot] is OctoshockDll.ePeripheralType.DualShock or OctoshockDll.ePeripheralType.DualAnalog)
 						{
 							if (_controller.IsPressed(pstring + "L3")) buttons |= 2;
 							if (_controller.IsPressed(pstring + "R3")) buttons |= 4;
@@ -628,7 +586,10 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 			//int scanline_num = h; // I wanted to do this, but our logic for mednafen modes here is based on un-doubled resolution. i could do a hack to divide it by 2 though
 			int real_scanline_num = standard == OctoshockDll.eVidStandard.NTSC ? 240 : 288;
 
-			int VirtualWidth=-1, VirtualHeight=-1;
+#pragma warning disable MA0084 // these shadow the IVideoProvider props
+			int VirtualWidth = -1;
+			int VirtualHeight = -1;
+#pragma warning restore MA0084
 			switch (settings.ResolutionMode)
 			{
 				case eResolutionMode.Mednafen:
@@ -649,13 +610,13 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 						//ok: here we have a framebuffer without overscan. 320x240 nominal. So the VirtualWidth of what we got is off by a factor of 109.375%
 						//so a beginning approach would be this:
 						//VirtualWidth = (int)(VirtualWidth * 320.0f / 350);
-						//but that will shrink things which are already annoyingly shrunken. 
+						//but that will shrink things which are already annoyingly shrunken.
 						//therefore, lets do that, but then scale the whole window by the same factor so the width becomes unscaled and now the height is scaled up!
 						//weird, huh?
 						VirtualHeight = (int)(VirtualHeight * 350.0f / 320);
 
 						//now unfortunately we may have lost vertical pixels. common in the case of PAL (rendering 256 on a field of 288)
-						//therefore we'll be stretching way too much vertically here. 
+						//therefore we'll be stretching way too much vertically here.
 						//lets add those pixels back with a new hack
 						if (standard == OctoshockDll.eVidStandard.PAL)
 						{
@@ -684,7 +645,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 					}
 					else
 					{
-						//this is a bit tricky. we know we want 400 for the virtualwidth. 
+						//this is a bit tricky. we know we want 400 for the virtualwidth.
 						VirtualWidth = 400;
 						if (settings.HorizontalClipping == eHorizontalClipping.Basic)
 							VirtualWidth = 378;
@@ -754,17 +715,13 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 
 			//change the disc if needed, and valid
 			//also if frame is 0, we need to set a disc no matter what
-			int requestedDisc = (int)_controller.AxisValue("Disc Select");
+			int requestedDisc = _controller.AxisValue("Disc Select");
 			if (requestedDisc != CurrentDiscIndexMounted && CurrentTrayOpen
 				|| Frame == 0
 				)
 			{
 				//don't replace default disc with the leave-default placeholder!
-				if (requestedDisc == -1)
-				{
-
-				}
-				else
+				if (requestedDisc is not -1)
 				{
 					CurrentDiscIndexMounted = requestedDisc;
 				}
@@ -854,7 +811,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 				LagCount++;
 
 			//what happens to sound in this case?
-			if (render == false) 
+			if (!render)
 			{
 				Frame++;
 				return true;
@@ -915,7 +872,9 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 		public IInputCallbackSystem InputCallbacks
 		{
 			[FeatureNotImplemented]
+#pragma warning disable CA1065 // convention for [FeatureNotImplemented] is to throw NIE
 			get => throw new NotImplementedException();
+#pragma warning restore CA1065
 		}
 
 		public bool DeterministicEmulation => true;
@@ -963,7 +922,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 			throw new InvalidOperationException("Async mode is not supported.");
 		}
 
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			var cfg = _SyncSettings.FIOConfig.ToLogical();
 			int nMemcards = cfg.NumMemcards;
@@ -1037,6 +996,8 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 			int size = OctoshockDll.shock_StateTransaction(psx, ref transaction);
 			savebuff = new byte[size];
 		}
+
+		public bool AvoidRewind => false;
 
 		public void SaveStateBinary(BinaryWriter writer)
 		{
@@ -1140,6 +1101,7 @@ namespace BizHawk.Emulation.Cores.Sony.PSX
 			BobOffset
 		}
 
+		[CoreSettings]
 		public class Settings
 		{
 			[DisplayName("Determine Lag from GPU Frames")]

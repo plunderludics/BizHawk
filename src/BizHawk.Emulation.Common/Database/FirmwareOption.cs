@@ -1,5 +1,3 @@
-using System;
-
 namespace BizHawk.Emulation.Common
 {
 	public readonly struct FirmwareOption : IEquatable<FirmwareOption>
@@ -14,7 +12,8 @@ namespace BizHawk.Emulation.Common
 
 		public readonly FirmwareID ID;
 
-		public bool IsAcceptableOrIdeal => Status == FirmwareOptionStatus.Ideal || Status == FirmwareOptionStatus.Acceptable;
+		public bool IsAcceptableOrIdeal
+			=> Status is FirmwareOptionStatus.Acceptable or FirmwareOptionStatus.Ideal;
 
 		public readonly long Size;
 
@@ -22,6 +21,7 @@ namespace BizHawk.Emulation.Common
 
 		public FirmwareOption(FirmwareID id, string hash, long size, FirmwareOptionStatus status)
 		{
+			FirmwareFile.CheckChecksumStrIsHex(ref hash);
 			Hash = hash;
 			ID = id;
 			Size = size;

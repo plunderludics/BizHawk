@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-using BizHawk.Common.CollectionExtensions;
-
 namespace BizHawk.Emulation.Common
 {
 	/// <summary>
@@ -24,6 +22,8 @@ namespace BizHawk.Emulation.Common
 			public const string ChannelF = "ChannelF";
 			public const string Coleco = "Coleco";
 			public const string DEBUG = "DEBUG";
+			public const string Doom = "Doom";
+			public const string DOS = "DOS";
 			public const string Dreamcast = "Dreamcast";
 			public const string GameCube = "GameCube";
 			public const string GB = "GB";
@@ -38,6 +38,7 @@ namespace BizHawk.Emulation.Common
 			public const string Libretro = "Libretro";
 			public const string Lynx = "Lynx";
 			public const string MSX = "MSX";
+			public const string N3DS = "3DS";
 			public const string N64 = "N64";
 			public const string NDS = "NDS";
 			public const string NeoGeoCD = "NeoGeoCD";
@@ -45,7 +46,7 @@ namespace BizHawk.Emulation.Common
 			public const string NGP = "NGP";
 			public const string NULL = "NULL";
 			public const string O2 = "O2";
-			public const string Panasonic3DO = "Panasonic3DO";
+			public const string Panasonic3DO = "3DO";
 			public const string PCE = "PCE";
 			public const string PCECD = "PCECD";
 			public const string PCFX = "PCFX";

@@ -1,12 +1,12 @@
-﻿using System;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Consoles.Nintendo.Gameboy;
 using BizHawk.Emulation.Cores.Nintendo.GBHawk;
 
 namespace BizHawk.Emulation.Cores.Nintendo.GBHawkLink
 {
-	[Core(CoreNames.GBHawkLink, "")]
-	[ServiceNotApplicable(new[] { typeof(IDriveLight) })]
+	[Core(
+		name: CoreNames.GBHawkLink,
+		author: "alyosha and BizHawk contributors")]
 	public partial class GBHawkLink : IEmulator, ISaveRam, IDebuggable, IStatable, IInputPollable, IRegionable, ILinkable,
 		ISettable<GBHawkLink.GBLinkSettings, GBHawkLink.GBLinkSyncSettings>,
 		ILinkedGameBoyCommon
@@ -40,8 +40,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawkLink
 			var ser = new BasicServiceProvider(this);
 			ServiceProvider = ser;
 
-			linkSettings = (GBLinkSettings)lp.Settings ?? new GBLinkSettings();
-			linkSyncSettings = (GBLinkSyncSettings)lp.SyncSettings ?? new GBLinkSyncSettings();
+			linkSettings = lp.Settings ?? new GBLinkSettings();
+			linkSyncSettings = lp.SyncSettings ?? new GBLinkSyncSettings();
 			_controllerDeck = new(
 				GBHawkControllerDeck.DefaultControllerName,
 				GBHawkControllerDeck.DefaultControllerName);
@@ -67,7 +67,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawkLink
 			R = new GBHawk.GBHawk(lp.Comm, lp.Roms[1].Game, lp.Roms[1].RomData, temp_set_R, temp_sync_R);
 
 			ser.Register<IVideoProvider>(this);
-			ser.Register<ISoundProvider>(this); 
+			ser.Register<ISoundProvider>(this);
 
 			_tracer = new TraceBuffer(L.cpu.TraceHeader);
 			ser.Register<ITraceable>(_tracer);

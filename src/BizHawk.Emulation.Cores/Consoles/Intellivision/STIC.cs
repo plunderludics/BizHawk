@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
 using BizHawk.Emulation.Common;
@@ -50,8 +48,8 @@ namespace BizHawk.Emulation.Cores.Intellivision
 
 		public int[] GetVideoBuffer()
 		{
-			
-			return FrameBuffer; 
+
+			return FrameBuffer;
 		}
 
 		// gets called when a new border color is chosen
@@ -95,7 +93,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 
 			for (int i = 0; i < 64; i++)
 			{
-				Register[i] = 0; 
+				Register[i] = 0;
 				write_reg(i, 0, false);
 			}
 
@@ -118,7 +116,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 		// mask off appropriate STIC bits and write to register
 		private void write_reg(int reg, ushort value, bool poke)
 		{
-			
+
 			if (reg < 0x8)
 			{
 				value = (ushort)((value & 0x7FF) | 0x3800);
@@ -140,7 +138,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 			}
 			else if (reg < 0x28)
 			{
-				value = (ushort)(0x3FFF);
+				value = 0x3FFF;
 			}
 			else if (reg < 0x2D)
 			{
@@ -148,7 +146,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 			}
 			else if (reg < 0x30)
 			{
-				value = (ushort)(0x3FFF);
+				value = 0x3FFF;
 			}
 			else if (reg < 0x33)
 			{
@@ -163,7 +161,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 			}
 			else if (reg < 0x40)
 			{
-				value = (ushort)(0x3FFF);
+				value = 0x3FFF;
 			}
 			Register[reg] = value;
 
@@ -518,7 +516,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 					{
 						FrameBuffer[(j * 2) * 176 + (i + 8) + BORDER_OFFSET] = ColorToRGBA(bg);
 						FrameBuffer[(j * 2 + 1) * 176 + (i + 8) + BORDER_OFFSET] = ColorToRGBA(bg);
-					} 
+					}
 				}
 			}
 		}
@@ -526,7 +524,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 		// see for more details: http://spatula-city.org/~im14u2c/intv/jzintv-1.0-beta3/doc/programming/stic.txt
 		/*
 		The STIC provides 3 registers for controlling each MOB, and a 4th register
-		for reading its collision (or "interaction") status.  The registers are 
+		for reading its collision (or "interaction") status.  The registers are
 		laid out as follows:
 
 		   X Register:    Address = $0000 + MOB #
@@ -575,7 +573,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 
 			int cur_x, cur_y;
 
-			// we go from 7 to zero because visibility of lower numbered MOBs have higher priority 
+			// we go from 7 to zero because visibility of lower numbered MOBs have higher priority
 			for (int i = 7; i >= 0 ; i--)
 			{
 				x = Register[i];
@@ -598,7 +596,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 				bool vis = x.Bit(9);
 				bool x_flip = y.Bit(10);
 				bool y_flip = y.Bit(11);
-				ushort yres = y.Bit(7) ? (ushort)2 : (ushort)1; 
+				ushort yres = y.Bit(7) ? (ushort)2 : (ushort)1;
 				ushort ysiz2 = y.Bit(8) ? (ushort)2 : (ushort)1;
 				ushort ysiz4 = y.Bit(9) ? (ushort)4 : (ushort)1;
 				bool intr = x.Bit(8);
@@ -613,7 +611,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 				if (gram)
 					card &= 0x3F;
 
-				//pull the data from the card into the mobs array		
+				//pull the data from the card into the mobs array
 				for (int j=0;j<8;j++)
 				{
 					if (gram)
@@ -649,35 +647,10 @@ namespace BizHawk.Emulation.Cores.Intellivision
 				// flip mobs accordingly
 				if (x_flip)
 				{
-					for (int j = 0; j < 8; j++)
-					{
-						byte temp_0 = (byte)((mobs[j] & 1) << 7);
-						byte temp_1 = (byte)((mobs[j] & 2) << 5);
-						byte temp_2 = (byte)((mobs[j] & 4) << 3);
-						byte temp_3 = (byte)((mobs[j] & 8) << 1);
-						byte temp_4 = (byte)((mobs[j] & 16) >> 1);
-						byte temp_5 = (byte)((mobs[j] & 32) >> 3);
-						byte temp_6 = (byte)((mobs[j] & 64) >> 5);
-						byte temp_7 = (byte)((mobs[j] & 128) >> 7);
-
-						mobs[j] = (byte)(temp_0 + temp_1 + temp_2 + temp_3 + temp_4 + temp_5 + temp_6 + temp_7);
-					}
-
+					for (var j = 0; j < mobs.Length; j++) mobs[j] = BitReverse.Byte8[mobs[j]];
 					if (yres > 1)
 					{
-						for (int j = 0; j < 8; j++)
-						{
-							byte temp_0 = (byte)((y_mobs[j] & 1) << 7);
-							byte temp_1 = (byte)((y_mobs[j] & 2) << 5);
-							byte temp_2 = (byte)((y_mobs[j] & 4) << 3);
-							byte temp_3 = (byte)((y_mobs[j] & 8) << 1);
-							byte temp_4 = (byte)((y_mobs[j] & 16) >> 1);
-							byte temp_5 = (byte)((y_mobs[j] & 32) >> 3);
-							byte temp_6 = (byte)((y_mobs[j] & 64) >> 5);
-							byte temp_7 = (byte)((y_mobs[j] & 128) >> 7);
-
-							y_mobs[j] = (byte)(temp_0 + temp_1 + temp_2 + temp_3 + temp_4 + temp_5 + temp_6 + temp_7);
-						}
+						for (var j = 0; j < y_mobs.Length; j++) y_mobs[j] = BitReverse.Byte8[y_mobs[j]];
 					}
 				}
 
@@ -856,7 +829,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 					}
 
 					// the extra condition here is to ignore only border/BG collsion bit set
-					if (Collision[i, j] != 0 && Collision[i,j] != (1 << 9) && Collision[i,j] != (1 << 8)) 
+					if (Collision[i, j] != 0 && Collision[i,j] != (1 << 9) && Collision[i,j] != (1 << 8))
 					{
 						for (int k = 0; k < 8; k++)
 						{

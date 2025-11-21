@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -87,5 +86,4 @@ namespace BizHawk.Emulation.Cores.ColecoVision
 
 		public static string DefaultControllerName => typeof(StandardController).DisplayName();
 	}
-
 }

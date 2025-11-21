@@ -4,7 +4,7 @@ using BizHawk.Emulation.Cores.Nintendo.N64.NativeApi;
 
 namespace BizHawk.Emulation.Cores.Nintendo.N64
 {
-	partial class N64
+	public partial class N64
 	{
 		public TraceBuffer Tracer { get; private set; }
 
@@ -14,8 +14,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.N64
 		{
 			var regs = GetCpuFlagsAndRegisters();
 			uint pc = (uint)regs["PC"].Value;
-			var length = 0;
-			var disasm = Disassemble(MemoryDomains.SystemBus, pc, out length);
+			var disasm = Disassemble(MemoryDomains.SystemBus, pc, out int length);
 
 			var sb = new StringBuilder();
 

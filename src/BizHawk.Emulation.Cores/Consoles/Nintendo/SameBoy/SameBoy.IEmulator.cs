@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 
 using BizHawk.Emulation.Common;
@@ -157,6 +156,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.Sameboy
 
 		public void Dispose()
 		{
+			_memorycallbacks.ActiveChanged -= SetMemoryCallbacks;
 			if (SameboyState != IntPtr.Zero)
 			{
 				LibSameboy.sameboy_destroy(SameboyState);

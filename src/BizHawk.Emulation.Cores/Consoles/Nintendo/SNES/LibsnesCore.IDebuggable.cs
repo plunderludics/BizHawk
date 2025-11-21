@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 
 using BizHawk.Emulation.Common;
@@ -63,6 +62,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.SNES
 		}
 
 		[FeatureNotImplemented]
+#pragma warning disable CA1065 // convention for [FeatureNotImplemented] is to throw NIE
 		public long TotalExecutedCycles => throw new NotImplementedException();
+#pragma warning restore CA1065
 	}
 }

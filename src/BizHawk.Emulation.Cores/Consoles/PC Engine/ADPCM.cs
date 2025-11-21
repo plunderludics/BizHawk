@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Components;
@@ -106,7 +104,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 			if (AdpcmIsPlaying && (value & 0x20) == 0)
 				AdpcmIsPlaying = false; // clearing this bit stops playback
 
-			if (AdpcmIsPlaying == false && (value & 0x20) != 0)
+			if (!AdpcmIsPlaying && (value & 0x20) != 0)
 			{
 				if ((value & 0x40) == 0)
 					Console.WriteLine("a thing that's normally set is not set");
@@ -168,7 +166,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 					_scsi.Think();
 				}
 
-				if (_scsi.DataTransferInProgress == false)
+				if (!_scsi.DataTransferInProgress)
 					Port180B = 0;
 			}
 
@@ -188,7 +186,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 		private bool nibble;
 		private int magnitude;
 
-		private static readonly int[] StepSize = 
+		private static readonly int[] StepSize =
 		{
 			0x0002, 0x0006, 0x000A, 0x000E, 0x0012, 0x0016, 0x001A, 0x001E,
 			0x0002, 0x0006, 0x000A, 0x000E, 0x0013, 0x0017, 0x001B, 0x001F,
@@ -254,7 +252,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 		private byte ReadNibble()
 		{
 			byte value;
-			if (nibble == false)
+			if (!nibble)
 				value = (byte)(RAM[ReadAddress] >> 4);
 			else
 			{
@@ -263,7 +261,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 				ReadAddress++;
 			}
 
-			nibble ^= true;
+			nibble = !nibble;
 			return value;
 		}
 
@@ -275,13 +273,13 @@ namespace BizHawk.Emulation.Cores.PCEngine
 			int m = StepFactor[mag];
 			int adjustment = StepSize[(magnitude * 8) + mag];
 			magnitude = AddClamped(magnitude, m, 0, 48);
-			if (positive == false) adjustment *= -1;
+			if (!positive) adjustment *= -1;
 			playingSample = AddClamped(playingSample, adjustment, 0, 4095);
 		}
 
 		private void AdpcmEmitSample()
 		{
-			if (AdpcmIsPlaying == false)
+			if (!AdpcmIsPlaying)
 				_synchronizer.EnqueueSample(0, 0);
 			else
 			{

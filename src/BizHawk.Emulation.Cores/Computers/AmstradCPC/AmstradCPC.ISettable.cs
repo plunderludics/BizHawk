@@ -31,12 +31,12 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 			// restore user settings to devices
 			if (_machine != null && _machine.AYDevice != null)
 			{
-				((AY38912)_machine.AYDevice as AY38912).PanningConfiguration = o.AYPanConfig;
+				((AY38912)_machine.AYDevice).PanningConfiguration = o.AYPanConfig;
 				_machine.AYDevice.Volume = o.AYVolume;
 			}
 			if (_machine != null && _machine.TapeBuzzer != null)
 			{
-				((Beeper)_machine.TapeBuzzer as Beeper).Volume = o.TapeVolume;
+				((Beeper)_machine.TapeBuzzer).Volume = o.TapeVolume;
 			}
 
 
@@ -52,6 +52,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 			return ret ? PutSettingsDirtyBits.RebootCore : PutSettingsDirtyBits.None;
 		}
 
+		[CoreSettings]
 		public class AmstradCPCSettings
 		{
 			[DisplayName("AY-3-8912 Panning Config")]
@@ -85,6 +86,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 			}
 		}
 
+		[CoreSettings]
 		public class AmstradCPCSyncSettings
 		{
 			[DisplayName("Deterministic Emulation")]
@@ -104,7 +106,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 
 			[DisplayName("Border type")]
 			[Description("Select how to show the border area")]
-			[DefaultValue(BorderType.Uniform)]
+			[DefaultValue(BorderType.Visible)]
 			public BorderType BorderType { get; set; }
 
 			public AmstradCPCSyncSettings Clone()
@@ -319,7 +321,6 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 					sb.Append("\n" + m.OtherMisc);
 
 				return sb.ToString();
-
 			}
 		}
 
@@ -329,19 +330,14 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 		public enum BorderType
 		{
 			/// <summary>
-			/// Attempts to equalise the border areas
+			/// Roughly what you might see on an Amstrad monitor
 			/// </summary>
-			Uniform,
+			Visible,
 
 			/// <summary>
-			/// Pretty much the signal the gate array is generating (looks shit)
+			/// The full display area
 			/// </summary>
 			Uncropped,
-
-			/// <summary>
-			/// Top and bottom border removed so that the result is *almost* 16:9
-			/// </summary>
-			Widescreen,
 		}
 	}
 }

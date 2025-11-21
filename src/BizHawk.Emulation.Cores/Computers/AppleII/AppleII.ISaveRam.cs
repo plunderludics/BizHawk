@@ -1,4 +1,3 @@
-﻿using System;
 using System.IO;
 
 using BizHawk.Common;
@@ -17,7 +16,7 @@ namespace BizHawk.Emulation.Cores.Computers.AppleII
 
 		public bool SaveRamModified => true;
 
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			using var ms = new MemoryStream();
 			using var bw = new BinaryWriter(ms);

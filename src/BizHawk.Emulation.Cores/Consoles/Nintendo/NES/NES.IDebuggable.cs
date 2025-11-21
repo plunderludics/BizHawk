@@ -1,10 +1,9 @@
-﻿using System;
 using System.Collections.Generic;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
 {
-	public partial class NES : IDebuggable
+	public sealed partial class NES : IDebuggable
 	{
 		public IDictionary<string, RegisterValue> GetCpuFlagsAndRegisters() => cpu.GetCpuFlagsAndRegisters();
 

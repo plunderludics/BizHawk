@@ -1,4 +1,3 @@
-﻿using System;
 using System.Runtime.CompilerServices;
 using BizHawk.Common;
 using NLua;
@@ -108,7 +107,7 @@ namespace BizHawk.Client.Common
 				{
 					return sandbox;
 				}
-				
+
 				// for now: throw exception (I want to manually creating them)
 				// return CreateSandbox(thread);
 				throw new InvalidOperationException("HOARY GORILLA HIJINX");

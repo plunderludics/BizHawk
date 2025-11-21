@@ -1,9 +1,9 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 
+using BizHawk.Common;
 using BizHawk.Common.CollectionExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Properties;
@@ -243,9 +243,11 @@ namespace BizHawk.Emulation.Cores.Atari.Jaguar
 		public bool DriveLightEnabled => IsJaguarCD;
 		public bool DriveLightOn { get; private set; }
 
+		public string DriveLightIconDescription => "CD Drive Activity";
+
 		private readonly LibVirtualJaguar.CDTOCCallback _cdTocCallback;
 		private readonly LibVirtualJaguar.CDReadCallback _cdReadCallback;
-		
+
 		private readonly Disc _cd;
 		private readonly DiscSectorReader _cdReader;
 		private readonly byte[] _buf2352 = new byte[2352];
@@ -259,9 +261,9 @@ namespace BizHawk.Emulation.Cores.Atari.Jaguar
 			{
 				Padding0 = 0,
 				Padding1 = 0,
-				NumSessions = (byte)nsessions,
 				MinTrack = (byte)_cd.TOC.FirstRecordedTrackNumber,
 				MaxTrack = (byte)_cd.Sessions[nsessions].TOC.LastRecordedTrackNumber,
+				NumSessions = (byte)nsessions,
 				LastLeadOutMins = lastLeadOutTs.MIN,
 				LastLeadOutSecs = lastLeadOutTs.SEC,
 				LastLeadOutFrames = lastLeadOutTs.FRAC,
@@ -297,6 +299,12 @@ namespace BizHawk.Emulation.Cores.Atari.Jaguar
 			_cdReader.ReadLBA_2352(lba, _buf2352, 0);
 			Marshal.Copy(_buf2352, 0, dst, 2352);
 			DriveLightOn = true;
+		}
+
+		public override void Dispose()
+		{
+			_memoryCallbacks.ActiveChanged -= SetMemoryCallbacks;
+			base.Dispose();
 		}
 	}
 }

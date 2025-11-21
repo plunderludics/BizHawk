@@ -1,16 +1,15 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
 using BizHawk.Common;
+using BizHawk.Common.CollectionExtensions;
+using BizHawk.Common.NumberExtensions;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
 {
 	public class Controller : IController
 	{
-		public IInputDisplayGenerator InputDisplayGenerator { get; set; } = null;
-
 		public Controller(ControllerDefinition definition)
 		{
 			Definition = definition;
@@ -24,22 +23,35 @@ namespace BizHawk.Client.Common
 
 		public ControllerDefinition Definition { get; }
 
-		public bool IsPressed(string button) => _buttons[button];
+		public bool IsPressed(string button)
+			=> _buttons.GetValueOrDefault(button);
 
-		public int AxisValue(string name) => _axes[name];
+		public int AxisValue(string name)
+			=> _axes.GetValueOrDefault(name);
 
 		public IReadOnlyCollection<(string Name, int Strength)> GetHapticsSnapshot()
 			=> _haptics.Select(kvp => (kvp.Key, kvp.Value)).ToArray();
 
 		public void SetHapticChannelStrength(string name, int strength) => _haptics[name] = strength;
 
-		private readonly WorkingDictionary<string, List<string>> _bindings = new WorkingDictionary<string, List<string>>();
-		private readonly WorkingDictionary<string, bool> _buttons = new WorkingDictionary<string, bool>();
-		private readonly WorkingDictionary<string, int> _axes = new WorkingDictionary<string, int>();
-		private readonly Dictionary<string, AxisSpec> _axisRanges = new WorkingDictionary<string, AxisSpec>();
+		private readonly Dictionary<string, List<string>> _bindings = new();
+
+		private readonly Dictionary<string, bool> _buttons = new();
+
+		private readonly Dictionary<string, int> _axes = new();
+
+		private readonly Dictionary<string, AxisSpec> _axisRanges = new();
+
 		private readonly Dictionary<string, AnalogBind> _axisBindings = new Dictionary<string, AnalogBind>();
-		private readonly Dictionary<string, int> _haptics = new WorkingDictionary<string, int>();
+
+		private readonly Dictionary<string, int> _haptics = new();
+
 		private readonly Dictionary<string, FeedbackBind> _feedbackBindings = new Dictionary<string, FeedbackBind>();
+
+#if BIZHAWKBUILD_SUPERHAWK
+		public bool AnyInputHeld
+			=> _buttons.ContainsValue(true) || _axes.Any(kvp => kvp.Value != _axisRanges[kvp.Key].Neutral);
+#endif
 
 		public bool this[string button] => IsPressed(button);
 
@@ -47,11 +59,20 @@ namespace BizHawk.Client.Common
 		public List<string> SearchBindings(string button)
 			=> _bindings.Where(b => b.Value.Contains(button)).Select(static b => b.Key).ToList();
 
-		// Searches bindings for the controller and returns true if this binding is mapped somewhere in this controller
-		public bool HasBinding(string button) =>
-			_bindings
+		/// <summary>
+		/// Checks if the given button combination would be a controller input.
+		/// This means Shift+A will return true if an input is bound to either A or Shift+A.
+		/// </summary>
+		public bool HasBinding(string button)
+		{
+			string[] buttons = button.Split('+');
+			return _bindings
 				.SelectMany(kvp => kvp.Value)
-				.Any(boundButton => boundButton == button);
+				.Any((boundCombination) => {
+					string[] boundButtons = boundCombination.Split('+');
+					return boundButtons.All((b) => buttons.Contains(b));
+				});
+		}
 
 		/// <summary>
 		/// uses the bindings to latch our own logical button state from the source controller's button state (which are assumed to be the physical side of the binding).
@@ -60,7 +81,7 @@ namespace BizHawk.Client.Common
 		public void LatchFromPhysical(IController finalHostController)
 		{
 			_buttons.Clear();
-			
+
 			foreach (var (k, v) in _bindings)
 			{
 				_buttons[k] = false;
@@ -69,6 +90,7 @@ namespace BizHawk.Client.Common
 					if (finalHostController.IsPressed(button))
 					{
 						_buttons[k] = true;
+						break;
 					}
 				}
 			}
@@ -89,14 +111,15 @@ namespace BizHawk.Client.Common
 				value *= v.Mult;
 
 				// -1..1 -> -A..A (where A is the larger "side" of the range e.g. a range of 0..50, neutral=10 would give A=40, and thus a value in -40..40)
-				var range = _axisRanges[k];
+				var range = _axisRanges[k]; // this was `GetValueOrPutNew`, but I really hope it was always found, since `new AxisSpec()` isn't valid --yoshi
+				if (range.IsReversed) value = -value;
 				value *= Math.Max(range.Neutral - range.Min, range.Max - range.Neutral);
 
 				// shift the midpoint, so a value of 0 becomes range.Neutral (and, assuming >=1x multiplier, all values in range are reachable)
 				value += range.Neutral;
 
 				// finally, constrain to range
-				_axes[k] = ((int) value).ConstrainWithin(range.Range);
+				_axes[k] = ((int)Math.Round(value)).ConstrainWithin(range.Range);
 			}
 		}
 
@@ -108,7 +131,10 @@ namespace BizHawk.Client.Common
 				{
 					foreach (var hostChannel in v.Channels!.Split('+'))
 					{
-						finalHostController.SetHapticChannelStrength(v.GamepadPrefix + hostChannel, (int) ((double) strength * v.Prescale));
+						const double S32_MAX_AS_F64 = int.MaxValue;
+						finalHostController.SetHapticChannelStrength(
+							v.GamepadPrefix + hostChannel,
+							(v.Prescale * (double) strength).Clamp(min: 0.0, max: S32_MAX_AS_F64).RoundToInt());
 					}
 				}
 			}
@@ -148,10 +174,7 @@ namespace BizHawk.Client.Common
 				_axes[button] = controller.AxisValue(button);
 			}
 
-			foreach (var button in controller.InversedButtons)
-			{
-				_buttons[button] ^= true;
-			}
+			foreach (var button in controller.InversedButtons) _buttons[button] = !_buttons.GetValueOrDefault(button);
 		}
 
 		public void BindMulti(string button, string controlString)
@@ -164,7 +187,7 @@ namespace BizHawk.Client.Common
 			var controlBindings = controlString.Split(',');
 			foreach (var control in controlBindings)
 			{
-				_bindings[button].Add(control.Trim());
+				_bindings.GetValueOrPutNew(button).Add(control.Trim());
 			}
 		}
 

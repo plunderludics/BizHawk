@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -10,10 +10,14 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+
 using BizHawk.Client.Common;
 using BizHawk.Common;
+using BizHawk.Common.CollectionExtensions;
 using BizHawk.Common.ReflectionExtensions;
 using BizHawk.Emulation.Common;
+
+using static BizHawk.Common.CommctrlImports;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -23,25 +27,16 @@ namespace BizHawk.Client.EmuHawk
 		public static void PopulateFromEnum<T>(this ComboBox box, T enumVal)
 			where T : Enum
 		{
-			box.Items.Clear();
-			box.Items.AddRange(typeof(T).GetEnumDescriptions().Cast<object>().ToArray());
+			box.ReplaceItems(items: typeof(T).GetEnumDescriptions());
 			box.SelectedItem = enumVal.GetDescription();
 		}
-
-		/// <summary>extension method to make <see cref="Control.Invoke(Delegate)"/> easier to use</summary>
-		public static void Invoke(this Control control, Action action)
-			=> control.Invoke(action);
-
-		/// <summary>extension method to make <see cref="Control.BeginInvoke(Delegate)"/> easier to use</summary>
-		public static void BeginInvoke(this Control control, Action action)
-			=> control.BeginInvoke(action);
 
 		public static ToolStripMenuItem ToColumnsMenu(this InputRoll inputRoll, Action changeCallback)
 		{
 			var menu = new ToolStripMenuItem
 			{
 				Name = "GeneratedColumnsSubMenu",
-				Text = "Columns"
+				Text = "Columns",
 			};
 
 			var columns = inputRoll.AllColumns;
@@ -54,7 +49,7 @@ namespace BizHawk.Client.EmuHawk
 					Text = $"{column.Text} ({column.Name})",
 					Checked = column.Visible,
 					CheckOnClick = true,
-					Tag = column.Name
+					Tag = column.Name,
 				};
 
 				menuItem.CheckedChanged += (o, ev) =>
@@ -75,6 +70,28 @@ namespace BizHawk.Client.EmuHawk
 		public static Point ChildPointToScreen(this Control control, Control child)
 		{
 			return control.PointToScreen(new Point(child.Location.X, child.Location.Y));
+		}
+
+		public static void FollowMousePointer(this Form form)
+		{
+			var point = Cursor.Position;
+			point.Offset(form.Width / -2, form.Height / -2);
+			form.StartPosition = FormStartPosition.Manual;
+			form.Location = point;
+		}
+
+		public static DialogResult ShowDialogOnScreen(this Form form)
+		{
+			var topLeft = new Point(
+				Math.Max(0, form.Location.X),
+				Math.Max(0, form.Location.Y));
+			var screen = Screen.AllScreens.First(s => s.WorkingArea.Contains(topLeft));
+			var w = screen.WorkingArea.Right - form.Bounds.Right;
+			var h = screen.WorkingArea.Bottom - form.Bounds.Bottom;
+			if (h < 0) topLeft.Y += h;
+			if (w < 0) topLeft.X += w;
+			form.SetDesktopLocation(topLeft.X, topLeft.Y);
+			return form.ShowDialog();
 		}
 
 		public static Color Add(this Color color, int val)
@@ -134,11 +151,54 @@ namespace BizHawk.Client.EmuHawk
 			return tabControl.TabPages.Cast<TabPage>();
 		}
 
+		public static Control? InnermostControlAt(this Form form, Point pos, GetChildAtPointSkip flags = GetChildAtPointSkip.None)
+		{
+			Control? top = form;
+			Control? found;
+			do
+			{
+				found = top!.GetChildAtPoint(top.PointToClient(pos), flags);
+				top = found;
+			} while (found is { HasChildren: true });
+			return found;
+		}
+
+#pragma warning disable CS0618 // WinForms doesn't use generics ofc
+		public static bool InsertAfter(this ToolStripItemCollection items, ToolStripItem needle, ToolStripItem insert)
+			=> ((IList) items).InsertAfter(needle, insert: insert);
+
+		public static bool InsertAfterLast(this ToolStripItemCollection items, ToolStripItem needle, ToolStripItem insert)
+			=> ((IList) items).InsertAfterLast(needle, insert: insert);
+
+		public static bool InsertBefore(this ToolStripItemCollection items, ToolStripItem needle, ToolStripItem insert)
+			=> ((IList) items).InsertBefore(needle, insert: insert);
+
+		public static bool InsertBeforeLast(this ToolStripItemCollection items, ToolStripItem needle, ToolStripItem insert)
+			=> ((IList) items).InsertBeforeLast(needle, insert: insert);
+#pragma warning restore CS0618
+
 		public static void ReplaceDropDownItems(this ToolStripDropDownItem menu, params ToolStripItem[] items)
 		{
 			menu.DropDownItems.Clear();
 			menu.DropDownItems.AddRange(items);
 		}
+
+		public static void ReplaceItems(this ComboBox dropdown, params object[] items)
+		{
+			dropdown.Items.Clear();
+			dropdown.Items.AddRange(items);
+		}
+
+		public static void ReplaceItems(this ComboBox dropdown, IEnumerable<object> items)
+			=> dropdown.ReplaceItems(items: items.ToArray());
+
+		public static CheckState ToCheckState(this bool? tristate)
+			=> tristate switch
+			{
+				true => CheckState.Checked,
+				false => CheckState.Unchecked,
+				null => CheckState.Indeterminate,
+			};
 	}
 
 	public static class ListViewExtensions
@@ -183,32 +243,42 @@ namespace BizHawk.Client.EmuHawk
 		/// <exception cref="Win32Exception">unmanaged call failed</exception>
 		public static void SetSortIcon(this ListView listViewControl, int columnIndex, SortOrder order)
 		{
-			if (OSTailoredCode.IsUnixHost) return;
+			if (OSTailoredCode.IsUnixHost)
+			{
+				return;
+			}
 
-			const int LVM_GETHEADER = 4127;
-			const int HDM_GETITEM = 4619;
-			const int HDM_SETITEM = 4620;
-			var columnHeader = Win32Imports.SendMessage(listViewControl.Handle, LVM_GETHEADER, IntPtr.Zero, IntPtr.Zero);
+			var columnHeader = WmImports.SendMessageW(listViewControl.Handle, LVM_GETHEADER, IntPtr.Zero, IntPtr.Zero);
 			for (int columnNumber = 0, l = listViewControl.Columns.Count; columnNumber < l; columnNumber++)
 			{
 				var columnPtr = new IntPtr(columnNumber);
-				var item = new Win32Imports.HDITEM { mask = Win32Imports.HDITEM.Mask.Format };
-				if (Win32Imports.SendMessage(columnHeader, HDM_GETITEM, columnPtr, ref item) == IntPtr.Zero) throw new Win32Exception();
+				var item = new HDITEMW { mask = HDITEMW.Mask.Format };
+				if (SendMessageW(columnHeader, HDM_GETITEMW, columnPtr, ref item) == IntPtr.Zero)
+				{
+					throw new Win32Exception();
+				}
+
 				if (columnNumber != columnIndex || order == SortOrder.None)
 				{
-					item.fmt &= ~Win32Imports.HDITEM.Format.SortDown & ~Win32Imports.HDITEM.Format.SortUp;
+					item.fmt &= ~HDITEMW.Format.SortDown & ~HDITEMW.Format.SortUp;
 				}
-				else if (order == SortOrder.Ascending)
+				// ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+				else switch (order)
 				{
-					item.fmt &= ~Win32Imports.HDITEM.Format.SortDown;
-					item.fmt |= Win32Imports.HDITEM.Format.SortUp;
+					case SortOrder.Ascending:
+						item.fmt &= ~HDITEMW.Format.SortDown;
+						item.fmt |= HDITEMW.Format.SortUp;
+						break;
+					case SortOrder.Descending:
+						item.fmt &= ~HDITEMW.Format.SortUp;
+						item.fmt |= HDITEMW.Format.SortDown;
+						break;
 				}
-				else if (order == SortOrder.Descending)
+
+				if (SendMessageW(columnHeader, HDM_SETITEMW, columnPtr, ref item) == IntPtr.Zero)
 				{
-					item.fmt &= ~Win32Imports.HDITEM.Format.SortUp;
-					item.fmt |= Win32Imports.HDITEM.Format.SortDown;
+					throw new Win32Exception();
 				}
-				if (Win32Imports.SendMessage(columnHeader, HDM_SETITEM, columnPtr, ref item) == IntPtr.Zero) throw new Win32Exception();
 			}
 		}
 
@@ -250,7 +320,7 @@ namespace BizHawk.Client.EmuHawk
 				initFileName: $"{game.FilesystemSafeName()}-{suffix}");
 			if (result is null) return;
 			FileInfo file = new(result);
-			string extension = file.Extension.ToUpper();
+			string extension = file.Extension.ToUpperInvariant();
 			ImageFormat i = extension switch
 			{
 				".BMP" => ImageFormat.Bmp,
@@ -290,7 +360,7 @@ namespace BizHawk.Client.EmuHawk
 			=> !e.Alt && e.Control && e.Shift && e.KeyCode == key;
 
 		/// <summary>
-		/// Changes the description heigh area to match the rows needed for the largest description in the list
+		/// Changes the description height area to match the rows needed for the largest description in the list
 		/// </summary>
 		public static void AdjustDescriptionHeightToFit(this PropertyGrid grid)
 		{
@@ -315,8 +385,9 @@ namespace BizHawk.Client.EmuHawk
 					{
 						var field = control.GetType().GetField("userSized", BindingFlags.Instance | BindingFlags.NonPublic);
 						field?.SetValue(control, true);
-						int height = (int)Graphics.FromHwnd(control.Handle).MeasureString(desc, control.Font, grid.Width).Height;
-						control.Height = Math.Max(20, height) + 16; // magic for now
+						using var label = new Label();
+						var maxSize = new Size(grid.Width - 9, 999999);
+						control.Height = label.Height + TextRenderer.MeasureText(desc, control.Font, maxSize, TextFormatFlags.WordBreak).Height;
 						return;
 					}
 				}

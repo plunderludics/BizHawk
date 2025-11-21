@@ -1,115 +1,96 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 
 using NLua.Extensions;
+using NLua.Native;
 
 namespace NLua
 {
-	public class LuaTable : LuaBase
+	public class LuaTable : LuaBase, IReadOnlyDictionary<object, object>
 	{
+		public int Count
+			=> Wrapped?.Count ?? default;
+
+		public IEnumerable<object>/*?*/ Keys
+			=> Wrapped?.Keys;
+
+		public IEnumerable<object/*?*/> Values
+			=> Wrapped?.Values as IReadOnlyCollection<object/*?*/> ?? Array.Empty<object/*?*/>();
+
+		private Dictionary<object, object/*?*/>/*?*/ Wrapped
+			=> TryGet(out var lua) ? lua.GetTableDict(this) : null;
+
 		public LuaTable(int reference, Lua interpreter): base(reference, interpreter)
 		{
 		}
 
+#if false
 		/// <summary>
 		/// Indexer for string fields of the table
 		/// </summary>
-		public object this[string field] {
-			get
-			{
-				Lua lua;
-				if (!TryGet(out lua))
-					return null;
-				return lua.GetObject(_Reference, field);
-			}
+		public object this[string field]
+		{
+			get => !TryGet(out var lua) ? null : lua.GetObject(_Reference, field);
 			set
 			{
-				Lua lua;
-				if (!TryGet(out lua))
+				if (!TryGet(out var lua))
+				{
 					return;
+				}
+
 				lua.SetObject(_Reference, field, value);
 			}
 		}
+#endif
 
-		/// <summary>
-		/// Indexer for numeric fields of the table
-		/// </summary>
-		public object this[object field] {
-			get
-			{
-				Lua lua;
-				if (!TryGet(out lua))
-					return null;
-
-				return lua.GetObject(_Reference, field);
-			}
+		public object this[object field]
+		{
+			get => !TryGet(out var lua) ? null : lua.GetObject(_Reference, field);
 			set
 			{
-				Lua lua;
-				if (!TryGet(out lua))
+				if (!TryGet(out var lua))
+				{
 					return;
+				}
 
 				lua.SetObject(_Reference, field, value);
 			}
 		}
 
-		public IDictionaryEnumerator GetEnumerator()
-		{
-			Lua lua;
-			if (!TryGet(out lua))
-				return null;
+		public bool ContainsKey(object key)
+			=> Wrapped?.ContainsKey(key) ?? false;
 
-			return lua.GetTableDict(this).GetEnumerator();
-		}
+		public Dictionary<object, object/*?*/>.Enumerator GetEnumerator()
+			=> Wrapped?.GetEnumerator() ?? default;
 
-		public ICollection Keys
-		{
-			get
-			{
-				Lua lua;
-				if (!TryGet(out lua))
-					return null;
+		IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator()
+			=> GetEnumerator();
 
-				return lua.GetTableDict(this).Keys;
-			}
-		}
-
-		public ICollection Values
-		{
-			get
-			{
-				Lua lua;
-				if (!TryGet(out lua))
-					return Array.Empty<object>();
-
-				return lua.GetTableDict(this).Values;
-			}
-		}
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
 
 		/// <summary>
 		/// Gets an string fields of a table ignoring its metatable,
 		/// if it exists
 		/// </summary>
 		internal object RawGet(string field)
-		{
-			Lua lua;
-			if (!TryGet(out lua))
-				return null;
-
-			return lua.RawGetObject(_Reference, field);
-		}
+			=> !TryGet(out var lua) ? null : lua.RawGetObject(_Reference, field);
 
 		/// <summary>
 		/// Pushes this table into the Lua stack
 		/// </summary>
 		internal void Push(LuaState luaState)
-		{
-			luaState.GetRef(_Reference);
-		}
+			=> luaState.GetRef(_Reference);
 
 		public override string ToString()
+			=> "table";
+
+		public bool TryGetValue(object key, out object/*?*/ value)
 		{
-			return "table";
+			if (Wrapped is Dictionary<object, object/*?*/> dict) return dict.TryGetValue(key, out value);
+			value = default;
+			return default;
 		}
 	}
 }

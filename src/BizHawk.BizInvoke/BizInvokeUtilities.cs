@@ -1,7 +1,7 @@
-﻿using System;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace BizHawk.BizInvoke
@@ -34,7 +34,10 @@ namespace BizHawk.BizInvoke
 				CallingConventions.Standard,
 				new[] { typeof(object), typeof(IntPtr) });
 
-			delegateCtor.SetImplementationFlags(MethodImplAttributes.Runtime | MethodImplAttributes.Managed);
+#pragma warning disable RCS1130 // `MethodImplAttributes` isn't `[Flags]`, but this is its intended use
+			const MethodImplAttributes IMPL_FLAGS_MANAGED = MethodImplAttributes.Runtime | MethodImplAttributes.Managed;
+#pragma warning restore RCS1130
+			delegateCtor.SetImplementationFlags(IMPL_FLAGS_MANAGED);
 
 			var delegateInvoke = delegateType.DefineMethod(
 				"Invoke",
@@ -44,7 +47,7 @@ namespace BizHawk.BizInvoke
 
 			// we have to project all of the attributes from the baseMethod to the delegateInvoke
 			// so for something like [Out], the interop engine will see it and use it
-			for (int i = 0; i < paramInfos.Length; i++)
+			for (var i = 0; i < paramInfos.Length; i++)
 			{
 				var p = delegateInvoke.DefineParameter(i + 1, ParameterAttributes.None, paramInfos[i].Name);
 				foreach (var a in paramInfos[i].GetCustomAttributes(false))
@@ -61,7 +64,8 @@ namespace BizHawk.BizInvoke
 				}
 			}
 
-			delegateInvoke.SetImplementationFlags(MethodImplAttributes.Runtime | MethodImplAttributes.Managed);
+			// ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+			delegateInvoke.SetImplementationFlags(IMPL_FLAGS_MANAGED);
 
 			// add the [UnmanagedFunctionPointer] to the delegate so interop will know how to call it
 			var attr = new CustomAttributeBuilder(
@@ -79,17 +83,23 @@ namespace BizHawk.BizInvoke
 		private static CustomAttributeBuilder GetAttributeBuilder(object o)
 		{
 			// anything more clever we can do here?
-			var t = o.GetType();
-			if (t == typeof(OutAttribute) || t == typeof(InAttribute))
+#if NETSTANDARD2_1_OR_GREATER || NET471_OR_GREATER || NETCOREAPP2_0_OR_GREATER
+			if (o is OutAttribute or InAttribute or IsReadOnlyAttribute)
+#else
+			if (o is OutAttribute or InAttribute
+				|| o.GetType().FullName == "System.Runtime.CompilerServices.IsReadOnlyAttribute") // I think without this, you'd still only hit the below runtime assertion when this project targets e.g. netstandard2.0 but a core targets e.g. net8.0, so unlikely --yoshi
+#endif
 			{
-				return new CustomAttributeBuilder(t.GetConstructor(Type.EmptyTypes)!, Array.Empty<object>());
+				return new(o.GetType().GetConstructor(Type.EmptyTypes)!, Array.Empty<object>());
 			}
-			else if (t == typeof(MarshalAsAttribute))
+			if (o is MarshalAsAttribute marshalAsAttr)
 			{
-				return new CustomAttributeBuilder(t.GetConstructor(new[] { typeof(UnmanagedType) })!, new object[] { ((MarshalAsAttribute)o).Value });
+				return new(
+					typeof(MarshalAsAttribute).GetConstructor(new[] { typeof(UnmanagedType) })!,
+					new object[] { marshalAsAttr.Value }
+				);
 			}
-
-			throw new InvalidOperationException($"Unknown parameter attribute {t.Name}");
+			throw new InvalidOperationException($"parameter of a BizInvoke method had unknown attribute {o.GetType().FullName}");
 		}
 	}
 }

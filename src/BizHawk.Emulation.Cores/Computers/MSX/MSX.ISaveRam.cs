@@ -1,12 +1,10 @@
-﻿using System;
-
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.MSX
 {
 	public partial class MSX : ISaveRam
 	{
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			return (byte[]) SaveRAM?.Clone();
 		}

@@ -13,8 +13,10 @@
 		<NoWarn>$(NoWarn);RS2008</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" />
+		<EditorConfigFiles Include="$(MSBuildProjectDirectory)/../Analyzers.editorconfig" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
 		<Compile Include="$(MSBuildProjectDirectory)/../AnalyzersCommon/**/*.cs" />
+		<Using Include="Microsoft.CodeAnalysis;Microsoft.CodeAnalysis.CSharp;Microsoft.CodeAnalysis.CSharp.Syntax;Microsoft.CodeAnalysis.Diagnostics;Microsoft.CodeAnalysis.Operations;Microsoft.CodeAnalysis.Text" />
+		<Using Include="System" />
 	</ItemGroup>
 </Project>

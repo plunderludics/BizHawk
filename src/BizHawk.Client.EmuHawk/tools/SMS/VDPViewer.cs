@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Drawing.Imaging;
@@ -181,17 +180,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (ModifierKeys.HasFlag(Keys.Control) && e.KeyCode == Keys.C)
 			{
-				// find the control under the mouse
-				Point m = Cursor.Position;
-				Control top = this;
-				Control found;
-				do
-				{
-					found = top.GetChildAtPoint(top.PointToClient(m));
-					top = found;
-				} while (found != null && found.HasChildren);
-
-				if (found is BmpView bv)
+				if (this.InnermostControlAt(Cursor.Position) is BmpView bv)
 				{
 					Clipboard.SetImage(bv.Bmp);
 				}

@@ -1,10 +1,7 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-
-using BizHawk.Client.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -80,7 +77,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				_panelSize = Size;
 			}
-			
+
 			_realConfigObject = config;
 			_realConfigButtons = buttons;
 			SetButtonList();
@@ -131,7 +128,7 @@ namespace BizHawk.Client.EmuHawk
 					Location = new Point(x, y),
 					Size = new Size(_inputSize, UIHelper.ScaleY(23)),
 					TabIndex = i,
-					AutoTab = _autoTab
+					AutoTab = _autoTab,
 				};
 
 				iw.SetupTooltip(Tooltip, null);
@@ -143,7 +140,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					Location = new Point(x + _inputSize + _labelPadding, y + UIHelper.ScaleY(3)),
 					Size = new Size(labelWidth, UIHelper.ScaleY(15)),
-					Text = _buttons[i].Replace('_', ' ').Trim()
+					Text = _buttons[i].Replace('_', ' ').Trim(),
 				};
 
 				Tooltip.SetToolTip(label, label.Text);

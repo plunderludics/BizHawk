@@ -1,9 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
 using BizHawk.Common;
+using BizHawk.Common.NumberExtensions;
+using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 using NymaTypes;
 
@@ -11,7 +12,7 @@ using static BizHawk.Emulation.Cores.Waterbox.LibNymaCore;
 
 namespace BizHawk.Emulation.Cores.Waterbox
 {
-	public partial class NymaCore
+	public abstract partial class NymaCore
 	{
 		private const int MAX_INPUT_DATA = 256;
 
@@ -34,6 +35,9 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			int thunkWriteOffset)
 				=> ret.AddAxis(name, 0.RangeTo(0xFFFF), 0x8000, isReversed);
 
+		private string GetInputDeviceOverride(int port)
+			=> Mershul.PtrToStringUtf8(_nyma.GetInputDeviceOverride(port));
+
 		private void InitControls(List<NPortInfoT> allPorts, int numCds, ref SystemInfo si)
 		{
 			_controllerAdapter = new ControllerAdapter(
@@ -42,6 +46,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				OverrideButtonName,
 				numCds,
 				ref si,
+				GetInputDeviceOverride,
 				ComputeHiddenPorts(),
 				AddAxis,
 				_controllerDeckName);
@@ -65,6 +70,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				Func<string, string> overrideName,
 				int numCds,
 				ref SystemInfo systemInfo,
+				Func<int, string> getInputDeviceOverride,
 				HashSet<string> hiddenPorts,
 				AddAxisHook addAxisHook,
 				string controllerDeckName)
@@ -75,6 +81,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 					{
 						{ "Power", "System" },
 						{ "Reset", "System" },
+						{ "Insert Coin", "System" },
 						{ "Open Tray", "System" },
 						{ "Close Tray", "System" },
 						{ "Disk Index", "System" },
@@ -87,14 +94,22 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				for (int port = 0, devByteStart = 0; port < allPorts.Count; port++)
 				{
 					var portInfo = allPorts[port];
-					if (!config.TryGetValue(port, out var deviceName)) deviceName = portInfo.DefaultDeviceShortName;
+					var deviceName = getInputDeviceOverride(port);
+					if (deviceName == null)
+					{
+						if (!config.TryGetValue(port, out deviceName))
+						{
+							deviceName = portInfo.DefaultDeviceShortName;
+						}
+					}
+
 					finalDevices.Add(deviceName);
 
 					if (hiddenPorts.Contains(portInfo.ShortName))
 						continue;
 
 					var devices = portInfo.Devices;
-					
+
 					var device = devices.Find(a => a.ShortName == deviceName);
 					if (device == null)
 					{
@@ -117,7 +132,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 
 					foreach (var input in inputs)
 					{
-						if (input.Type == InputType.Padding)
+						if (input.Type == InputType.Padding0)
 							continue;
 
 						var bitSize = (int)input.BitSize;
@@ -131,6 +146,27 @@ namespace BizHawk.Emulation.Cores.Waterbox
 
 						switch (input.Type)
 						{
+							case InputType.Padding1:
+							{
+								// padding with set bits
+								_thunks.Add((_, b) =>
+								{
+									var val = (byte)(1 << bitOffset);
+									var byteOffset = byteStart;
+									for (var i = 0; i < bitSize; i++)
+									{
+										b[byteOffset] |= val;
+										val <<= 1;
+										if (val == 0)
+										{
+											val = 1;
+											byteOffset++;
+										}
+									}
+								});
+
+								break;
+							}
 							case InputType.ResetButton:
 							case InputType.Button:
 							case InputType.ButtonCanRapid:
@@ -165,7 +201,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 								switchPreviousFrame.Add(0);
 
 								var names = data.Positions.Select(p => $"{name}: Set {p.Name}").ToArray();
-								if (!input.Name.StartsWith("AF ") && !input.Name.EndsWith(" AF") && !input.Name.StartsWith("Autofire ")) // hack: don't support some devices
+								if (!input.Name.StartsWithOrdinal("AF ") && !input.Name.EndsWithOrdinal(" AF") && !input.Name.StartsWithOrdinal("Autofire ")) // hack: don't support some devices
 								{
 									foreach (var n in names)
 									{
@@ -274,14 +310,21 @@ namespace BizHawk.Emulation.Cores.Waterbox
 								// TODO: wire up statuses to something (not controller, of course)
 								break;
 							case InputType.Rumble:
-								ret.HapticsChannels.Add(name);
+								//TODO Does this apply to all Mednafen's systems? (This is for PSX.) Might need to pass more metadata through to here
+								var nameLeft = $"{name} Left (strong)";
+								var nameRight = $"{name} Right (weak)";
+								ret.HapticsChannels.Add(nameLeft);
+								ret.HapticsChannels.Add(nameRight);
 								// this is a special case, we treat b here as output rather than input
 								// so these thunks are called after the frame has advanced
 								_rumblers.Add((c, b) =>
 								{
-									// TODO: not entirely sure this is correct...
-									var val = b[byteStart] | (b[byteStart + 1] << 8);
-									c.SetHapticChannelStrength(name, val << 7);
+									const double SCALE_FACTOR = (double)int.MaxValue / byte.MaxValue;
+									static int Scale(byte b)
+										=> (b * SCALE_FACTOR).RoundToInt();
+									//TODO double-check order
+									c.SetHapticChannelStrength(nameRight, Scale(b[byteStart]));
+									c.SetHapticChannelStrength(nameLeft, Scale(b[byteStart + 1]));
 								});
 								break;
 							default:
@@ -296,6 +339,10 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				}
 				ret.BoolButtons.Add("Power");
 				ret.BoolButtons.Add("Reset");
+				if (systemInfo.GameType == GameMediumTypes.GMT_ARCADE)
+				{
+					ret.BoolButtons.Add("Insert Coin");
+				}
 				if (numCds > 0)
 				{
 					ret.BoolButtons.Add("Open Tray");
@@ -327,6 +374,8 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			}
 
 			private const ulong MAGIC = 9569546739673486731;
+
+			public bool AvoidRewind => false;
 
 			public void SaveStateBinary(BinaryWriter writer)
 			{

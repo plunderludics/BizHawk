@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Atari.Jaguar
@@ -10,7 +8,7 @@ namespace BizHawk.Emulation.Cores.Atari.Jaguar
 
 		public new bool SaveRamModified => _saveRamSize > 0 && _core.SaveRamIsDirty();
 
-		public new byte[] CloneSaveRam()
+		public new byte[] CloneSaveRam(bool clearDirty)
 		{
 			if (_saveRamSize == 0)
 			{
@@ -18,7 +16,7 @@ namespace BizHawk.Emulation.Cores.Atari.Jaguar
 			}
 
 			byte[] ret = new byte[_saveRamSize];
-			_core.GetSaveRam(ret);
+			_core.GetSaveRam(ret, clearDirty);
 			return ret;
 		}
 

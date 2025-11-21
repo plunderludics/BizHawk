@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
 using BizHawk.Common.NumberExtensions;
@@ -15,12 +13,12 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 		private BlipBuffer _blip_L = new BlipBuffer(15000);
 		private BlipBuffer _blip_R = new BlipBuffer(15000);
 
-		public static bool[] DUTY_CYCLES = { false, false, false, false, false, false, false, true,
+		public static readonly bool[] DUTY_CYCLES = { false, false, false, false, false, false, false, true,
 													 true, false, false, false, false, false, false, true,
 													 true, false, false, false, false, true, true, true,
 													 false, true, true, true, true, true, true, false };
 
-		public static int[] DIVISOR = { 8, 16, 32, 48, 64, 80, 96, 112 };
+		public static readonly int[] DIVISOR = { 8, 16, 32, 48, 64, 80, 96, 112 };
 
 		public const int NR10 = 0;
 		public const int NR11 = 1;
@@ -44,7 +42,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 		public const int NR51 = 19;
 		public const int NR52 = 20;
 
-		public static int[] unused_bits = { 0x80, 0x3F, 0x00, 0xFF, 0xBF,
+		public static readonly int[] unused_bits = { 0x80, 0x3F, 0x00, 0xFF, 0xBF,
 															0x3F, 0x00, 0xFF, 0xBF,
 													  0x7F, 0xFF, 0x9F, 0xFF, 0xBF,
 															0xFF, 0x00, 0x00, 0xBF,
@@ -171,7 +169,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 						else { ret = 0xFF; }
 					}
 					else { ret = Wave_RAM[addr & 0x0F]; }
-					
+
 					break;
 			}
 
@@ -270,7 +268,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 							if (SQ1_shift > 0)
 							{
 								int shadow_frq = SQ1_frq_shadow;
-								shadow_frq = shadow_frq >> SQ1_shift;
+								shadow_frq >>= SQ1_shift;
 								if (SQ1_negate) { shadow_frq = -shadow_frq; }
 								shadow_frq += SQ1_frq_shadow;
 
@@ -290,7 +288,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 						calculate_bias_gain_1();
 						SQ1_len_en = (value & 0x40) > 0;
 						break;
-					case 0xFF16:                                        // NR21 (sound length / wave pattern duty %)		
+					case 0xFF16:                                        // NR21 (sound length / wave pattern duty %)
 						Audio_Regs[NR21] = value;
 						SQ2_duty = (byte)((value & 0xC0) >> 6);
 						SQ2_length = (ushort)(64 - (value & 0x3F));
@@ -304,9 +302,9 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 						// several glitchy effects happen when writing to NRx2 during audio playing
 						if (((Audio_Regs[NR22] & 7) == 0) && !SQ2_vol_done) { SQ2_vol_state++; }
 						else if ((Audio_Regs[NR22] & 8) == 0) { SQ2_vol_state += 2; }
-							
+
 						if (((Audio_Regs[NR22] ^ value) & 8) > 0) { SQ2_vol_state = (byte)(0x10 - SQ2_vol_state); }
-							
+
 						SQ2_vol_state &= 0xF;
 						if ((value & 0xF8) == 0) { SQ2_enable = false; }
 						Audio_Regs[NR22] = value;
@@ -381,7 +379,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 
 						if ((sequencer_len & 1) == 0)
 						{
-							
+
 							if (!WAVE_len_en && ((value & 0x40) > 0) && (WAVE_len_cntr > 0))
 							{
 								WAVE_len_cntr--;
@@ -511,7 +509,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 
 						calculate_bias_gain_a();
 						break;
-					case 0xFF26:                                        // NR52 (ctrl)						
+					case 0xFF26:                                        // NR52 (ctrl)
 						// NOTE: Make sure to do the power off first since it will call the write_reg function again
 						if ((value & 0x80) == 0) { power_off(); }
 						AUD_CTRL_power = (value & 0x80) > 0;
@@ -559,7 +557,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 							SQ1_len_cntr = SQ1_length;
 						}
 						break;
-					case 0xFF16:                                        // NR21 (sound length / wave pattern duty %)		
+					case 0xFF16:                                        // NR21 (sound length / wave pattern duty %)
 						if (!Core.is_GBC)
 						{
 							SQ2_length = (ushort)(64 - (value & 0x3F));
@@ -727,7 +725,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 
 					if (NOISE_wdth_md)
 					{
-						NOISE_LFSR = NOISE_LFSR & 0x7FBF;
+						NOISE_LFSR &= 0x7FBF;
 						NOISE_LFSR |= (bit_lfsr << 6);
 					}
 
@@ -741,7 +739,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 			// so if it's constantly written to, these values won't update
 
 			if (Core.DIV_falling_edge && AUD_CTRL_power)
-			{				
+			{
 				sequencer_vol++; sequencer_vol &= 0x7;
 				sequencer_len++; sequencer_len &= 0x7;
 				sequencer_swp++; sequencer_swp &= 0x7;
@@ -782,7 +780,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 						if ((SQ1_swp_prd > 0))
 						{
 							int shadow_frq = SQ1_frq_shadow;
-							shadow_frq = shadow_frq >> SQ1_shift;
+							shadow_frq >>= SQ1_shift;
 							if (SQ1_negate) { shadow_frq = -shadow_frq; }
 							shadow_frq += SQ1_frq_shadow;
 
@@ -809,7 +807,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 
 									// after writing, we repeat the process and do another overflow check
 									shadow_frq = SQ1_frq_shadow;
-									shadow_frq = shadow_frq >> SQ1_shift;
+									shadow_frq >>= SQ1_shift;
 									if (SQ1_negate) { shadow_frq = -shadow_frq; }
 									shadow_frq += SQ1_frq_shadow;
 
@@ -899,14 +897,14 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 			if (sequencer_reset_cd > 0)
 			{
 				sequencer_reset_cd--;
-							
+
 				if (sequencer_reset_cd == 0)
 				{
 					// seems to be off by one issues here, hard to tell since the write takes place in the cpu loop
-					// but the effect takes place in the sound loop 
+					// but the effect takes place in the sound loop
 					if (Core.double_speed)
 					{
-						
+
 						sequencer_len = (Core.timer.divider_reg - 1).Bit(13) ? 0 : 1;
 						sequencer_vol = (Core.timer.divider_reg - 1).Bit(13) ? 0 : 1;
 						sequencer_swp = (Core.timer.divider_reg - 1).Bit(13) ? 0 : 1;
@@ -916,7 +914,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 						sequencer_len = (Core.timer.divider_reg + 1).Bit(12) ? 0 : 1;
 						sequencer_vol = (Core.timer.divider_reg + 1).Bit(12) ? 0 : 1;
 						sequencer_swp = (Core.timer.divider_reg + 1).Bit(12) ? 0 : 1;
-					}				
+					}
 				}
 			}
 
@@ -976,7 +974,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 
 			// on GBC, lengths are also reset
 			if (Core.is_GBC)
-			{ 
+			{
 				SQ1_length = SQ2_length = WAVE_length = NOISE_length = 0;
 				SQ1_len_cntr = SQ2_len_cntr = WAVE_len_cntr = NOISE_len_cntr = 0;
 			}
@@ -994,7 +992,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 				Wave_RAM = new byte[] { 0x84, 0x40, 0x43, 0xAA, 0x2D, 0x78, 0x92, 0x3C,
 									0x60, 0x59, 0x59, 0xB0, 0x34, 0xB8, 0x2E, 0xDA };
 			}
-			
+
 			Audio_Regs = new byte[21];
 
 			for (int i = 0; i < 0x16; i++)
@@ -1081,7 +1079,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 		{
 			ser.Sync(nameof(Audio_Regs), ref Audio_Regs, false);
 			ser.Sync(nameof(Wave_RAM), ref Wave_RAM, false);
-	
+
 			ser.Sync(nameof(SQ1_vol_done), ref SQ1_vol_done);
 			ser.Sync(nameof(SQ1_calc_done), ref SQ1_calc_done);
 			ser.Sync(nameof(SQ1_swp_enable), ref SQ1_swp_enable);
@@ -1232,11 +1230,6 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 			_blip_L.Clear();
 			_blip_R.Clear();
 			master_audio_clock = 0;
-		}
-
-		private void GetSamples(short[] samples)
-		{
-
 		}
 
 		public void DisposeSound()

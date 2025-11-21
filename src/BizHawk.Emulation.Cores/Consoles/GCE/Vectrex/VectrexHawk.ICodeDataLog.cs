@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 
 using BizHawk.Emulation.Common;
@@ -29,7 +28,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 		{
 			None,
 			RAM,
-			ROM,			
+			ROM,
 		}
 
 		[Flags]

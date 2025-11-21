@@ -1,4 +1,3 @@
-﻿using System;
 using NLua;
 
 using BizHawk.Emulation.Common;
@@ -31,7 +30,10 @@ namespace BizHawk.Client.Common
 
 		private readonly LuaFunction _function;
 
-		public NamedLuaFunction(LuaFunction function, string theEvent, Action<string> logCallback, LuaFile luaFile, Func<LuaThread> createThreadCallback, string name = null)
+		public Action/*?*/ OnRemove { get; set; } = null;
+
+		public NamedLuaFunction(LuaFunction function, string theEvent, Action<string> logCallback, LuaFile luaFile,
+			Func<LuaThread> createThreadCallback, ILuaLibraries luaLibraries, string name = null)
 		{
 			_function = function;
 			Name = name ?? "Anonymous";
@@ -59,15 +61,38 @@ namespace BizHawk.Client.Common
 			{
 				try
 				{
-					_function.Call(args);
+					return _function.Call(args);
 				}
 				catch (Exception ex)
 				{
 					logCallback($"error running function attached by the event {Event}\nError message: {ex.Message}");
 				}
+				return null;
 			};
-			InputCallback = () => Callback(Array.Empty<object>());
-			MemCallback = (addr, val, flags) => Callback(new object[] { addr, val, flags });
+			InputCallback = () =>
+			{
+				luaLibraries.IsInInputOrMemoryCallback = true;
+				try
+				{
+					Callback(Array.Empty<object>());
+				}
+				finally
+				{
+					luaLibraries.IsInInputOrMemoryCallback = false;
+				}
+			};
+			MemCallback = (addr, val, flags) =>
+			{
+				luaLibraries.IsInInputOrMemoryCallback = true;
+				try
+				{
+					return Callback([ addr, val, flags ]) is [ long n ] ? unchecked((uint) n) : null;
+				}
+				finally
+				{
+					luaLibraries.IsInInputOrMemoryCallback = false;
+				}
+			};
 		}
 
 		public void DetachFromScript()
@@ -83,6 +108,9 @@ namespace BizHawk.Client.Common
 
 		public Guid Guid { get; }
 
+		public string GuidStr
+			=> Guid.ToString("D");
+
 		public string Name { get; }
 
 		public LuaFile LuaFile { get; private set; }
@@ -91,7 +119,7 @@ namespace BizHawk.Client.Common
 
 		public string Event { get; }
 
-		private Action<object[]> Callback { get; }
+		private Func<object[], object[]> Callback { get; }
 
 		public Action InputCallback { get; }
 

@@ -1,11 +1,10 @@
-﻿using System;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 {
 	public partial class GBHawk : ISaveRam
 	{
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			return (byte[])cart_RAM?.Clone();
 		}

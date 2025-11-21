@@ -1,9 +1,6 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-
-using BizHawk.Common;
 
 namespace BizHawk.Emulation.Common
 {
@@ -138,7 +135,7 @@ namespace BizHawk.Emulation.Common
 		{
 			SaveInternal(s, true);
 		}
-		
+
 		private Dictionary<string, long> SaveInternal(Stream s, bool forReal)
 		{
 			var ret = new Dictionary<string, long>();

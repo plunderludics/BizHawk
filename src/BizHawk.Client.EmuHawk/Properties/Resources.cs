@@ -1,5 +1,5 @@
-using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace BizHawk.Client.EmuHawk.Properties
@@ -16,6 +16,7 @@ namespace BizHawk.Client.EmuHawk.Properties
 		private static Bitmap ReadEmbeddedIconAsBitmap(string filename) => new Bitmap(EmuHawk.ReflectionCache.EmbeddedResourceStream($"images.{filename}.ico"));
 
 		internal static readonly Lazy<Bitmap> A78Joystick = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.A78Joystick"));
+		internal static readonly Lazy<Bitmap> AmigaKeyboard = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.AmigaKeyboard"));
 		internal static readonly Lazy<Bitmap> AppleIIKeyboard = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.AppleIIKeyboard"));
 		internal static readonly Lazy<Bitmap> ArcadeController = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.ArcadeController"));
 		internal static readonly Lazy<Bitmap> C64Joystick = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.C64Joystick"));
@@ -35,6 +36,7 @@ namespace BizHawk.Client.EmuHawk.Properties
 		internal static readonly Lazy<Bitmap> SaturnController = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.SaturnController"));
 		internal static readonly Lazy<Bitmap> SmsController = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.SMSController"));
 		internal static readonly Lazy<Bitmap> SnesController = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.SNES_Controller"));
+		internal static readonly Lazy<Bitmap> ThreeDOController = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.3DOController"));
 		internal static readonly Lazy<Bitmap> TI83Controller = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.TI83_Controller"));
 		internal static readonly Lazy<Bitmap> VBoyController = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.VBoyController"));
 		internal static readonly Lazy<Bitmap> WonderSwanColor = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("ControllerImages.WonderSwanColor"));
@@ -43,9 +45,11 @@ namespace BizHawk.Client.EmuHawk.Properties
 		internal static readonly Bitmap Add = ReadEmbeddedBitmap("add");
 		internal static readonly Bitmap AddEdit = ReadEmbeddedBitmap("AddEdit");
 		internal static readonly Bitmap AddWatch = ReadEmbeddedIconAsBitmap("addWatch");
+		internal static readonly Bitmap Amiga = ReadEmbeddedBitmap("amiga");
 		internal static readonly Bitmap ArrowBlackDown = ReadEmbeddedBitmap("arrow_black_down");
 		internal static readonly Lazy<Bitmap> AtariController = new Lazy<Bitmap>(() => ReadEmbeddedBitmap("atari_controller"));
 		internal static readonly Bitmap Audio = ReadEmbeddedBitmap("AudioHS");
+		internal static readonly Bitmap AudioMuted = ReadEmbeddedBitmap("AudioMuted");
 		internal static readonly Bitmap AutoSearch = ReadEmbeddedBitmap("AutoSearch");
 		internal static readonly Bitmap Avi = ReadEmbeddedBitmap("AVI");
 		internal static readonly Bitmap Back = ReadEmbeddedBitmap("Back");
@@ -53,7 +57,7 @@ namespace BizHawk.Client.EmuHawk.Properties
 		internal static readonly Icon BasicBot = ReadEmbeddedIcon("basicbot");
 		internal static readonly Bitmap BasicBotBit = ReadEmbeddedBitmap("basicbotbit");
 		internal static readonly Bitmap Blank = ReadEmbeddedBitmap("Blank");
-		internal static readonly Cursor BlankCursor = new Cursor(EmuHawk.ReflectionCache.EmbeddedResourceStream("images.BlankCursor.cur"));
+		internal static readonly Lazy<Cursor> BlankCursor = new(() => new(EmuHawk.ReflectionCache.EmbeddedResourceStream("images.BlankCursor.cur")));
 		internal static readonly Bitmap BlueDown = ReadEmbeddedBitmap("BlueDown");
 		internal static readonly Bitmap BlueUp = ReadEmbeddedBitmap("BlueUp");
 		internal static readonly Bitmap Both = ReadEmbeddedBitmap("Both");
@@ -86,6 +90,12 @@ namespace BizHawk.Client.EmuHawk.Properties
 		internal static readonly Bitmap Erase = ReadEmbeddedBitmap("Erase");
 		internal static readonly Bitmap ESE = ReadEmbeddedBitmap("ESE");
 		internal static readonly Bitmap ExclamationRed = ReadEmbeddedBitmap("ExclamationRed");
+		internal static readonly Bitmap FFaccept = ReadEmbeddedBitmap("Farm-Fresh_accept");
+		internal static readonly Bitmap FFcancel = ReadEmbeddedBitmap("Farm-Fresh_cancel");
+		internal static readonly Bitmap FFdelete = ReadEmbeddedBitmap("Farm-Fresh_delete");
+		internal static readonly Bitmap FFexclamation = ReadEmbeddedBitmap("Farm-Fresh_exclamation");
+		internal static readonly Bitmap FFhelp = ReadEmbeddedBitmap("Farm-Fresh_help");
+		internal static readonly Bitmap FFstar = ReadEmbeddedBitmap("Farm-Fresh_star");
 		internal static readonly Bitmap FastForward = ReadEmbeddedBitmap("FastForward");
 		internal static readonly Bitmap Find = ReadEmbeddedBitmap("FindHS");
 		internal static readonly Bitmap Forward = ReadEmbeddedBitmap("Forward");
@@ -157,6 +167,7 @@ namespace BizHawk.Client.EmuHawk.Properties
 		internal static readonly Bitmap Refresh = ReadEmbeddedBitmap("Refresh");
 		internal static readonly Bitmap Restart = ReadEmbeddedBitmap("restart");
 		internal static readonly Bitmap RetroQuestion = ReadEmbeddedBitmap("RetroQuestion");
+		internal static readonly Bitmap RewindRecord = ReadEmbeddedBitmap("RewindRecord");
 		internal static readonly Bitmap Save = ReadEmbeddedBitmap("Save");
 		internal static readonly Bitmap SaveAs = ReadEmbeddedBitmap("SaveAs");
 		internal static readonly Bitmap SaveConfig = ReadEmbeddedBitmap("SaveConfig");
@@ -211,5 +222,8 @@ namespace BizHawk.Client.EmuHawk.Properties
 		internal static readonly Bitmap YellowLeft = ReadEmbeddedBitmap("YellowLeft");
 		internal static readonly Bitmap YellowRight = ReadEmbeddedBitmap("YellowRight");
 		internal static readonly Bitmap YellowUp = ReadEmbeddedBitmap("YellowUp");
+
+		internal static Stream GetNotHawkCallSFX()
+			=> EmuHawk.ReflectionCache.EmbeddedResourceStream("Resources.nothawk.wav");
 	}
 }

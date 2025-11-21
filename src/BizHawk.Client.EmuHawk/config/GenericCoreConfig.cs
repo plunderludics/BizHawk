@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
@@ -80,7 +79,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				MAME mame => DoMAMEDialog(owner, settable, mame.CurrentDriverSettings, isMovieActive: isMovieActive),
 				NymaCore core => DoNymaDialogFor(owner, settable, title, core.SettingsInfo, isMovieActive: isMovieActive),
-				_ => DoDialogFor(owner, settable, title, isMovieActive: isMovieActive)
+				_ => DoDialogFor(owner, settable, title, isMovieActive: isMovieActive),
 			};
 		}
 

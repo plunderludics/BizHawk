@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Common.NumberExtensions;
 
 namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
@@ -242,7 +241,6 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 				default:
 					ret = 0xFF;
 					break;
-
 			}
 			return ret;
 		}
@@ -278,17 +276,17 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 					{
 						input_register |= 0xF;
 					}
-					
+
 					// check for interrupts
 					// if an interrupt is triggered, it is delayed by 4 cycles
-					if (((contr_prev & 8) > 0) && ((input_register & 8) == 0) ||
-						((contr_prev & 4) > 0) && ((input_register & 4) == 0) ||
-						((contr_prev & 2) > 0) && ((input_register & 2) == 0) ||
-						((contr_prev & 1) > 0) && ((input_register & 1) == 0))
+					if (((contr_prev & 0b1000) is not 0 && (input_register & 0b1000) is 0)
+						|| ((contr_prev & 0b100) is not 0 && (input_register & 0b100) is 0)
+						|| ((contr_prev & 0b10) is not 0 && (input_register & 0b10) is 0)
+						|| ((contr_prev & 0b1) is not 0 && (input_register & 0b1) is 0))
 					{
 						controller_delay_cd = 4; delays_to_process = true;
 					}
-					
+
 					break;
 
 				// Serial data port
@@ -416,7 +414,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 					{
 						GB_bios_register = value;
 						if (!GBC_compat) { ppu.pal_change_blocked = true; RAM_Bank = 1; RAM_Bank_ret = 0; }
-					}			
+					}
 					break;
 
 				// PPU Regs for GBC
@@ -438,7 +436,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 
 						// send IR signal out
 						if ((IR_reg & 0x1) == 0x1) { IR_signal = (byte)(0 | IR_mask); } else { IR_signal = 2; }
-						
+
 						// receive own signal if IR on and receive on
 						if ((IR_reg & 0xC1) == 0xC1) { IR_self = (byte)(0 | IR_mask); } else { IR_self = 2; }
 

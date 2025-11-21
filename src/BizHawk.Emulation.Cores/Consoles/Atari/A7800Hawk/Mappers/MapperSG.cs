@@ -1,6 +1,5 @@
 ﻿using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
-using System;
 
 namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 {
@@ -122,14 +121,14 @@ namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 				// could be either RAM mirror or ROM
 				if (addr >= 0x3000 && Core._hsbios != null)
 				{
-
+					// no-op (hsbios)
 				}
 				else if (Core.is_pokey_450 && (addr >= 0x450) && (addr < 0x480))
 				{
 					if (addr < 0x460)
 					{
 						Core.pokey.WriteReg(addr & 0xF, value);
-					}					
+					}
 				}
 				else
 				{
@@ -153,7 +152,7 @@ namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 					{
 						RAM[addr - 0x6000] = value;
 					}
-					else if (Core.cart_RAM==16) 
+					else if (Core.cart_RAM==16)
 					{
 						RAM[addr - 0x4000] = value;
 					}

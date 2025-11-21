@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -57,7 +56,7 @@ namespace BizHawk.Client.EmuHawk
 
 			var main = new MovieZone(Emulator, Tools, MovieSession, 0, CurrentMovie.InputLogLength)
 			{
-				Name = "Entire Movie"
+				Name = "Entire Movie",
 			};
 
 			_zones.Add(main);
@@ -92,12 +91,12 @@ namespace BizHawk.Client.EmuHawk
 			_zones.Clear();
 			ZonesList.Items.Clear();
 
-			MacroInputTool_Load(null, null);
+			MacroInputTool_Load(null, EventArgs.Empty);
 		}
 
 		public override bool AskSaveChanges()
 		{
-			if (_unsavedZones.Count == 0 || IsDisposed)
+			if (_unsavedZones.Count == 0)
 			{
 				return true;
 			}
@@ -131,7 +130,7 @@ namespace BizHawk.Client.EmuHawk
 
 			var newZone = new MovieZone(Emulator, Tools, MovieSession, (int) StartNum.Value, (int) (EndNum.Value - StartNum.Value + 1))
 			{
-				Name = $"Zone {_zones.Count}"
+				Name = $"Zone {_zones.Count}",
 			};
 			_zones.Add(newZone);
 			ZonesList.Items.Add($"{newZone.Name} - length: {newZone.Length}");
@@ -209,7 +208,7 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			if (!(CurrentMovie is ITasMovie))
+			if (CurrentMovie is not ITasMovie)
 			{
 				SelectedZone.Start = Emulator.Frame;
 			}
@@ -238,7 +237,7 @@ namespace BizHawk.Client.EmuHawk
 				ZonesList.Items.Add($"{loadZone.Name} - length: {loadZone.Length}");
 
 				// Options only for TasMovie
-				if (!(CurrentMovie is ITasMovie))
+				if (CurrentMovie is not ITasMovie)
 				{
 					loadZone.Replace = false;
 					loadZone.Overlay = false;

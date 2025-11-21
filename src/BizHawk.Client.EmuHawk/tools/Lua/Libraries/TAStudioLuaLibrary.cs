@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
@@ -26,7 +25,7 @@ namespace BizHawk.Client.EmuHawk
 
 		public override string Name => "tastudio";
 
-		private TAStudio Tastudio => Tools.Get<TAStudio>() as TAStudio;
+		private TAStudio Tastudio => Tools.TAStudio;
 
 		private struct PendingChanges
 		{
@@ -44,13 +43,13 @@ namespace BizHawk.Client.EmuHawk
 			InputChange,
 			InsertFrames,
 			DeleteFrames,
-			ClearFrames
+			ClearFrames,
 		}
 
 		private enum InputChangeTypes
 		{
 			Bool,
-			Axis
+			Axis,
 		}
 
 		public class TastudioBranchInfo
@@ -139,30 +138,35 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (Engaged())
 			{
-				_luaLibsImpl.IsUpdateSupressed = true;
+				if (_luaLibsImpl.IsInInputOrMemoryCallback)
+				{
+					throw new InvalidOperationException("tastudio.setplayback() is not allowed during input/memory callbacks");
+				}
+
 
 				int f;
 				if (frame is long frameNumber)
 				{
 					f = (int)frameNumber;
 				}
+				else if (frame is double frameNumber2)
+				{
+					f = (int)frameNumber2;
+				}
 				else
 				{
-					f = Tastudio.CurrentTasMovie.Markers.FindIndex((string)frame);
-					if (f == -1)
-					{
-						return;
-					}
+					int markerIndex = Tastudio.CurrentTasMovie.Markers.FindIndex((string)frame);
+					if (markerIndex == -1) return;
 
-					f = Tastudio.CurrentTasMovie.Markers[f].Frame;
+					f = Tastudio.CurrentTasMovie.Markers[markerIndex].Frame;
 				}
 
-				if (0.RangeToExclusive(Tastudio.CurrentTasMovie.InputLogLength).Contains(f))
+				if (f >= 0)
 				{
-					Tastudio.GoToFrame(f, true);
+					_luaLibsImpl.IsUpdateSupressed = true;
+					Tastudio.GoToFrame(f);
+					_luaLibsImpl.IsUpdateSupressed = false;
 				}
-
-				_luaLibsImpl.IsUpdateSupressed = false;
 			}
 		}
 
@@ -257,7 +261,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					Type = LuaChangeTypes.InsertFrames,
 					Frame = frame,
-					Number = number
+					Number = number,
 				});
 			}
 		}
@@ -272,7 +276,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					Type = LuaChangeTypes.DeleteFrames,
 					Frame = frame,
-					Number = number
+					Number = number,
 				});
 			}
 		}
@@ -287,7 +291,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					Type = LuaChangeTypes.ClearFrames,
 					Frame = frame,
-					Number = number
+					Number = number,
 				});
 			}
 		}
@@ -296,12 +300,24 @@ namespace BizHawk.Client.EmuHawk
 		[LuaMethod("applyinputchanges", "")]
 		public void ApplyInputChanges()
 		{
+			if (_changeList.Count == 0)
+			{
+				return;
+			}
+
 			if (Engaged())
 			{
+				if (_luaLibsImpl.IsInInputOrMemoryCallback)
+				{
+					throw new InvalidOperationException("tastudio.applyinputchanges() is not allowed during input/memory callbacks");
+				}
+
 				_luaLibsImpl.IsUpdateSupressed = true;
 
-				if (_changeList.Count > 0)
+				Tastudio.StopRecordingOnNextEdit = false;
+				Tastudio.CurrentTasMovie.SingleInvalidation(() =>
 				{
+					Tastudio.CurrentTasMovie.ChangeLog.BeginNewBatch("tastudio.applyinputchanges");
 					int size = _changeList.Count;
 
 					for (int i = 0; i < size; i++)
@@ -320,21 +336,29 @@ namespace BizHawk.Client.EmuHawk
 								}
 								break;
 							case LuaChangeTypes.InsertFrames:
-								Tastudio.InsertNumFrames(_changeList[i].Frame, _changeList[i].Number);
+								Tastudio.CurrentTasMovie.InsertEmptyFrame(_changeList[i].Frame, _changeList[i].Number);
 								break;
 							case LuaChangeTypes.DeleteFrames:
-								Tastudio.DeleteFrames(_changeList[i].Frame, _changeList[i].Number);
+								int endExclusive = _changeList[i].Frame + _changeList[i].Number;
+								endExclusive = Math.Min(Tastudio.CurrentTasMovie.InputLogLength, endExclusive);
+								if (_changeList[i].Frame < endExclusive)
+								{
+									Tastudio.CurrentTasMovie.RemoveFrames(_changeList[i].Frame, endExclusive);
+								}
 								break;
 							case LuaChangeTypes.ClearFrames:
-								Tastudio.ClearFrames(_changeList[i].Frame, _changeList[i].Number);
+								endExclusive = _changeList[i].Frame + _changeList[i].Number;
+								endExclusive = Math.Min(Tastudio.CurrentTasMovie.InputLogLength, endExclusive);
+								for (int j = _changeList[i].Frame; j < endExclusive; j++)
+								{
+									Tastudio.CurrentTasMovie.ClearFrame(j);
+								}
 								break;
 						}
 					}
 					_changeList.Clear();
-					Tastudio.Refresh();
-					Tastudio.JumpToGreenzone();
-					Tastudio.DoAutoRestore();
-				}
+					Tastudio.CurrentTasMovie.ChangeLog.EndBatch();
+				});
 
 				_luaLibsImpl.IsUpdateSupressed = false;
 			}
@@ -353,10 +377,7 @@ namespace BizHawk.Client.EmuHawk
 		[LuaMethod("addcolumn", "")]
 		public void AddColumn(string name, string text, int width)
 		{
-			if (Engaged())
-			{
-				Tastudio.AddColumn(name, text, width, ColumnType.Text);
-			}
+			if (Engaged()) Tastudio.AddColumn(name: name, widthUnscaled: width, text: text);
 		}
 
 		[LuaMethodExample("tastudio.setbranchtext( \"Some text\", 1 );")]
@@ -387,12 +408,29 @@ namespace BizHawk.Client.EmuHawk
 				Tastudio.CurrentTasMovie.Branches.Select(b =>
 				{
 					var table = _th.CreateTable();
-					table["Id"] = b.Uuid.ToString();
+					table["Id"] = b.Uuid.ToString("D");
 					table["Frame"] = b.Frame;
 					table["Text"] = b.UserText;
 					return table;
 				}),
 				indexFrom: 0);
+		}
+
+		[LuaMethodExample("""
+			tastudio.setbranchtext("New label", tastudio.get_branch_index_by_id(branch_id));
+		""")]
+		[LuaMethod(
+			name: "get_branch_index_by_id",
+			description: "Finds the branch with the given UUID (0-indexed). Returns nil if not found.")]
+		public int? GetBranchIndexByID(string id)
+		{
+			if (!Guid.TryParseExact(id, format: "D", out var parsed))
+			{
+				Log($"not a valid UUID: {id}");
+				return null;
+			}
+			return Tastudio.CurrentTasMovie.Branches.Index()
+				.FirstOrNull(tuple => tuple.Item.Uuid == parsed)?.Index;
 		}
 
 		[LuaMethodExample("local nltasget = tastudio.getbranchinput( \"97021544-2454-4483-824f-47f75e7fcb6a\", 500 );")]
@@ -424,6 +462,11 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (Engaged())
 			{
+				if (_luaLibsImpl.IsInInputOrMemoryCallback)
+				{
+					throw new InvalidOperationException("tastudio.loadbranch() is not allowed during input/memory callbacks");
+				}
+
 				_luaLibsImpl.IsUpdateSupressed = true;
 
 				Tastudio.LoadBranchByIndex(index);
@@ -433,20 +476,55 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[LuaMethodExample("local sttasget = tastudio.getmarker( 500 );")]
-		[LuaMethod("getmarker", "returns the marker text at the given frame, or an empty string if there is no marker for the given frame")]
-		public string GetMarker(int frame)
+		[LuaMethod(
+			name: "getmarker",
+			description: "Returns the label of the marker on the given frame. This may be an empty string."
+				+ " If that frame doesn't have a marker (or TAStudio isn't running), returns nil."
+				+ " If branchID is specified, searches the markers in that branch instead.")]
+		public string/*?*/ GetMarker(int frame, string/*?*/ branchID = null)
 		{
 			if (Engaged())
 			{
-				var marker = Tastudio.CurrentTasMovie.Markers.Get(frame);
+				var marker = MarkerListForBranch(branchID)?.Get(frame);
 				if (marker != null)
 				{
 					return marker.Message;
 				}
 			}
 
-			return "";
+			return null;
 		}
+
+		/// <remarks>assumes a TAStudio project is loaded</remarks>
+		private TasMovieMarkerList/*?*/ MarkerListForBranch(string/*?*/ branchID)
+			=> Guid.TryParseExact(branchID, format: "D", out var parsed)
+				? Tastudio.CurrentTasMovie.Branches.FirstOrDefault(branch => branch.Uuid == parsed)?.Markers
+				: branchID is null ? Tastudio.CurrentTasMovie.Markers : null; // not a typo; null `branchID` indicates main log
+
+		[LuaMethodExample("""
+			local marker_label = tastudio.getmarker(tastudio.find_marker_on_or_before(100));
+		""")]
+		[LuaMethod(
+			name: "find_marker_on_or_before",
+			description: "Returns the frame number of the marker closest to the given frame (including that frame, but not after it)."
+				+ " This may be the power-on marker at 0. Returns nil if the arguments are invalid or TAStudio isn't active."
+				+ " If branchID is specified, searches the markers in that branch instead.")]
+		public int? FindMarkerOnOrBefore(int frame, string/*?*/ branchID = null)
+			=> Engaged() && MarkerListForBranch(branchID) is TasMovieMarkerList markers
+				? markers.PreviousOrCurrent(frame)?.Frame
+				: null;
+
+		[LuaMethodExample("""
+			local marker_label = tastudio.getmarker(tastudio.get_frames_with_markers()[2]);
+		""")]
+		[LuaMethod(
+			name: "get_frames_with_markers",
+			description: "Returns a list of all the frames which have markers on them."
+				+ " If branchID is specified, instead returns the frames which have markers in that branch.")]
+		public LuaTable GetFramesWithMarkers(string/*?*/ branchID = null)
+			=> Engaged() && MarkerListForBranch(branchID) is TasMovieMarkerList markers
+				? _th.EnumerateToLuaTable(markers.Select(static m => m.Frame))
+				: _th.CreateTable();
 
 		[LuaMethodExample("tastudio.removemarker( 500 );")]
 		[LuaMethod("removemarker", "if there is a marker for the given frame, it will be removed")]
@@ -458,7 +536,6 @@ namespace BizHawk.Client.EmuHawk
 				if (marker != null)
 				{
 					Tastudio.CurrentTasMovie.Markers.Remove(marker);
-					Tastudio.RefreshDialog();
 				}
 			}
 		}
@@ -478,7 +555,6 @@ namespace BizHawk.Client.EmuHawk
 				else
 				{
 					Tastudio.CurrentTasMovie.Markers.Add(frame, message1);
-					Tastudio.RefreshDialog();
 				}
 			}
 		}
@@ -489,7 +565,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (Engaged())
 			{
-				Tastudio.QueryItemBgColorCallback = (index, name) => _th.SafeParseColor(luaf.Call(index, name)?[0]);
+				Tastudio.QueryItemBgColorCallback = (index, name) => _th.SafeParseColor(luaf.Call(index, name)?.FirstOrDefault());
 			}
 		}
 
@@ -499,11 +575,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (Engaged())
 			{
-				Tastudio.QueryItemTextCallback = (index, name) =>
-				{
-					var result = luaf.Call(index, name);
-					return result?[0]?.ToString();
-				};
+				Tastudio.QueryItemTextCallback = (index, name) => luaf.Call(index, name)?.FirstOrDefault()?.ToString();
 			}
 		}
 
@@ -516,7 +588,7 @@ namespace BizHawk.Client.EmuHawk
 				Tastudio.QueryItemIconCallback = (index, name) =>
 				{
 					var result = luaf.Call(index, name);
-					if (result?[0] != null)
+					if (result?.FirstOrDefault() is not null)
 					{
 						return _iconCache.GetValueOrPutNew1(result[0].ToString()).ToBitmap();
 					}
@@ -535,7 +607,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[LuaMethodExample("tastudio.ongreenzoneinvalidated( function( currentindex )\r\n\tconsole.log( \"Called whenever the greenzone is invalidated.\" );\r\nend );")]
-		[LuaMethod("ongreenzoneinvalidated", "Called whenever the greenzone is invalidated. Your callback can have 1 parameter, which will be the index of the first row that was invalidated.")]
+		[LuaMethod("ongreenzoneinvalidated", "Called whenever the movie is modified in a way that could invalidate savestates in the movie's state history. Called regardless of whether any states were actually invalidated. Your callback can have 1 parameter, which will be the last frame before the invalidated ones. That is, the first of the modified frames.")]
 		public void OnGreenzoneInvalidated(LuaFunction luaf)
 		{
 			if (Engaged())

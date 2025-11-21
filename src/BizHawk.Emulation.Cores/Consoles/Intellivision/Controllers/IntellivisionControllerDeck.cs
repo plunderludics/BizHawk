@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -75,5 +74,4 @@ namespace BizHawk.Emulation.Cores.Intellivision
 
 		public static string DefaultControllerName => typeof(FakeAnalogController).DisplayName();
 	}
-
 }

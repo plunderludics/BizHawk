@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.User
@@ -31,7 +30,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.User
 			return true;
 		}
 
-		public virtual bool ReadPa2()	
+		public virtual bool ReadPa2()
 		{
 			return true;
 		}

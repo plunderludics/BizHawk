@@ -1,5 +1,4 @@
 ﻿using BizHawk.Common;
-using System;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
 {
@@ -49,7 +48,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 
 		public override void WritePrg(int addr, byte value)
 		{
-			
+
 			switch (addr & 0x6001)
 			{
 				case 0x0000: //$8000

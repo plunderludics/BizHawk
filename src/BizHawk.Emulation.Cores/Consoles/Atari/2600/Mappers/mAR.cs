@@ -1,16 +1,15 @@
-﻿using System;
 using System.Linq;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Atari.Atari2600
 {
 	/*
-	This is the cartridge class for Arcadia (aka StarPath) Supercharger 
-	games.  Christopher Salomon provided most of the technical details 
+	This is the cartridge class for Arcadia (aka StarPath) Supercharger
+	games.  Christopher Salomon provided most of the technical details
 	used in creating this class.  A good description of the Supercharger
 	is provided in the Cuttle Cart's manual.
 
-	The Supercharger has four 2K banks.  There are three banks of RAM 
+	The Supercharger has four 2K banks.  There are three banks of RAM
 	and one bank of ROM.  All 6K of the RAM can be read and written.
 
 	D7-D5 of this byte: Write Pulse Delay (n/a for emulator)
@@ -142,12 +141,12 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			_dataHoldRegister = 0;
 			_numberOfLoadImages = 0;
 			_loadedImages = null;
-			
+
 			_header = new byte[256];
 			_powerIndicator = false;
 			_powerRomCycle = 0;
 			_size = 0;
-			
+
 			_elapsedCycles = 0;
 
 			InitializeSettings();
@@ -259,8 +258,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 				_writePending = false;
 				BankConfiguration(_dataHoldRegister);
 			}
-			else if (_writeEnabled && _writePending &&
-					Core.DistinctAccessCount == _distinctAccesses + 5)
+			else if (_writeEnabled && _writePending && Core.DistinctAccessCount == _distinctAccesses + 5)
 			{
 				if ((addr & 0x800) == 0)
 				{
@@ -309,8 +307,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			}
 
 			// Handle poke if writing enabled
-			else if (_writeEnabled && _writePending &&
-				(Core.DistinctAccessCount == (_distinctAccesses + 5)))
+			else if (_writeEnabled && _writePending && Core.DistinctAccessCount == _distinctAccesses + 5)
 			{
 				if ((addr & 0x0800) == 0)
 				{
@@ -375,7 +372,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			//  101wp     1            ROM
 			//  110wp     2            1      as used in Killer Satellites
 			//  111wp     1            2      as we use for 2k/4k ROM cloning
-			// 
+			//
 			//  w = Write Enable (1 = enabled; accesses to $F000-$F0FF cause writes
 			//    to happen.  0 = disabled, and the cart acts like ROM.)
 			//  p = ROM Power (0 = enabled, 1 = off.)  Only power the ROM if you're

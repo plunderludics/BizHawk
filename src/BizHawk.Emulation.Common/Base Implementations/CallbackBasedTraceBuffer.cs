@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 
 namespace BizHawk.Emulation.Common
@@ -43,7 +42,7 @@ namespace BizHawk.Emulation.Common
 
 		protected readonly List<TraceInfo> Buffer = new List<TraceInfo>();
 
-		protected abstract void TraceFromCallback(uint addr, uint value, uint flags);
+		protected abstract uint? TraceFromCallback(uint addr, uint value, uint flags);
 
 		private ITraceSink? _sink;
 

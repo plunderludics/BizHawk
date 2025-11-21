@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -34,6 +33,7 @@ namespace BizHawk.Client.EmuHawk
 		public ToolBox()
 		{
 			InitializeComponent();
+			ToolBoxStrip.ImageScalingSize = UIHelper.Scale(ToolBoxStrip.ImageScalingSize);
 			Icon = ToolIcon;
 		}
 

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -17,14 +16,16 @@ namespace BizHawk.Client.EmuHawk
 
 		private readonly IMovie _selectedMovie;
 		private readonly bool _readOnly;
+		private readonly bool _dispose;
 
 		public IDialogController DialogController { get; }
 
-		public EditSubtitlesForm(IDialogController dialogController, IMovie movie, PathEntryCollection pathEntries, bool readOnly)
+		public EditSubtitlesForm(IDialogController dialogController, IMovie movie, PathEntryCollection pathEntries, bool readOnly, bool disposeOnClose = false)
 		{
 			_pathEntries = pathEntries;
 			_selectedMovie = movie;
 			_readOnly = readOnly;
+			_dispose = disposeOnClose;
 			DialogController = dialogController;
 			InitializeComponent();
 			Icon = Properties.Resources.TAStudioIcon;
@@ -93,7 +94,7 @@ namespace BizHawk.Client.EmuHawk
 				for (int i = 0; i < SubGrid.Rows.Count - 1; i++)
 				{
 					var sub = new Subtitle();
-					
+
 					var c = SubGrid.Rows[i].Cells[0];
 					try { sub.Frame = int.Parse(c.Value.ToString()); }
 					catch { ShowError(i, 0); return; }
@@ -148,7 +149,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return new Subtitle();
 			}
-			
+
 			var sub = new Subtitle();
 
 			if (int.TryParse(SubGrid.Rows[index].Cells[0].Value.ToString(), out int frame))
@@ -170,12 +171,12 @@ namespace BizHawk.Client.EmuHawk
 			{
 				sub.Duration = duration;
 			}
-			
+
 			if (uint.TryParse(SubGrid.Rows[index].Cells[4].Value.ToString(), out uint color))
 			{
 				sub.Color = color;
 			}
-			
+
 			sub.Message = SubGrid.Rows[index].Cells[5].Value?.ToString() ?? "";
 
 			_selectedMovie.Subtitles.Add(sub);
@@ -269,6 +270,14 @@ namespace BizHawk.Client.EmuHawk
 					SubGrid[e.ColumnIndex, e.RowIndex].Style.BackColor = picker.Color;
 					SubGrid.RefreshEdit();
 				}
+			}
+		}
+
+		private void OnClosed(object sender, FormClosedEventArgs e)
+		{
+			if (_dispose && _selectedMovie is ITasMovie tasMovie)
+			{
+				tasMovie.Dispose();
 			}
 		}
 	}

@@ -1,5 +1,5 @@
-﻿using System;
 using BizHawk.Emulation.Common;
+using BizHawk.Emulation.Cores.Nintendo.NES;
 
 namespace BizHawk.Emulation.Cores.Nintendo.SubNESHawk
 {
@@ -35,6 +35,45 @@ namespace BizHawk.Emulation.Cores.Nintendo.SubNESHawk
 			reset_cycle = controller.AxisValue("Reset Cycle");
 			reset_cycle_int = (int)Math.Floor(reset_cycle);
 
+			if (_nesCore.Board is FDS fds)
+			{
+				if (controller.IsPressed("FDS Eject"))
+				{
+					fds.Eject();
+				}
+
+				for (var i = 0; i < fds.NumSides; i++)
+				{
+					if (controller.IsPressed("FDS Insert " + i))
+					{
+						fds.InsertSide(i);
+					}
+				}
+			}
+
+			if (_nesCore.IsVS)
+			{
+				_nesCore.VS_service = (byte)(controller.IsPressed("Service Switch") ? 1 : 0);
+
+				if (controller.IsPressed("Insert Coin P1"))
+				{
+					_nesCore.VS_coin_inserted |= 1;
+				}
+				else
+				{
+					_nesCore.VS_coin_inserted &= 2;
+				}
+
+				if (controller.IsPressed("Insert Coin P2"))
+				{
+					_nesCore.VS_coin_inserted |= 2;
+				}
+				else
+				{
+					_nesCore.VS_coin_inserted &= 1;
+				}
+			}
+
 			_nesCore.lagged = true;
 
 			DoFrame(controller);
@@ -47,7 +86,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.SubNESHawk
 				current_cycle = 0;
 				_nesCore.cpu.ext_ppu_cycle = current_cycle;
 			}
-			
+
 			_isLag = _nesCore.lagged;
 
 			if (_isLag)
@@ -72,6 +111,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.SubNESHawk
 
 		private void DoFrame(IController controller)
 		{
+			_nesCore.cpu.ext_ppu_cycle = 0; // Reset this value at the beginning of each frame
 			stop_cur_frame = false;
 			while (!stop_cur_frame)
 			{
@@ -82,7 +122,6 @@ namespace BizHawk.Emulation.Cores.Nintendo.SubNESHawk
 				}
 				_nesCore.do_single_step(controller, out pass_new_input, out pass_a_frame);
 				current_cycle++;
-				_nesCore.cpu.ext_ppu_cycle = current_cycle;
 				stop_cur_frame |= pass_a_frame;
 				stop_cur_frame |= pass_new_input;
 			}

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 
 using BizHawk.Common.BufferExtensions;
@@ -14,24 +14,25 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			{
 				return "AR";
 			}
-			
+
 			if (rom.Length < 2048) // Less than 2k, then no bank switching needed
 			{
 				return "2K";
 			}
-			
-			if (rom.Length == 2048 || // If 2k or the same 2k twice...Why would a rom be that way? Overdump?
-				(rom.Length == 4096 
-					&& rom.Take(2048).SequenceEqual(rom.Skip(2048).Take(2048))))
+
+			if (rom.Length is 2048
+				|| (rom.Length is 4096
+					&& rom.AsSpan(start: 0, length: 2048).SequenceEqual(rom.AsSpan(start: 2048, length: 2048))))
 			{
+				// If 2k or the same 2k twice...Why would a rom be that way? Overdump?
 				return IsProablyCV(rom) ? "CV" : "2K";
 			}
-			
+
 			if (rom.Length == 4096)
 			{
 				return IsProablyCV(rom) ? "CV" : "4K";
 			}
-			
+
 			if (rom.Length == 8192) // Several 8K Options
 			{
 				if (IsProbablySC(rom))
@@ -39,7 +40,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 					return "F8SC";
 				}
 
-				if (rom.Take(4096).SequenceEqual(rom.Skip(4096).Take(4096)))
+				if (rom.AsSpan(start: 0, length: 4096).SequenceEqual(rom.AsSpan(start: 4096, length: 4096)))
 				{
 					return "4K"; // Again if it is simply the same 4k twice. Got this scenario from Stella logic.  Will assume a good reason for it
 				}
@@ -231,12 +232,12 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			return "UNKNOWN";
 		}
 
-		private static bool IsProbablySC(IList<byte> rom)
+		private static bool IsProbablySC(ReadOnlySpan<byte> rom)
 		{
 			// We assume a Superchip cart contains the same bytes for its entire
 			// RAM area; obviously this test will fail if it doesn't
 			// The RAM area will be the first 256 bytes of each 4K bank
-			var numBanks = rom.Count / 4096;
+			var numBanks = rom.Length / 4096;
 			for (var i = 0; i < numBanks; i++)
 			{
 				var first = rom[i * 4096];
@@ -272,20 +273,17 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			});
 		}
 
-		private static bool IsProbably4A50(IList<byte> rom)
+		private static bool IsProbably4A50(ReadOnlySpan<byte> rom)
 		{
 			// 4A50 carts store address $4A50 at the NMI vector, which
 			// in this scheme is always in the last page of ROM at
 			// $1FFA - $1FFB (at least this is true in rev 1 of the format)
-			if (rom[rom.Count - 6] == 0x50 && rom[rom.Count - 5] == 0x4A)
-			{
-				return true;
-			}
+			if (rom is [ .., 0x50, 0x4A, _, _, _, _ ]) return true;
 
 			// Program starts at $1Fxx with NOP $6Exx or NOP $6Fxx?
-			if (((rom[0xFFFD] & 0x1F) == 0x1F) &&
-				(rom[rom[0xFFFD] * 256 + rom[0xFFFC]] == 0x0C) &&
-				((rom[rom[0xFFFD] * 256 + rom[0xFFFC] + 2] & 0xFE) == 0x6E))
+			if ((rom[0xFFFD] & 0x1F) is 0x1F
+				&& rom[rom[0xFFFD] * 256 + rom[0xFFFC]] is 0x0C
+				&& (rom[rom[0xFFFD] * 256 + rom[0xFFFC] + 2] & 0xFE) is 0x6E)
 			{
 				return true;
 			}
@@ -401,8 +399,9 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			// These signatures are attributed to the MESS project
 			return ContainsAny(rom, new List<byte[]>
 			{
-				new byte[] { 0x44, 0x50, 0x43, 0x2B },
-				new byte[] { 0x44, 0x50, 0x43, 0x2B },
+				// why is this checking the same value twice? ...
+				"DPC+"u8.ToArray(),
+				"DPC+"u8.ToArray(),
 			});
 		}
 

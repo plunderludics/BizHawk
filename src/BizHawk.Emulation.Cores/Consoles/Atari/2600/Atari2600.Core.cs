@@ -1,11 +1,9 @@
-﻿using System;
+using System.Runtime.CompilerServices;
 
 using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
-
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Components.M6502;
-using System.Runtime.CompilerServices;
 
 namespace BizHawk.Emulation.Cores.Atari.Atari2600
 {
@@ -335,7 +333,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 		internal byte ReadControls1(bool peek)
 		{
 			InputCallbacks.Call();
-			
+
 			byte value = _controllerDeck.ReadPort1(_controller);
 
 			if (!peek)

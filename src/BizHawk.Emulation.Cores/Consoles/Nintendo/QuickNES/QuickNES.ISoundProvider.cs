@@ -1,9 +1,8 @@
-﻿using System;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 {
-	public partial class QuickNES : ISoundProvider
+	public sealed partial class QuickNES : ISoundProvider
 	{
 		private readonly short[] _monoBuff = new short[1024];
 		private readonly short[] _stereoBuff = new short[2048];

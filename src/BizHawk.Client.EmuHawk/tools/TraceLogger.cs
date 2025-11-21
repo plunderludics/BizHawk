@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -94,20 +93,8 @@ namespace BizHawk.Client.EmuHawk
 			_splitFile = FileSizeCap != 0;
 
 			TraceView.AllColumns.Clear();
-			TraceView.AllColumns.Add(new RollColumn
-			{
-				Name = DisasmColumnName,
-				Text = DisasmColumnName,
-				UnscaledWidth = 239,
-				Type = ColumnType.Text
-			});
-			TraceView.AllColumns.Add(new RollColumn
-			{
-				Name = RegistersColumnName,
-				Text = RegistersColumnName,
-				UnscaledWidth = 357,
-				Type = ColumnType.Text
-			});
+			TraceView.AllColumns.Add(new(name: DisasmColumnName, widthUnscaled: 239, text: DisasmColumnName));
+			TraceView.AllColumns.Add(new(name: RegistersColumnName, widthUnscaled: 357, text: RegistersColumnName));
 		}
 
 		private void SaveConfigSettings()
@@ -124,7 +111,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					DisasmColumnName => _instructions[index].Disassembly.TrimEnd(),
 					RegistersColumnName => _instructions[index].RegisterInfo,
-					_ => text
+					_ => text,
 				};
 			}
 		}
@@ -178,7 +165,7 @@ namespace BizHawk.Client.EmuHawk
 									_instructions.RemoveRange(0, _instructions.Count - MaxLines);
 								}
 								_instructions.Add(info);
-							}
+							},
 						};
 						_instructions.Clear();
 					}
@@ -197,7 +184,7 @@ namespace BizHawk.Client.EmuHawk
 								_currentSize += (ulong)data.Length;
 								if (_splitFile)
 									CheckSplitFile();
-							}
+							},
 						};
 					}
 				}
@@ -254,7 +241,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					TracerBox.Text = "Trace log - logging to file...";
 				}
-				else if (_instructions.Any())
+				else if (_instructions.Count is not 0)
 				{
 					TracerBox.Text = $"Trace log - logging - {_instructions.Count} instructions";
 				}
@@ -265,7 +252,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 			else
 			{
-				if (_instructions.Any())
+				if (_instructions.Count is not 0)
 				{
 					TracerBox.Text = $"Trace log - {_instructions.Count} instructions";
 				}
@@ -351,7 +338,7 @@ namespace BizHawk.Client.EmuHawk
 				StartLocation = this.ChildPointToScreen(TraceView),
 				TextInputType = InputPrompt.InputType.Unsigned,
 				Message = "Max lines to display in the window",
-				InitialValue = MaxLines.ToString()
+				InitialValue = MaxLines.ToString(),
 			};
 			if (!this.ShowDialogWithTempMute(prompt).IsOk()) return;
 			var max = int.Parse(prompt.PromptText);
@@ -365,7 +352,7 @@ namespace BizHawk.Client.EmuHawk
 				StartLocation = this.ChildPointToScreen(TraceView),
 				TextInputType = InputPrompt.InputType.Unsigned,
 				Message = "Log file segment size in megabytes\nSetting 0 disables segmentation",
-				InitialValue = FileSizeCap.ToString()
+				InitialValue = FileSizeCap.ToString(),
 			};
 			if (!this.ShowDialogWithTempMute(prompt).IsOk()) return;
 			FileSizeCap = int.Parse(prompt.PromptText);
@@ -389,6 +376,7 @@ namespace BizHawk.Client.EmuHawk
 					CloseFile();
 				}
 			}
+			LoggingEnabled.Text = LoggingEnabled.Checked ? "Stop &logging" : "Start &logging";
 		}
 
 		private void StartLogFile(bool append = false)
@@ -438,10 +426,7 @@ namespace BizHawk.Client.EmuHawk
 				var name = Game.FilesystemSafeName();
 				var filename = Path.Combine(Config.PathEntries.LogAbsolutePath(), name) + _extension;
 				LogFile = new FileInfo(filename);
-				if (LogFile.Directory != null && !LogFile.Directory.Exists)
-				{
-					LogFile.Directory.Create();
-				}
+				LogFile.Directory?.Create();
 
 				// never delete, especially from ticking checkboxes
 				// append = false is enough, and even that only happens when actually enabling logging

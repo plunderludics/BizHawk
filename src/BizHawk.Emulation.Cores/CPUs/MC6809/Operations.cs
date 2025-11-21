@@ -258,14 +258,15 @@ namespace BizHawk.Emulation.Cores.Components.MC6809
 			FlagZ = Regs[src] == 0;
 			FlagH = false;
 			FlagN = (Regs[src] & 0xFF) > 127;
-
 		}
 
 		public void ASR_Func(ushort src)
 		{
 			FlagC = Regs[src].Bit(0);
 
+#pragma warning disable MA0084 // shadows `ushort this.temp`
 			ushort temp = (ushort)(Regs[src] & 0x80); // MSB doesn't change in this operation
+#pragma warning restore MA0084
 
 			Regs[src] = (ushort)((Regs[src] >> 1) | temp);
 
@@ -448,7 +449,7 @@ namespace BizHawk.Emulation.Cores.Components.MC6809
 			}
 			if (FlagC || (((a >> 4) & 0xF) > 9) || ((((a >> 4) & 0xF) > 8) && ((a & 0xF) > 9)))
 			{
-				CF |= (byte)(6 << 4);
+				CF |= 6 << 4;
 			}
 
 			a += CF;
@@ -542,7 +543,9 @@ namespace BizHawk.Emulation.Cores.Components.MC6809
 		{
 			ushort src = 0;
 			ushort dest = 0;
+#pragma warning disable MA0084 // shadows `ushort this.temp`
 			ushort temp = 0;
+#pragma warning restore MA0084
 			if ((Regs[sel] & 0x8) == 0)
 			{
 				switch (Regs[sel] & 0xF)

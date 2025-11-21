@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -167,8 +166,9 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBA
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
-		public void CallMemoryCallbacks(uint addr, uint value, uint flags, string scope)
+		public uint CallMemoryCallbacks(uint addr, uint value, uint flags, string scope)
 		{
+			throw new NotSupportedException("Memory callbacks not supported.");
 			// Not a thing in this implementation
 		}
 

@@ -1,9 +1,11 @@
-﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 
+using BizHawk.Bizware.Graphics;
 using BizHawk.Common;
 using BizHawk.Common.IOExtensions;
+using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -22,8 +24,7 @@ namespace BizHawk.Client.Common
 				return;
 			}
 
-			var backupName = Filename;
-			backupName = backupName.Insert(Filename.LastIndexOf("."), $".{DateTime.Now:yyyy-MM-dd HH.mm.ss}");
+			var backupName = Filename.InsertBeforeLast('.', insert: $".{DateTime.Now:yyyy-MM-dd HH.mm.ss}", out _);
 			backupName = Path.Combine(Session.BackupDirectory, Path.GetFileName(backupName));
 
 			Write(backupName, isBackup: true);
@@ -38,7 +39,7 @@ namespace BizHawk.Client.Common
 				Header[HeaderKeys.OriginalEmulatorVersion] = Header[HeaderKeys.EmulatorVersion];
 			}
 			Header[HeaderKeys.EmulatorVersion] = VersionInfo.GetEmuVersion();
-			CreateDirectoryIfNotExists(fn);
+			Directory.CreateDirectory(Path.GetDirectoryName(fn)!);
 
 			using var bs = new ZipStateSaver(fn, Session.Settings.MovieCompressionLevel);
 			AddLumps(bs, isBackup);
@@ -49,30 +50,18 @@ namespace BizHawk.Client.Common
 			}
 		}
 
-		private void SetCycleValues()
+		public void SetCycleValues() //TODO IEmulator should not be an instance prop of movies, it should be passed in to every call (i.e. from MovieService) --yoshi
 		{
 			// The saved cycle value will only be valid if the end of the movie has been emulated.
-			if (this.IsAtEnd())
+			if (this.IsAtEnd() && Emulator.AsCycleTiming() is { } cycleCore)
 			{
-				if (Emulator is ICycleTiming cycleCore)
-				{
-					Header[HeaderKeys.CycleCount] = cycleCore.CycleCount.ToString();
-					Header[HeaderKeys.ClockRate] = cycleCore.ClockRate.ToString(CultureInfo.InvariantCulture);
-				}
+				// legacy movies may incorrectly have no ClockRate header value set
+				Header[HeaderKeys.ClockRate] = cycleCore.ClockRate.ToString(NumberFormatInfo.InvariantInfo);
+				Header[HeaderKeys.CycleCount] = cycleCore.CycleCount.ToString();
 			}
 			else
 			{
-				Header.Remove(HeaderKeys.CycleCount);
-				Header.Remove(HeaderKeys.ClockRate);
-			}
-		}
-
-		private static void CreateDirectoryIfNotExists(string fn)
-		{
-			var file = new FileInfo(fn);
-			if (file.Directory != null && !file.Directory.Exists)
-			{
-				Directory.CreateDirectory(file.Directory.ToString());
+				Header.Remove(HeaderKeys.CycleCount); // don't allow invalid cycle count fields to stay set
 			}
 		}
 
@@ -102,7 +91,10 @@ namespace BizHawk.Client.Common
 
 				if (SavestateFramebuffer != null)
 				{
-					bs.PutLump(BinaryStateLump.Framebuffer, (BinaryWriter bw) => bw.Write(SavestateFramebuffer));
+					bs.PutLump(
+						BinaryStateLump.Framebuffer,
+						s => QuickBmpFile.Save(new BitmapBufferVideoProvider(SavestateFramebuffer), s, SavestateFramebuffer.Width, SavestateFramebuffer.Height),
+						zstdCompress: false);
 				}
 			}
 			else if (StartsFromSaveRam)
@@ -148,6 +140,7 @@ namespace BizHawk.Client.Common
 					if (!string.IsNullOrWhiteSpace(line))
 					{
 						_syncSettingsJson = line;
+						break;
 					}
 				}
 			});
@@ -160,9 +153,17 @@ namespace BizHawk.Client.Common
 				bl.GetLump(BinaryStateLump.Framebuffer, false,
 					br =>
 					{
-						var fb = br.ReadAllBytes();
-						SavestateFramebuffer = new int[fb.Length / sizeof(int)];
-						Buffer.BlockCopy(fb, 0, SavestateFramebuffer, 0, fb.Length);
+						if (bl.Version < 3)
+						{
+							var fb = MemoryMarshal.Cast<byte, int>(br.ReadAllBytes());
+							// width and height are unknown, so just use dummy values
+							SavestateFramebuffer = new BitmapBuffer(fb.Length / 4, 1, fb.ToArray());
+						}
+						else
+						{
+							QuickBmpFile.LoadAuto(br.BaseStream, out var bmp);
+							SavestateFramebuffer = new BitmapBuffer(bmp.BufferWidth, bmp.BufferHeight, bmp.GetVideoBuffer());
+						}
 					});
 			}
 			else if (StartsFromSaveRam)

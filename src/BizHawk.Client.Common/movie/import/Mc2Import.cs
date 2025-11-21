@@ -1,4 +1,5 @@
-﻿using BizHawk.Emulation.Common;
+using BizHawk.Common.StringExtensions;
+using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.PCEngine;
 
 namespace BizHawk.Client.Common.movie.import
@@ -18,7 +19,7 @@ namespace BizHawk.Client.Common.movie.import
 				Port2 = PceControllerType.Unplugged,
 				Port3 = PceControllerType.Unplugged,
 				Port4 = PceControllerType.Unplugged,
-				Port5 = PceControllerType.Unplugged
+				Port5 = PceControllerType.Unplugged,
 			};
 
 			_deck = new PceControllerDeck(
@@ -43,8 +44,7 @@ namespace BizHawk.Client.Common.movie.import
 				{
 					ImportTextFrame(line);
 				}
-				else if (line.ToLower()
-					.StartsWith("ports"))
+				else if (line.StartsWithIgnoreCase("ports"))
 				{
 					var portNumStr = ParseHeader(line, "ports");
 					if (int.TryParse(portNumStr, out int ports))
@@ -83,32 +83,32 @@ namespace BizHawk.Client.Common.movie.import
 							ss.Port5);
 					}
 				}
-				else if (line.ToLower().StartsWith("pcecd"))
+				else if (line.StartsWithIgnoreCase("pcecd"))
 				{
 					Result.Movie.HeaderEntries[HeaderKeys.Platform] = VSystemID.Raw.PCECD;
 				}
-				else if (line.ToLower().StartsWith("emuversion"))
+				else if (line.StartsWithIgnoreCase("emuversion"))
 				{
 					Result.Movie.Comments.Add($"{EmulationOrigin} Mednafen/PCEjin version {ParseHeader(line, "emuVersion")}");
 				}
-				else if (line.ToLower().StartsWith("version"))
+				else if (line.StartsWithIgnoreCase("version"))
 				{
 					string version = ParseHeader(line, "version");
 					Result.Movie.Comments.Add($"{MovieOrigin} .mc2 version {version}");
 				}
-				else if (line.ToLower().StartsWith("romfilename"))
+				else if (line.StartsWithIgnoreCase("romfilename"))
 				{
 					Result.Movie.HeaderEntries[HeaderKeys.GameName] = ParseHeader(line, "romFilename");
 				}
-				else if (line.ToLower().StartsWith("cdgamename"))
+				else if (line.StartsWithIgnoreCase("cdgamename"))
 				{
 					Result.Movie.HeaderEntries[HeaderKeys.GameName] = ParseHeader(line, "cdGameName");
 				}
-				else if (line.ToLower().StartsWith("comment author"))
+				else if (line.StartsWithIgnoreCase("comment author"))
 				{
 					Result.Movie.HeaderEntries[HeaderKeys.Author] = ParseHeader(line, "comment author");
 				}
-				else if (line.ToLower().StartsWith("rerecordcount"))
+				else if (line.StartsWithIgnoreCase("rerecordcount"))
 				{
 					int rerecordCount;
 
@@ -124,7 +124,7 @@ namespace BizHawk.Client.Common.movie.import
 
 					Result.Movie.Rerecords = (ulong)rerecordCount;
 				}
-				else if (line.ToLower().StartsWith("startsfromsavestate"))
+				else if (line.StartsWithIgnoreCase("startsfromsavestate"))
 				{
 					// If this movie starts from a savestate, we can't support it.
 					if (ParseHeader(line, "StartsFromSavestate") == "1")
@@ -147,6 +147,7 @@ namespace BizHawk.Client.Common.movie.import
 		{
 			var buttons = new[] { "Up", "Down", "Left", "Right", "B1", "B2", "Run", "Select" };
 
+			_deck.Definition.BuildMnemonicsCache(Result.Movie.SystemID);
 			SimpleController controllers = new(_deck.Definition);
 
 			// Split up the sections of the frame.

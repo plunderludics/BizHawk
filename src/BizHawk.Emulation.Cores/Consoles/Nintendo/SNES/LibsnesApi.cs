@@ -1,4 +1,3 @@
-﻿using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -30,7 +29,9 @@ namespace BizHawk.Emulation.Cores.Nintendo.SNES
 		{
 			if (sizeof(CommStruct) != 368)
 			{
+#pragma warning disable CA1065 // yes, really throw
 				throw new InvalidOperationException("sizeof(comm)");
+#pragma warning restore CA1065
 			}
 		}
 
@@ -364,10 +365,10 @@ namespace BizHawk.Emulation.Cores.Nintendo.SNES
 			private string _getAscii(sbyte* ptr)
 			{
 				int len = 0;
-				sbyte* junko = (sbyte*)ptr;
+				sbyte* junko = ptr;
 				while (junko[len] != 0) len++;
 
-				return new string((sbyte*)str, 0, len, System.Text.Encoding.ASCII);
+				return new string(str, 0, len, System.Text.Encoding.ASCII);
 			}
 		}
 
@@ -427,6 +428,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.SNES
 			}
 			_readonlyFiles.Clear();
 		}
+
+		public bool AvoidRewind => false;
 
 		public void SaveStateBinary(BinaryWriter writer)
 		{

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -6,6 +5,7 @@ using System.Windows.Forms;
 
 using BizHawk.Emulation.Common;
 using BizHawk.Client.Common;
+using BizHawk.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -77,7 +77,7 @@ namespace BizHawk.Client.EmuHawk
 			SetStyle(ControlStyles.UserPaint, true);
 			SetStyle(ControlStyles.DoubleBuffer, true);
 			InitializeComponent();
-			Dock = DockStyle.Top | DockStyle.Left;
+			Dock = DockStyle.Left;
 			_schema = schema;
 			_inputManager = inputManager;
 			_setLastFocusedNUD = setLastFocusedNUD;
@@ -94,7 +94,7 @@ namespace BizHawk.Client.EmuHawk
 					Name = button.Name,
 					Text = icon != null ? null : button.DisplayName,
 					Location = UIHelper.Scale(button.Location),
-					Image = icon
+					Image = icon,
 				};
 				if (icon != null && UIHelper.AutoScaleFactorX > 1F && UIHelper.AutoScaleFactorY > 1F)
 				{
@@ -120,7 +120,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					ButtonSchema button => GenVirtualPadButton(_inputManager, button),
 					SingleAxisSchema singleAxis => new VirtualPadAnalogButton(
-						_inputManager.StickyXorAdapter,
+						_inputManager.StickyHoldController,
 						singleAxis.Name,
 						singleAxis.DisplayName,
 						singleAxis.MinValue,
@@ -129,10 +129,10 @@ namespace BizHawk.Client.EmuHawk
 					)
 					{
 						Location = UIHelper.Scale(singleAxis.Location),
-						Size = UIHelper.Scale(singleAxis.TargetSize)
+						Size = UIHelper.Scale(singleAxis.TargetSize),
 					},
 					AnalogSchema analog => new VirtualPadAnalogStick(
-						_inputManager,
+						_inputManager.StickyHoldController,
 						_setLastFocusedNUD,
 						analog.Name,
 						analog.SecondaryName,
@@ -141,10 +141,10 @@ namespace BizHawk.Client.EmuHawk
 					)
 					{
 						Location = UIHelper.Scale(analog.Location),
-						Size = UIHelper.Scale(new Size(180 + 79, 200 + 9))
+						Size = UIHelper.Scale(new Size(180 + 79, 200 + 9)),
 					},
 					TargetedPairSchema targetedPair => new VirtualPadTargetScreen(
-						_inputManager.StickyXorAdapter,
+						_inputManager.StickyHoldController,
 						_setLastFocusedNUD,
 						targetedPair.Name,
 						targetedPair.SecondaryName,
@@ -163,10 +163,21 @@ namespace BizHawk.Client.EmuHawk
 					)
 					{
 						Location = UIHelper.Scale(discManager.Location),
-						Size = UIHelper.Scale(discManager.TargetSize)
+						Size = UIHelper.Scale(discManager.TargetSize),
 					},
-					_ => throw new InvalidOperationException()
+					_ => throw new InvalidOperationException(),
 				});
+			}
+			if (OSTailoredCode.IsUnixHost)
+			{
+				PadBox.PerformLayout();
+				foreach (var c in PadBox.Controls().Where(static c => c is CheckBox { Image: null }))
+				{
+					var size = c.Size;
+					size.Width -= UIHelper.ScaleX(8);
+					c.AutoSize = false;
+					c.Size = size;
+				}
 			}
 		}
 

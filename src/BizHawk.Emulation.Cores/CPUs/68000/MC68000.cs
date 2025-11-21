@@ -1,4 +1,3 @@
-﻿using System;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Globalization;
@@ -36,7 +35,7 @@ namespace BizHawk.Emulation.Cores.Components.M68000
 			set
 			{
 				if (value == s) return;
-				if (value == true) // entering supervisor mode
+				if (value) // entering supervisor mode
 				{
 					Console.WriteLine("&^&^&^&^& ENTER SUPERVISOR MODE");
 					usp = A[7].s32;
@@ -142,7 +141,7 @@ namespace BizHawk.Emulation.Cores.Components.M68000
 				{
 					// TODO: Entering interrupt is not free. how many cycles does it take?
 					//Log.Error("CPU","****** ENTER INTERRUPT {0} *******", Interrupt);
-					short sr = (short)SR;                  // capture current SR.
+					short sr = SR;                  // capture current SR.
 					S = true;                               // switch to supervisor mode, if not already in it.
 					A[7].s32 -= 4;                          // Push PC on stack
 					WriteLong(A[7].s32, PC);
@@ -222,7 +221,7 @@ namespace BizHawk.Emulation.Cores.Components.M68000
 			while (true)
 			{
 				string[] args = reader.ReadLine().Split(' ');
-				if (args[0].Trim() == "") continue;
+				if (args[0].Trim().Length is 0) continue;
 				if (args[0] == "[/" + id + "]") break;
 				else if (args[0] == "D0") D[0].s32 = int.Parse(args[1], NumberStyles.HexNumber);
 				else if (args[0] == "D1") D[1].s32 = int.Parse(args[1], NumberStyles.HexNumber);

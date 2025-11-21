@@ -1,5 +1,3 @@
-using System;
-
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -10,8 +8,12 @@ namespace BizHawk.Client.Common
 
 		Guid Guid { get; }
 
+		string GuidStr { get; }
+
 		MemoryCallbackDelegate MemCallback { get; }
 
 		string Name { get; }
+
+		Action OnRemove { get; set; }
 	}
 }

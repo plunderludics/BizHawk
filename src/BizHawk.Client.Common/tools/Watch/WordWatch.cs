@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using BizHawk.Emulation.Common;
@@ -18,7 +17,7 @@ namespace BizHawk.Client.Common
 		/// </summary>
 		/// <param name="domain"><see cref="MemoryDomain"/> where you want to track</param>
 		/// <param name="address">The address you want to track</param>
-		/// <param name="type">How you you want to display the value See <see cref="WatchDisplayType"/></param>
+		/// <param name="type">selected format for displaying the value</param>
 		/// <param name="bigEndian">Specify the endianess. true for big endian</param>
 		/// <param name="note">A custom note about the <see cref="Watch"/></param>
 		/// <param name="value">Current value</param>
@@ -36,23 +35,20 @@ namespace BizHawk.Client.Common
 		/// <summary>
 		/// Gets an Enumeration of <see cref="WatchDisplayType"/>s that are valid for a <see cref="WordWatch"/>
 		/// </summary>
-		public static IEnumerable<WatchDisplayType> ValidTypes
-		{
-			get
-			{
-				yield return WatchDisplayType.Unsigned;
-				yield return WatchDisplayType.Signed;
-				yield return WatchDisplayType.Hex;
-				yield return WatchDisplayType.Binary;
-				yield return WatchDisplayType.FixedPoint_12_4;
-			}
-		}
+		public static readonly IReadOnlyList<WatchDisplayType> ValidTypes = [
+			WatchDisplayType.Unsigned,
+			WatchDisplayType.Signed,
+			WatchDisplayType.Hex,
+			WatchDisplayType.Binary,
+			WatchDisplayType.FixedPoint_12_4,
+		];
 
 		/// <summary>
 		/// Get a list a <see cref="WatchDisplayType"/> that can be used for this <see cref="WordWatch"/>
 		/// </summary>
 		/// <returns>An enumeration that contains all valid <see cref="WatchDisplayType"/></returns>
-		public override IEnumerable<WatchDisplayType> AvailableTypes() => ValidTypes;
+		public override IReadOnlyList<WatchDisplayType> AvailableTypes()
+			=> ValidTypes;
 
 		/// <summary>
 		/// Reset the previous value; set it to the current one
@@ -79,7 +75,7 @@ namespace BizHawk.Client.Common
 					WatchDisplayType.Hex => ushort.Parse(value, NumberStyles.HexNumber),
 					WatchDisplayType.Binary => Convert.ToUInt16(value, 2),
 					WatchDisplayType.FixedPoint_12_4 => (ushort)(double.Parse(value, NumberFormatInfo.InvariantInfo) * 16.0),
-					_ => 0
+					_ => 0,
 				};
 
 				PokeWord(val);
@@ -138,7 +134,7 @@ namespace BizHawk.Client.Common
 					.Insert(8, " ")
 					.Insert(4, " ")
 					.Insert(14, " "),
-				_ => val.ToString()
+				_ => val.ToString(),
 			};
 		}
 
@@ -146,7 +142,7 @@ namespace BizHawk.Client.Common
 		/// Get a string representation of difference
 		/// between current value and the previous one
 		/// </summary>
-		public override string Diff => $"{_value - (int)_previous:+#;-#;0}";
+		public override string Diff => $"{_value - _previous:+#;-#;0}";
 
 		/// <summary>
 		/// Returns true if the Watch is valid, false otherwise
@@ -171,7 +167,7 @@ namespace BizHawk.Client.Common
 		/// <summary>
 		/// Get the previous value
 		/// </summary>
-		public override int Previous => _previous;
+		public override uint Previous => _previous;
 
 		/// <summary>
 		/// Get a string representation of the previous value

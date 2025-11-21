@@ -6,9 +6,6 @@ using System.Linq;
 using System.Windows.Forms;
 using System.IO;
 
-using BizHawk.Client.Common;
-using BizHawk.Client.EmuHawk;
-
 namespace BizHawk.DATTool
 {
 	public partial class DATConverter : Form
@@ -109,7 +106,7 @@ namespace BizHawk.DATTool
 
 			foreach (var s in listBoxFiles.Items)
 			{
-				if (s.ToString().Trim() == "")
+				if (string.IsNullOrWhiteSpace(s.ToString()))
 				{
 					MessageBox.Show($"The selected file: {s}Cannot be found.\n\nSort this out and try again");
 					return;

@@ -1,8 +1,14 @@
-using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
+
+// ReSharper disable ClassNeverInstantiated.Local
+// ReSharper disable MemberCanBePrivate.Local
+// ReSharper disable NotAccessedField.Local
+
+#pragma warning disable CS0414
+#pragma warning disable CS0649
 
 namespace BizHawk.BizInvoke
 {
@@ -49,23 +55,19 @@ namespace BizHawk.BizInvoke
 		/// <summary>
 		/// Computes the byte offset of the first field of any class relative to a class pointer.
 		/// </summary>
-		/// <returns></returns>
 		public static int ComputeClassFirstFieldOffset()
-		{
-			return ComputeFieldOffset(typeof(CF).GetField("FirstField"));
-		}
+			=> ComputeFieldOffset(typeof(CF).GetField("FirstField"));
 
 		/// <summary>
 		/// Compute the byte offset of the first byte of string data (UTF16) relative to a pointer to the string.
 		/// </summary>
-		/// <returns></returns>
 		public static int ComputeStringOffset()
 		{
 			var s = new string(Array.Empty<char>());
 			int ret;
 			fixed(char* fx = s)
 			{
-				U u = new(new U2(s));
+				U u = new(new(s));
 				ret = (int) ((ulong) (UIntPtr) fx - (ulong) u.First!.P);
 			}
 			return ret;
@@ -74,24 +76,23 @@ namespace BizHawk.BizInvoke
 		/// <summary>
 		/// Compute the offset to the 0th element of an array of value types
 		/// </summary>
-		/// <returns></returns>
 		public static int ComputeValueArrayElementOffset()
 		{
 			var arr = new int[4];
 			int ret;
 			fixed (int* p = arr)
 			{
-				U u = new(new U2(arr));
+				U u = new(new(arr));
 				ret = (int)((ulong)(UIntPtr) p - (ulong) u.First!.P);
 			}
 			return ret;
 		}
 
+#if false
 		/// <summary>
 		/// Compute the offset to the 0th element of an array of object types
 		/// Slow, so cache it if you need it.
 		/// </summary>
-		/// <returns></returns>
 		public static int ComputeObjectArrayElementOffset()
 		{
 			var obj = new object[4];
@@ -112,6 +113,7 @@ namespace BizHawk.BizInvoke
 			var del = (Func<object[], int>)method.CreateDelegate(typeof(Func<object[], int>));
 			return del(obj);
 		}
+#endif
 
 		/// <summary>
 		/// Compute the byte offset of a field relative to a pointer to the class instance.
@@ -119,7 +121,7 @@ namespace BizHawk.BizInvoke
 		/// </summary>
 		public static int ComputeFieldOffset(FieldInfo fi)
 		{
-			if (fi.DeclaringType.IsValueType)
+			if (fi.DeclaringType!.IsValueType)
 			{
 				throw new NotImplementedException("Only supported for class fields right now");
 			}

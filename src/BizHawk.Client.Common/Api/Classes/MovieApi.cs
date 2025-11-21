@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -50,12 +49,10 @@ namespace BizHawk.Client.Common
 				return string.Empty;
 			}
 
-			var lg = _movieSession.Movie.LogGeneratorInstance(
-				_movieSession.Movie.GetInputState(frame));
-			return lg.GenerateLogEntry();
+			return Bk2LogEntryGenerator.GenerateLogEntry(_movieSession.Movie.GetInputState(frame));
 		}
 
-		public void Save(string filename = null)
+		public void Save(string filename)
 		{
 			if (_movieSession.Movie.NotActive())
 			{
@@ -65,7 +62,7 @@ namespace BizHawk.Client.Common
 			if (!string.IsNullOrEmpty(filename))
 			{
 				filename += $".{_movieSession.Movie.PreferredExtension}";
-				if (new FileInfo(filename).Exists)
+				if (File.Exists(filename))
 				{
 					LogCallback($"File {filename} already exists, will not overwrite");
 					return;
@@ -78,7 +75,7 @@ namespace BizHawk.Client.Common
 		public IReadOnlyDictionary<string, string> GetHeader()
 			=> _movieSession.Movie.NotActive()
 				? new Dictionary<string, string>()
-				: _movieSession.Movie.HeaderEntries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value);
+				: _movieSession.Movie.HeaderEntries.ToDictionary();
 
 		public IReadOnlyList<string> GetComments()
 			=> _movieSession.Movie.Comments.ToList();
@@ -98,7 +95,7 @@ namespace BizHawk.Client.Common
 
 		public int Length() => _movieSession.Movie.FrameCount;
 
-		public string Mode() => (_movieSession.Movie?.Mode ?? MovieMode.Inactive).ToString().ToUpper();
+		public string Mode() => (_movieSession.Movie?.Mode ?? MovieMode.Inactive).ToString().ToUpperInvariant();
 
 		public bool PlayFromStart(string path = "")
 		{

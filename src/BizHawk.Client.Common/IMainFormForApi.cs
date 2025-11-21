@@ -1,5 +1,6 @@
 using System.Drawing;
 
+using BizHawk.Client.Common.cheats;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -15,7 +16,7 @@ namespace BizHawk.Client.Common
 		/// <remarks>only referenced from <c>EmuClientApi</c></remarks>
 		Point DesktopLocation { get; }
 
-		/// <remarks>only referenced from <c>ClientLuaLibrary</c></remarks>
+		/// <remarks>only referenced from <c>LuaRegisteredFunctionsList</c></remarks>
 		IEmulator Emulator { get; }
 
 		bool EmulatorPaused { get; }
@@ -47,6 +48,9 @@ namespace BizHawk.Client.Common
 		/// <remarks>only referenced from <c>EmuClientApi</c></remarks>
 		void CloseRom(bool clearSram = false);
 
+		/// <remarks>only referenced from <c>ClientLuaLibrary</c></remarks>
+		IDecodeResult DecodeCheatForAPI(string code, out MemoryDomain/*?*/ domain);
+
 		/// <remarks>only referenced from <c>EmuClientApi</c></remarks>
 		void EnableRewind(bool enabled);
 
@@ -54,9 +58,10 @@ namespace BizHawk.Client.Common
 		bool FlushSaveRAM(bool autosave = false);
 
 		/// <remarks>only referenced from <c>EmuClientApi</c></remarks>
-		void FrameAdvance();
+		void FrameAdvance(bool discardApiHawkSurfaces = true);
 
-		void FrameBufferResized();
+		/// <param name="forceWindowResize">Override <see cref="Common.Config.ResizeWithFramebuffer"/></param>
+		void FrameBufferResized(bool forceWindowResize = false);
 
 		void FrameSkipMessage();
 
@@ -123,5 +128,15 @@ namespace BizHawk.Client.Common
 		void SetVolume(int volume);
 
 		void UnpauseEmulator();
+
+		event BeforeQuickLoadEventHandler QuicksaveLoad;
+
+		event BeforeQuickSaveEventHandler QuicksaveSave;
+
+		event EventHandler RomLoaded;
+
+		event StateLoadedEventHandler SavestateLoaded;
+
+		event StateSavedEventHandler SavestateSaved;
 	}
 }

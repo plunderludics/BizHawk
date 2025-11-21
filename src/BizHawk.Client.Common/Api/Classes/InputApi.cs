@@ -1,8 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-using BizHawk.Common;
-
 namespace BizHawk.Client.Common
 {
 	public sealed class InputApi : IInputApi
@@ -20,7 +18,7 @@ namespace BizHawk.Client.Common
 		public Dictionary<string, bool> Get()
 		{
 			var buttons = new Dictionary<string, bool>();
-			foreach (var (button, _) in _inputManager.ControllerInputCoalescer.BoolButtons().Where(kvp => kvp.Value)) buttons[button] = true;
+			foreach (var (button, _) in _inputManager.HostInputCoalescer.BoolButtons().Where(kvp => kvp.Value)) buttons[button] = true;
 			return buttons;
 		}
 
@@ -38,15 +36,15 @@ namespace BizHawk.Client.Common
 				["Right"] = rmb,
 				["XButton1"] = x1mb,
 				["XButton2"] = x2mb,
-				["Wheel"] = scroll
+				["Wheel"] = scroll,
 			};
 		}
 
 		public IReadOnlyDictionary<string, int> GetPressedAxes()
-			=> _inputManager.ControllerInputCoalescer.AxisValues().ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value);
+			=> _inputManager.ControllerInputCoalescer.AxisValues().ToDictionary();
 
 		public IReadOnlyList<string> GetPressedButtons()
-			=> _inputManager.ControllerInputCoalescer.BoolButtons().Where(static kvp => kvp.Value)
+			=> _inputManager.HostInputCoalescer.BoolButtons().Where(static kvp => kvp.Value)
 				.Select(static kvp => kvp.Key).ToList();
 	}
 }

@@ -1,6 +1,5 @@
-﻿using System;
-using System.Text;
 using System.IO;
+using System.Text;
 
 using BizHawk.BizInvoke;
 using BizHawk.Common;
@@ -9,8 +8,12 @@ using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Atari.Lynx
 {
-	[PortedCore(CoreNames.Handy, "K. Wilkins, Mednafen Team", "mednafen 0-9-34-1", "http://mednafen.sourceforge.net/")]
-	[ServiceNotApplicable(new[] { typeof(IDriveLight), typeof(IRegionable), typeof(ISettable<,>) })]
+	[PortedCore(
+		name: CoreNames.Handy,
+		author: "K. Wilkins, Mednafen Team",
+		portedVersion: "0.9.34.1",
+		portedUrl: "https://mednafen.github.io/releases/")]
+	[ServiceNotApplicable(typeof(IRegionable), typeof(ISettable<,>))]
 	public partial class Lynx : IEmulator, IVideoProvider, ISoundProvider, ISaveRam, IStatable, IInputPollable
 	{
 		private static readonly LibLynx LibLynx;
@@ -85,9 +88,9 @@ namespace BizHawk.Emulation.Cores.Atari.Lynx
 				switch (realfile.Length)
 				{
 					case 0x10000: pagesize0 = 0x100; break;
-					case 0x20000: pagesize0 = 0x200; break; //
+					case 0x20000: pagesize0 = 0x200; break; // |
 					case 0x40000: pagesize0 = 0x400; break; // all known good dumps fall in one of these three categories
-					case 0x80000: pagesize0 = 0x800; break; //
+					case 0x80000: pagesize0 = 0x800; break; // |
 
 					case 0x30000: pagesize0 = 0x200; pagesize1 = 0x100; break;
 					case 0x50000: pagesize0 = 0x400; pagesize1 = 0x100; break;

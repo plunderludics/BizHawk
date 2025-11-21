@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -139,5 +138,9 @@ namespace BizHawk.Client.EmuHawk
 			}
 			base.OnLoad(e);
 		}
+
+		public virtual void HandleHotkeyUpdate() { }
+
+		public virtual void OnPauseToggle(bool newPauseState) { }
 	}
 }

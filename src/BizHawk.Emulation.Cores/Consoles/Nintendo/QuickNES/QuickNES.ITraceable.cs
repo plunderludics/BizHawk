@@ -1,4 +1,3 @@
-﻿using System;
 using System.Runtime.InteropServices;
 
 using BizHawk.Emulation.Common;
@@ -6,7 +5,7 @@ using BizHawk.Emulation.Cores.Components.M6502;
 
 namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 {
-	partial class QuickNES
+	public sealed partial class QuickNES
 	{
 		public TraceBuffer Tracer { get; private set; }
 

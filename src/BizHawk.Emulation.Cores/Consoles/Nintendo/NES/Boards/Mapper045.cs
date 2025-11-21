@@ -88,18 +88,18 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 
 		private int CHR_AND()
 		{
-			
+
 			if (regs[2]==0)
 			{
 				return 0xFF;
-			} 
+			}
 			return (0xFF >> ~((regs[2] & 0x0F)|0xF0));
 		}
 
 		private int CHR_OR()
 		{
 			int temp = regs[2] >> 4;
-			temp = temp << 8;
+			temp <<= 8;
 
 			int x = regs[0] | (temp);
 			return x;
@@ -108,7 +108,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 		protected override int MapCHR(int addr)
 		{
 			int bank_1k = Get_CHRBank_1K(addr);
-			
+
 			bank_1k &= CHR_AND();
 			bank_1k |= CHR_OR();
 			bank_1k &= chr_mask;

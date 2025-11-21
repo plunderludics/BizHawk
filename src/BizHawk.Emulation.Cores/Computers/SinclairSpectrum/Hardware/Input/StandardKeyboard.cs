@@ -1,5 +1,5 @@
 ﻿using BizHawk.Common;
-using System;
+
 using System.Collections.Generic;
 using System.Linq;
 
@@ -166,7 +166,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 					lineIndex++;
 					lines >>= 1;
 				}
-				var result = (byte)status;
+				var result = status;
 
 				return result;
 			}
@@ -191,16 +191,16 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			/*
             The high byte indicates which half-row of keys is being polled
             A zero on one of these lines selects a particular half-row of five keys:
-              
+
                   IN:    Reads keys (bit 0 to bit 4 inclusive)
                   0xfefe  SHIFT, Z, X, C, V            0xeffe  0, 9, 8, 7, 6
                   0xfdfe  A, S, D, F, G                0xdffe  P, O, I, U, Y
                   0xfbfe  Q, W, E, R, T                0xbffe  ENTER, L, K, J, H
                   0xf7fe  1, 2, 3, 4, 5                0x7ffe  SPACE, SYM SHFT, M, N, B
 
-            A zero in one of the five lowest bits means that the corresponding key is pressed. If more than one address line 
-            is made low, the result is the logical AND of all single inputs, so a zero in a bit means that at least one of the 
-            appropriate keys is pressed. For example, only if each of the five lowest bits of the result from reading from Port 00FE 
+            A zero in one of the five lowest bits means that the corresponding key is pressed. If more than one address line
+            is made low, the result is the logical AND of all single inputs, so a zero in a bit means that at least one of the
+            appropriate keys is pressed. For example, only if each of the five lowest bits of the result from reading from Port 00FE
             (for instance by XOR A/IN A,(FE)) is one, no key is pressed
             */
 
@@ -248,10 +248,10 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			}
 
 			// mask out lower 4 bits
-			result = result & 0x1f;
+			result &= 0x1f;
 
 			// set bit 5 & 7 to 1
-			result = result | 0xa0;
+			result |= 0xa0;
 
 			return true;
 		}

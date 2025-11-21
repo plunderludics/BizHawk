@@ -1,4 +1,3 @@
-﻿using System;
 using System.Windows.Forms;
 
 using BizHawk.Emulation.Common;
@@ -100,7 +99,7 @@ namespace BizHawk.Client.EmuHawk
 				ZXSpectrum.BorderType.None => "No border at all",
 				ZXSpectrum.BorderType.Small => "All borders 10px",
 				ZXSpectrum.BorderType.Widescreen => "No top and bottom border (almost 16:9)",
-				_ => lblBorderInfo.Text
+				_ => lblBorderInfo.Text,
 			};
 		}
 	}

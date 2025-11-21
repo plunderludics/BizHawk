@@ -1,5 +1,3 @@
-using System;
-
 namespace BizHawk.Emulation.Cores.Components.MC6800
 {
 	public partial class MC6800
@@ -54,7 +52,7 @@ namespace BizHawk.Emulation.Cores.Components.MC6800
 
 		private void ResetInterrupts()
 		{
-
+			//TODO
 		}
 	}
 }

@@ -1,10 +1,8 @@
-﻿using System;
-
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.SNES
 {
-	unsafe partial class LibsnesApi
+	public unsafe partial class LibsnesApi
 	{
 		private bool Handle_SIG(eMessage msg)
 		{

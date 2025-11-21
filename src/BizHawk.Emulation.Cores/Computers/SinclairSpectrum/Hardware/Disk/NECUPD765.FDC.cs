@@ -71,7 +71,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 		/// <summary>
 		/// Step Rate Time (supplied via the specify command)
-		/// SRT stands for the steooino rate for the FDD ( 1 to 16 ms in 1 ms increments). 
+		/// SRT stands for the steooino rate for the FDD ( 1 to 16 ms in 1 ms increments).
 		/// Stepping rate applies to all drives(FH= 1ms, EH= 2ms, etc.).
 		/// </summary>
 		private int SRT;
@@ -83,7 +83,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 		/// <summary>
 		/// Head Unload Time (supplied via the specify command)
-		/// HUT stands for the head unload time after a Read or Write operation has occurred 
+		/// HUT stands for the head unload time after a Read or Write operation has occurred
 		/// (16 to 240 ms in 16 ms Increments)
 		/// </summary>
 		private int HUT;
@@ -345,9 +345,9 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 						// calculate requested size of data required
 						if (ActiveCommandParams.SectorSize == 0)
 						{
-							// When N=0, then DTL defines the data length which the FDC must treat as a sector. If DTL is smaller than the actual 
-							// data length in a sector, the data beyond DTL in the sector is not sent to the Data Bus. The FDC reads (internally) 
-							// the complete sector performing the CRC check and, depending upon the manner of command termination, may perform 
+							// When N=0, then DTL defines the data length which the FDC must treat as a sector. If DTL is smaller than the actual
+							// data length in a sector, the data beyond DTL in the sector is not sent to the Data Bus. The FDC reads (internally)
+							// the complete sector performing the CRC check and, depending upon the manner of command termination, may perform
 							// a Multi-Sector Read Operation.
 							sectorSize = ActiveCommandParams.DTL;
 
@@ -442,7 +442,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 							// we don't need EN
 							UnSetBit(SR1_EN, ref Status1);
 
-							// If SK=1, the FDC skips the sector with the Deleted Data Address Mark and reads the next sector. 
+							// If SK=1, the FDC skips the sector with the Deleted Data Address Mark and reads the next sector.
 							// The CRC bits in the deleted data field are not checked when SK=1
 							if (CMD_FLAG_SK && Status2.Bit(SR2_CM))
 							{
@@ -656,9 +656,9 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 						// calculate requested size of data required
 						if (ActiveCommandParams.SectorSize == 0)
 						{
-							// When N=0, then DTL defines the data length which the FDC must treat as a sector. If DTL is smaller than the actual 
-							// data length in a sector, the data beyond DTL in the sector is not sent to the Data Bus. The FDC reads (internally) 
-							// the complete sector performing the CRC check and, depending upon the manner of command termination, may perform 
+							// When N=0, then DTL defines the data length which the FDC must treat as a sector. If DTL is smaller than the actual
+							// data length in a sector, the data beyond DTL in the sector is not sent to the Data Bus. The FDC reads (internally)
+							// the complete sector performing the CRC check and, depending upon the manner of command termination, may perform
 							// a Multi-Sector Read Operation.
 							sectorSize = ActiveCommandParams.DTL;
 
@@ -790,8 +790,8 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 									ActiveCommandParams.EOT = ActiveCommandParams.Sector;
 								}
 
-								if (!CMD_FLAG_SK && !Status2.Bit(SR2_CM) &&
-									ActiveDrive.Disk.Protection == ProtectionType.PaulOwens)
+								if (!CMD_FLAG_SK && !Status2.Bit(SR2_CM)
+									&& ActiveDrive.Disk.Protection is ProtectionType.PaulOwens)
 								{
 									ActiveCommandParams.EOT = ActiveCommandParams.Sector;
 									SetBit(SR2_CM, ref Status2);
@@ -971,9 +971,9 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 						// calculate requested size of data required
 						if (ActiveCommandParams.SectorSize == 0)
 						{
-							// When N=0, then DTL defines the data length which the FDC must treat as a sector. If DTL is smaller than the actual 
-							// data length in a sector, the data beyond DTL in the sector is not sent to the Data Bus. The FDC reads (internally) 
-							// the complete sector performing the CRC check and, depending upon the manner of command termination, may perform 
+							// When N=0, then DTL defines the data length which the FDC must treat as a sector. If DTL is smaller than the actual
+							// data length in a sector, the data beyond DTL in the sector is not sent to the Data Bus. The FDC reads (internally)
+							// the complete sector performing the CRC check and, depending upon the manner of command termination, may perform
 							// a Multi-Sector Read Operation.
 							sectorSize = ActiveCommandParams.DTL;
 
@@ -1054,10 +1054,10 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 							sec.SectorReadCompleted();
 
 							// end of sector - compare IDs
-							if (sec.TrackNumber != ActiveCommandParams.Cylinder ||
-								sec.SideNumber != ActiveCommandParams.Head ||
-								sec.SectorID != ActiveCommandParams.Sector ||
-								sec.SectorSize != ActiveCommandParams.SectorSize)
+							if (sec.TrackNumber != ActiveCommandParams.Cylinder
+								|| sec.SideNumber != ActiveCommandParams.Head
+								|| sec.SectorID != ActiveCommandParams.Sector
+								|| sec.SectorSize != ActiveCommandParams.SectorSize)
 							{
 								SetBit(SR1_ND, ref Status1);
 							}
@@ -1864,7 +1864,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 		/// COMMAND:    2 parameter bytes
 		/// EXECUTION:  NO execution phase
 		/// RESULT:     NO result phase
-		/// 
+		///
 		/// Looks like specify command returns status 0x80 throughout its lifecycle
 		/// so CB is NOT set
 		/// </summary>
@@ -2134,8 +2134,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 					// for now I will assume that the first call is aimed at DriveA, the second at DriveB (which we are NOT implementing)
 
 					// check active drive first
-					if (ActiveDrive.SeekStatus == SEEK_RECALIBRATE ||
-						ActiveDrive.SeekStatus == SEEK_SEEK)
+					if (ActiveDrive.SeekStatus is SEEK_RECALIBRATE or SEEK_SEEK)
 					{
 						// interrupt has been raised for this drive
 						// acknowledge
@@ -2186,7 +2185,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 		/// COMMAND:    1 parameter byte
 		/// EXECUTION:  NO execution phase
 		/// RESULT:     1 result byte
-		/// 
+		///
 		/// The ZX spectrum appears to only specify drive 1 as the parameter byte, NOT drive 0
 		/// After the final param byte is received main status changes to 0xd0
 		/// Data register (ST3) result is 0x51 if drive/disk not available
@@ -2359,7 +2358,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 					SetBit(MSR_EXM, ref StatusMain);
 					SetBit(MSR_CB, ref StatusMain);
 
-					// overrun detection                    
+					// overrun detection
 					OverrunCounter++;
 					if (OverrunCounter >= 64)
 					{
@@ -2476,7 +2475,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				//// we are in command phase
 				case Phase.Command:
 					// attempt to process this parameter byte
-					//ProcessCommand(data);      
+					//ProcessCommand(data);
 					ActiveCommand.CommandDelegate();
 					break;
 				//// we are in execution phase
@@ -2555,9 +2554,9 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				}
 
 				/*
-                if ((CMD_FLAG_MF && !ActiveCommand.MF) ||
-                    (CMD_FLAG_MT && !ActiveCommand.MT) ||
-                    (CMD_FLAG_SK && !ActiveCommand.SK))
+                if ((CMD_FLAG_MF && !ActiveCommand.MF)
+                    || (CMD_FLAG_MT && !ActiveCommand.MT)
+                    || (CMD_FLAG_SK && !ActiveCommand.SK))
                 {
                     // command byte included spurious bit 5,6 or 7 flags
                     CMDIndex = CommandList.Count - 1;
@@ -2692,25 +2691,25 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			}
 
 			// check for error bits
-			if (GetBit(SR1_DE, Status1) ||
-				GetBit(SR1_MA, Status1) ||
-				GetBit(SR1_ND, Status1) ||
-				GetBit(SR1_NW, Status1) ||
-				GetBit(SR1_OR, Status1) ||
-				GetBit(SR2_BC, Status2) ||
-				GetBit(SR2_CM, Status2) ||
-				GetBit(SR2_DD, Status2) ||
-				GetBit(SR2_MD, Status2) ||
-				GetBit(SR2_SN, Status2) ||
-				GetBit(SR2_WC, Status2))
+			if (GetBit(SR1_DE, Status1)
+				|| GetBit(SR1_MA, Status1)
+				|| GetBit(SR1_ND, Status1)
+				|| GetBit(SR1_NW, Status1)
+				|| GetBit(SR1_OR, Status1)
+				|| GetBit(SR2_BC, Status2)
+				|| GetBit(SR2_CM, Status2)
+				|| GetBit(SR2_DD, Status2)
+				|| GetBit(SR2_MD, Status2)
+				|| GetBit(SR2_SN, Status2)
+				|| GetBit(SR2_WC, Status2))
 			{
 				// error bits set - unset end of track
 				UnSetBit(SR1_EN, ref Status1);
 			}
 
 			// check for data errors
-			if (GetBit(SR1_DE, Status1) ||
-				GetBit(SR2_DD, Status2))
+			if (GetBit(SR1_DE, Status1)
+				|| GetBit(SR2_DD, Status2))
 			{
 				// unset control mark
 				UnSetBit(SR2_CM, ref Status2);
@@ -2726,7 +2725,6 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			ResBuffer[RS_ST0] = Status0;
 			ResBuffer[RS_ST1] = Status1;
 			ResBuffer[RS_ST2] = Status2;
-
 		}
 
 		/// <summary>

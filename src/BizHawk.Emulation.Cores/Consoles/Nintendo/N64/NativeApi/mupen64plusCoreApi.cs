@@ -1,12 +1,11 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
-using System.Text;
 
 namespace BizHawk.Emulation.Cores.Nintendo.N64.NativeApi
 {
@@ -170,9 +169,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.N64.NativeApi
 
 		// Core Specifc functions
 
-		/// <summary>
-		/// Initializes the the core DLL
-		/// </summary>
+		/// <summary>Initializes the core DLL</summary>
 		/// <param name="APIVersion">Specifies what API version our app is using. Just set this to 0x20001</param>
 		/// <param name="ConfigPath">Directory to have the DLL look for config data. "" seems to disable this</param>
 		/// <param name="DataPath">Directory to have the DLL look for user data. "" seems to disable this</param>
@@ -339,7 +336,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.N64.NativeApi
 		//WARNING - RETURNS A STATIC BUFFER
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate IntPtr biz_r4300_decode_op(uint instr, uint counter);
-		public biz_r4300_decode_op m64p_decode_op; 
+		public biz_r4300_decode_op m64p_decode_op;
 
 		/// <summary>
 		/// Reads from the "system bus"
@@ -785,10 +782,10 @@ namespace BizHawk.Emulation.Cores.Nintendo.N64.NativeApi
 		{
 			IntPtr[] waitHandles = { handle.SafeWaitHandle.DangerousGetHandle() };
 			const uint count = 1;
-			var QS_MASK = ThreadHacks.QS_ALLINPUT; // message queue status
+			var QS_MASK = WmImports.QS_ALLINPUT; // message queue status
 			QS_MASK = 0; //bizhawk edit?? did we need any messages here?? apparently not???
 			uint nativeResult;
-			ThreadHacks.MSG msg;
+			WmImports.MSG msg;
 			while (true)
 			{
 				// MsgWaitForMultipleObjectsEx with MWMO_INPUTAVAILABLE returns,
@@ -796,10 +793,10 @@ namespace BizHawk.Emulation.Cores.Nintendo.N64.NativeApi
 				nativeResult = ThreadHacks.MsgWaitForMultipleObjectsEx(count, waitHandles, 0xFFFFFFFF, QS_MASK, ThreadHacks.MWMO_INPUTAVAILABLE);
 				if (IsNativeWaitSuccessful(count, nativeResult, out int managedResult) || WaitHandle.WaitTimeout == managedResult) break;
 				// there is a message, pump and dispatch it
-				if (ThreadHacks.PeekMessage(out msg, IntPtr.Zero, 0, 0, ThreadHacks.PM_REMOVE))
+				if (WmImports.PeekMessageW(out msg, IntPtr.Zero, 0, 0, WmImports.PM_REMOVE))
 				{
-					ThreadHacks.TranslateMessage(ref msg);
-					ThreadHacks.DispatchMessage(ref msg);
+					WmImports.TranslateMessage(ref msg);
+					WmImports.DispatchMessageW(ref msg);
 				}
 			}
 //			handle.WaitOne();

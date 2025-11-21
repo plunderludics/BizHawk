@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using BizHawk.Emulation.Common;
@@ -18,7 +17,7 @@ namespace BizHawk.Client.Common
 		/// </summary>
 		/// <param name="domain"><see cref="MemoryDomain"/> where you want to track</param>
 		/// <param name="address">The address you want to track</param>
-		/// <param name="type">How you you want to display the value See <see cref="WatchDisplayType"/></param>
+		/// <param name="type">selected format for displaying the value</param>
 		/// <param name="bigEndian">Specify the endianess. true for big endian</param>
 		/// <param name="note">A custom note about the <see cref="Watch"/></param>
 		/// <param name="value">Current value</param>
@@ -36,22 +35,18 @@ namespace BizHawk.Client.Common
 		/// <summary>
 		/// Gets an enumeration of <see cref="WatchDisplayType"/> that are valid for a <see cref="ByteWatch"/>
 		/// </summary>
-		public static IEnumerable<WatchDisplayType> ValidTypes
-		{
-			get
-			{
-				yield return WatchDisplayType.Unsigned;
-				yield return WatchDisplayType.Signed;
-				yield return WatchDisplayType.Hex;
-				yield return WatchDisplayType.Binary;
-			}
-		}
+		public static readonly IReadOnlyList<WatchDisplayType> ValidTypes = [
+			WatchDisplayType.Unsigned,
+			WatchDisplayType.Signed,
+			WatchDisplayType.Hex,
+			WatchDisplayType.Binary,
+		];
 
 		/// <summary>
 		/// Get a list a <see cref="WatchDisplayType"/> that can be used for this <see cref="ByteWatch"/>
 		/// </summary>
 		/// <returns>An enumeration that contains all valid <see cref="WatchDisplayType"/></returns>
-		public override IEnumerable<WatchDisplayType> AvailableTypes()
+		public override IReadOnlyList<WatchDisplayType> AvailableTypes()
 		{
 			return ValidTypes;
 		}
@@ -80,7 +75,7 @@ namespace BizHawk.Client.Common
 					WatchDisplayType.Signed => (byte)sbyte.Parse(value),
 					WatchDisplayType.Hex => byte.Parse(value, NumberStyles.HexNumber),
 					WatchDisplayType.Binary => Convert.ToByte(value, 2),
-					_ => 0
+					_ => 0,
 				};
 
 				PokeByte(val);
@@ -133,7 +128,7 @@ namespace BizHawk.Client.Common
 				WatchDisplayType.Signed => ((sbyte) val).ToString(),
 				WatchDisplayType.Hex => $"{val:X2}",
 				WatchDisplayType.Binary => Convert.ToString(val, 2).PadLeft(8, '0').Insert(4, " "),
-				_ => val.ToString()
+				_ => val.ToString(),
 			};
 		}
 
@@ -141,7 +136,7 @@ namespace BizHawk.Client.Common
 		/// Get a string representation of difference
 		/// between current value and the previous one
 		/// </summary>
-		public override string Diff => $"{_value - (short)_previous:+#;-#;0}";
+		public override string Diff => $"{_value - _previous:+#;-#;0}";
 
 		/// <summary>
 		/// Returns true if the Watch is valid, false otherwise
@@ -166,7 +161,7 @@ namespace BizHawk.Client.Common
 		/// <summary>
 		/// Get the previous value
 		/// </summary>
-		public override int Previous => _previous;
+		public override uint Previous => _previous;
 
 		/// <summary>
 		/// Get a string representation of the previous value

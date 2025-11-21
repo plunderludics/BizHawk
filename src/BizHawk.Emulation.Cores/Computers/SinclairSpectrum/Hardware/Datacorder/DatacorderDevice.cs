@@ -1,6 +1,6 @@
 ﻿using BizHawk.Common;
 using BizHawk.Emulation.Cores.Components.Z80A;
-using System;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,7 +14,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 	public sealed class DatacorderDevice : IPortIODevice
 	{
 		private SpectrumBase _machine { get; set; }
-		private Z80A _cpu { get; set; }
+		private Z80A<ZXSpectrum.CpuLink> _cpu { get; set; }
 		private OneBitBeeper _buzzer { get; set; }
 
 		/// <summary>
@@ -139,10 +139,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			_waitEdge = 0;
 			_position = 0;
 
-			if (
-				_dataBlocks.Count > 0 &&        // data blocks are present &&
-				_currentDataBlockIndex >= 0     // the current data block index is 1 or greater
-				)
+			if (_dataBlocks.Count > 0 && _currentDataBlockIndex >= 0) //TODO removed a comment that said "index is 1 or greater", but code is clearly "0 or greater"--which is correct? --yoshi
 			{
 				while (_position >= _dataBlocks[_currentDataBlockIndex].DataPeriods.Count)
 				{
@@ -188,10 +185,8 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			// sign that the tape is no longer playing
 			_tapeIsPlaying = false;
 
-			if (
-				_currentDataBlockIndex >= 0 &&                                              // we are at datablock 1 or above
-				_position >= _dataBlocks[_currentDataBlockIndex].DataPeriods.Count - 1      // the block is still playing back
-				)
+			if (_currentDataBlockIndex >= 0 // we are at datablock 1 or above //TODO 1-indexed then? --yoshi
+				&& _position >= _dataBlocks[_currentDataBlockIndex].DataPeriods.Count - 1) // the block is still playing back
 			{
 				// move to the next block
 				_currentDataBlockIndex++;
@@ -205,10 +200,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				_waitEdge = 0;
 				_position = 0;
 
-				if (
-					_currentDataBlockIndex < 0 &&       // block index is -1
-					_dataBlocks.Count > 0               // number of blocks is greater than 0
-					)
+				if (_currentDataBlockIndex < 0 && _dataBlocks.Count > 0) //TODO deleted a comment that said "block index is -1", but code is clearly "is negative"--are lower values not reachable? --yoshi
 				{
 					// move the index on to 0
 					_currentDataBlockIndex = 0;
@@ -426,7 +418,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			bool is48k = _machine.IsIn48kMode();
 
 			// check whether tape is actually playing
-			if (_tapeIsPlaying == false)
+			if (!_tapeIsPlaying)
 			{
 				// it's not playing. Update lastCycle and return
 				_lastCycle = cpuCycle;
@@ -448,7 +440,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				cycles -= _waitEdge;
 
 				if (_position == 0 && _tapeIsPlaying)
-				{				
+				{
 					// notify about the current block
 					var bl = _dataBlocks[_currentDataBlockIndex];
 
@@ -486,7 +478,6 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 							sbd.Append(bl.MetaData.First().Key + ": " + bl.MetaData.First().Value);
 						}
 						_machine.Spectrum.OSD_TapePlayingSkipBlockInfo(sbd.ToString());
-
 					}
 
 					// skip any empty blocks (and process any command blocks)
@@ -562,7 +553,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			}
 
 			// update lastCycle and return currentstate
-			_lastCycle = cpuCycle - (long)cycles;
+			_lastCycle = cpuCycle - cycles;
 
 			return currentState;
 		}
@@ -596,11 +587,6 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 			ushort addr = _cpu.RegPC;
 
-			if (_machine.Spectrum.SyncSettings.DeterministicEmulation)
-			{
-
-			}
-
 			var tb = DataBlocks[_currentDataBlockIndex];
 			var tData = tb.BlockData;
 
@@ -614,7 +600,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 			if (toRead < _cpu.Regs[_cpu.E] + (_cpu.Regs[_cpu.D] << 8))
 			{
-
+				// no-op
 			}
 			else
 			{
@@ -641,8 +627,8 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			}
 			var pc = (ushort)0x05DF;
 
-			if (_cpu.Regs[_cpu.E] + (_cpu.Regs[_cpu.D] << 8) == toRead &&
-				toRead + 1 < tData.Length)
+			if (_cpu.Regs[_cpu.E] + (_cpu.Regs[_cpu.D] << 8) == toRead
+				&& toRead + 1 < tData.Length)
 			{
 				var v = tData[toRead + 1];
 				_cpu.Regs[_cpu.L] = v;
@@ -669,7 +655,6 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			_currentDataBlockIndex++;
 
 			return true;
-
 		}
 
 		private long _lastINCycle = 0;
@@ -709,10 +694,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				_cpu.Regs[_cpu.L]
 			};
 
-			if (delta > 0 &&
-				delta < 96 &&
-				_cpu.RegPC == _monitorLastPC &&
-				_monitorLastRegs != null)
+			if (delta is > 0 and < 96 && _cpu.RegPC == _monitorLastPC && _monitorLastRegs is not null)
 			{
 				int dCnt = 0;
 				int dVal = 0;
@@ -726,8 +708,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 					}
 				}
 
-				if (dCnt == 1 &&
-					(dVal == 1 || dVal == -1))
+				if (dCnt is 1 && dVal is 1 or -1)
 				{
 					_monitorCount++;
 
@@ -782,9 +763,8 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 		{
 			if (_tapeIsPlaying && _autoPlay)
 			{
-				if (DataBlocks.Count > 1 ||
-					(_dataBlocks[_currentDataBlockIndex].BlockDescription != BlockType.CSW_Recording &&
-					_dataBlocks[_currentDataBlockIndex].BlockDescription != BlockType.WAV_Recording))
+				if (DataBlocks.Count > 1
+					|| _dataBlocks[_currentDataBlockIndex].BlockDescription is not (BlockType.CSW_Recording or BlockType.WAV_Recording))
 				{
 					// we should only stop the tape when there are multiple blocks
 					// if we just have one big block (maybe a CSW or WAV) then auto stopping will cock things up
@@ -793,8 +773,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 				if (_monitorTimeOut < 0)
 				{
-					if (_dataBlocks[_currentDataBlockIndex].BlockDescription != BlockType.PAUSE_BLOCK &&
-						_dataBlocks[_currentDataBlockIndex].BlockDescription != BlockType.PAUS)
+					if (_dataBlocks[_currentDataBlockIndex].BlockDescription is not (BlockType.PAUSE_BLOCK or BlockType.PAUS))
 					{
 						AutoStopTape();
 					}
@@ -811,7 +790,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				var block = DataBlocks[_currentDataBlockIndex];
 
 				// is this a pause block?
-				if (block.BlockDescription == BlockType.PAUS || block.BlockDescription == BlockType.PAUSE_BLOCK)
+				if (block.BlockDescription is BlockType.PAUS or BlockType.PAUSE_BLOCK)
 				{
 					// don't autostop the tape here
 					return;
@@ -828,9 +807,8 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 					return;
 
 				// don't autostop if there is only 1 block
-				if (DataBlocks.Count == 1 || _dataBlocks[_currentDataBlockIndex].BlockDescription == BlockType.CSW_Recording ||
-					_dataBlocks[_currentDataBlockIndex].BlockDescription == BlockType.WAV_Recording
-					)
+				if (DataBlocks.Count is 1
+					|| _dataBlocks[_currentDataBlockIndex].BlockDescription is BlockType.CSW_Recording or BlockType.WAV_Recording)
 				{
 					return;
 				}

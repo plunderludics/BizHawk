@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Emulation.Cores.Consoles.Nintendo.Gameboy;
 
 namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
@@ -211,7 +209,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 					return byte_to_send;
 			}
 
-			if (command_state >= CommandState.GB_PRINTER_COMMAND_ID && command_state < CommandState.GB_PRINTER_COMMAND_CHECKSUM_LOW)
+			if (command_state is >= CommandState.GB_PRINTER_COMMAND_ID and < CommandState.GB_PRINTER_COMMAND_CHECKSUM_LOW)
 			{
 				checksum += byte_received;
 			}

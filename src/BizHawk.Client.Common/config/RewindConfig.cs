@@ -25,7 +25,7 @@
 		bool UseFixedRewindInterval { get; }
 
 		/// <summary>
-		/// Desired frame length (number of emulated frames you can go back before running out of buffer)
+		/// Desired minimum rewind range (number of emulated frames you can go back before running out of buffer)
 		/// </summary>
 		int TargetFrameLength { get; }
 
@@ -53,6 +53,7 @@
 		public bool UseCompression { get; set; } = false;
 		public bool UseDelta { get; set; } = false;
 		public bool Enabled { get; set; } = true;
+		public bool AllowSlowStates { get; set; } = false; // TODO: Hook up in UI
 		public long BufferSize { get; set; } = 512; // in mb
 		public bool UseFixedRewindInterval { get; set; } = false;
 		public int TargetFrameLength { get; set; } = 600;

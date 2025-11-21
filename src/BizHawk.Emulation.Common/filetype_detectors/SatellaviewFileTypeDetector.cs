@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using BizHawk.Common;
 using BizHawk.Common.IOExtensions;
@@ -38,7 +38,7 @@ namespace BizHawk.Emulation.Common
 
 			private const int OFFSET_REVISION = 0x2B; // 1 octet
 
-			private const int OFFSET_SELFDESTRUCT = 0x24; // 2 octets, but the lower 10 bits are always 0, so effectively 1 octet
+			private const int OFFSET_SELFDESTRUCT = 0x25; // 1 octet; technically 2 octets LE at 0x24, but the least-significant 10 bits are always 0
 
 			private const int OFFSET_SPEED = 0x28; // 1 octet
 
@@ -69,7 +69,7 @@ namespace BizHawk.Emulation.Common
 					LIMITED_2_PLAYS_LEFT => 2,
 					LIMITED_1_PLAYS_LEFT => 1,
 					LIMITED_0_PLAYS_LEFT => 0,
-					_ => -1
+					_ => -1,
 				};
 
 			public byte Revision
@@ -88,7 +88,7 @@ namespace BizHawk.Emulation.Common
 				=> _header = header;
 
 			public override string ToString()
-				=> $"[{ContentTypeField >> 4:X1}] {Title} r{Revision} ({(IsSelfDestructing ? RemainingPlays : "unlimited")} plays left)";
+				=> $"[{ContentTypeField >> 4:X1}] {Title} r{Revision} ({(IsSelfDestructing ? RemainingPlays.ToString() : "unlimited")} plays left)";
 
 			public bool VerifyChecksum(ReadOnlySpan<byte> rom)
 				=> true; //TODO need to parse page mapping from offset 0x20..0x23 in order to calculate this
@@ -106,7 +106,9 @@ namespace BizHawk.Emulation.Common
 			var corruption = 0;
 			// "invalid" states were assigned a higher value if the wiki page was less vague
 
-			if (header.Title.Length is 0) corruption++;
+			static bool IsASCIIOrKana(char c)
+				=> c is (>= ' ' and <= '~') or (>= 'ぁ' and <= 'ヿ') or (>= '！' and <= '￮'); // doubt this matches SHIFT-JIS but it should cover all the kana which is what I expect in a title
+			if (!header.Title.Any(IsASCIIOrKana)) corruption++;
 
 			if (header.IsSelfDestructing)
 			{

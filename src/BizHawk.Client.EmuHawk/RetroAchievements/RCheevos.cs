@@ -1,7 +1,7 @@
-using System;
-using System.Collections.Generic;
+using System.Buffers.Binary;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -15,21 +15,39 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class RCheevos : RetroAchievements
 	{
-		private static readonly LibRCheevos _lib;
+		internal static readonly LibRCheevos _lib;
 
 		static RCheevos()
 		{
 			var resolver = new DynamicLibraryImportResolver(
 				OSTailoredCode.IsUnixHost ? "librcheevos.so" : "librcheevos.dll", hasLimitedLifetime: false);
 			_lib = BizInvoker.GetInvoker<LibRCheevos>(resolver, CallingConventionAdapters.Native);
+
+			var version = Marshal.PtrToStringAnsi(_lib.rc_version_string());
+			Console.WriteLine($"Loaded RCheevos v{version}");
+
+			// init message callbacks
+			_errorMessageCallback = ErrorMessageCallback;
+			_verboseMessageCallback = VerboseMessageCallback;
+			_lib.rc_hash_init_error_message_callback(_errorMessageCallback);
+			_lib.rc_hash_init_verbose_message_callback(_verboseMessageCallback);
+
+			// init readers
+			_filereader = new(OpenFileCallback, SeekFileCallback, TellFileCallback, ReadFileCallback, CloseFileCallback);
+			_cdreader = new(OpenTrackCallback, ReadSectorCallback, CloseTrackCallback, FirstTrackSectorCallback);
+			_lib.rc_hash_init_custom_filereader(in _filereader);
+			_lib.rc_hash_init_custom_cdreader(in _cdreader);
+
+			_http.DefaultRequestHeaders.UserAgent.ParseAdd(VersionInfo.UserAgentEscaped);
 		}
 
 		private IntPtr _runtime;
 
 		private readonly LibRCheevos.rc_runtime_event_handler_t _eventcb;
-		private readonly LibRCheevos.rc_peek_t _peekcb;
+		private readonly LibRCheevos.rc_runtime_peek_t _peekcb;
+		private readonly LibRCheevos.rc_runtime_validate_address_t _validatecb;
 
-		private readonly Dictionary<int, (ReadMemoryFunc Func, int Start)> _readMap = new();
+		private byte[] _readMap = Array.Empty<byte>();
 
 		private ToolStripMenuItem _hardcoreModeMenuItem;
 		private bool _hardcoreMode;
@@ -55,12 +73,16 @@ namespace BizHawk.Client.EmuHawk
 				Checked = _getConfig().RAAutostart,
 				CheckOnClick = true,
 			};
-			autoStartRAItem.CheckedChanged += (_, _) => _getConfig().RAAutostart ^= true;
+			autoStartRAItem.CheckedChanged += (_, _) =>
+			{
+				var config = _getConfig();
+				config.RAAutostart = !config.RAAutostart;
+			};
 			raDropDownItems.Add(autoStartRAItem);
 
 			var loginItem = new ToolStripMenuItem("Login")
 			{
-				Visible = !LoggedIn
+				Visible = !LoggedIn,
 			};
 			loginItem.Click += (_, _) =>
 			{
@@ -73,7 +95,7 @@ namespace BizHawk.Client.EmuHawk
 
 			var logoutItem = new ToolStripMenuItem("Logout")
 			{
-				Visible = LoggedIn
+				Visible = LoggedIn,
 			};
 			logoutItem.Click += (_, _) =>
 			{
@@ -91,37 +113,37 @@ namespace BizHawk.Client.EmuHawk
 			var enableCheevosItem = new ToolStripMenuItem("Enable Achievements")
 			{
 				Checked = CheevosActive,
-				CheckOnClick = true
+				CheckOnClick = true,
 			};
-			enableCheevosItem.CheckedChanged += (_, _) => CheevosActive ^= true;
+			enableCheevosItem.CheckedChanged += (_, _) => CheevosActive = !CheevosActive;
 			raDropDownItems.Add(enableCheevosItem);
 
-			var enableLboardsItem = new ToolStripMenuItem("Enable Leaderboards")
+			var enableLboardNotifsItem = new ToolStripMenuItem("Enable Leaderboard Notifications")
 			{
-				Checked = LBoardsActive,
+				Checked = LBoardNotifsActive,
 				CheckOnClick = true,
-				Enabled = HardcoreMode
+				Enabled = HardcoreMode,
 			};
-			enableLboardsItem.CheckedChanged += (_, _) => LBoardsActive ^= true;
-			raDropDownItems.Add(enableLboardsItem);
+			enableLboardNotifsItem.CheckedChanged += (_, _) => LBoardNotifsActive = !LBoardNotifsActive;
+			raDropDownItems.Add(enableLboardNotifsItem);
 
 			var enableRichPresenceItem = new ToolStripMenuItem("Enable Rich Presence")
 			{
-				Checked = RichPresenceActive,
-				CheckOnClick = true
+				Checked = RichPresenceActive || HardcoreMode,
+				CheckOnClick = true,
+				Enabled = !HardcoreMode,
 			};
-			enableRichPresenceItem.CheckedChanged += (_, _) => RichPresenceActive ^= true;
+			enableRichPresenceItem.CheckedChanged += (_, _) => RichPresenceActive = !RichPresenceActive;
 			raDropDownItems.Add(enableRichPresenceItem);
 
 			var enableHardcoreItem = new ToolStripMenuItem("Enable Hardcore Mode")
 			{
 				Checked = HardcoreMode,
-				CheckOnClick = true
+				CheckOnClick = true,
 			};
 			enableHardcoreItem.CheckedChanged += (_, _) =>
 			{
-				_hardcoreMode ^= true;
-
+				_hardcoreMode = !_hardcoreMode;
 				if (HardcoreMode)
 				{
 					_hardcoreMode = _mainForm.RebootCore(); // unset hardcore mode if we fail to reboot core somehow
@@ -131,7 +153,7 @@ namespace BizHawk.Client.EmuHawk
 					ToSoftcoreMode();
 				}
 
-				enableLboardsItem.Enabled = HardcoreMode;
+				enableLboardNotifsItem.Enabled = HardcoreMode;
 			};
 			raDropDownItems.Add(enableHardcoreItem);
 
@@ -140,15 +162,15 @@ namespace BizHawk.Client.EmuHawk
 			var enableSoundEffectsItem = new ToolStripMenuItem("Enable Sound Effects")
 			{
 				Checked = EnableSoundEffects,
-				CheckOnClick = true
+				CheckOnClick = true,
 			};
-			enableSoundEffectsItem.CheckedChanged += (_, _) => EnableSoundEffects ^= true;
+			enableSoundEffectsItem.CheckedChanged += (_, _) => EnableSoundEffects = !EnableSoundEffects;
 			raDropDownItems.Add(enableSoundEffectsItem);
 
 			var enableUnofficialCheevosItem = new ToolStripMenuItem("Test Unofficial Achievements")
 			{
 				Checked = AllowUnofficialCheevos,
-				CheckOnClick = true
+				CheckOnClick = true,
 			};
 			enableUnofficialCheevosItem.CheckedChanged += (_, _) => ToggleUnofficialCheevos();
 			raDropDownItems.Add(enableUnofficialCheevosItem);
@@ -188,48 +210,58 @@ namespace BizHawk.Client.EmuHawk
 
 		protected override void HandleHardcoreModeDisable(string reason)
 		{
-			_mainForm.ShowMessageBox(null, $"{reason} Disabling hardcore mode.", "Warning", EMsgBoxIcon.Warning);
+			_dialogParent.ModalMessageBox(
+				caption: "Warning",
+				icon: EMsgBoxIcon.Warning,
+				text: $"{reason} Disabling hardcore mode.");
 			HardcoreMode = false;
 		}
 
-		public RCheevos(IMainFormForRetroAchievements mainForm, InputManager inputManager, ToolManager tools,
-			Func<Config> getConfig, ToolStripItemCollection raDropDownItems, Action shutdownRACallback)
-			: base(mainForm, inputManager, tools, getConfig, raDropDownItems, shutdownRACallback)
+		/// <exception cref="Exception">unmanaged call failed</exception>
+		public RCheevos(
+			MainForm mainForm,
+			InputManager inputManager,
+			ToolManager tools,
+			Func<Config> getConfig,
+			Action<Stream> playWavFile,
+			ToolStripItemCollection raDropDownItems,
+			Action shutdownRACallback)
+				: base(mainForm, inputManager, tools, getConfig, raDropDownItems, shutdownRACallback)
 		{
+			_playWavFileCallback = playWavFile;
+
 			_isActive = true;
-			_httpThread = new(HttpRequestThreadProc) { IsBackground = true, Priority = ThreadPriority.BelowNormal };
+			_httpThread = new(HttpRequestThreadProc) { IsBackground = true, Priority = ThreadPriority.BelowNormal, Name = "RCheevos HTTP Thread" };
 			_httpThread.Start();
 
 			_runtime = _lib.rc_runtime_alloc();
 			if (_runtime == IntPtr.Zero)
 			{
-				throw new("rc_runtime_alloc returned NULL!");
+				throw new Exception("rc_runtime_alloc returned NULL!");
 			}
-			Login();
 
 			_eventcb = EventHandlerCallback;
 			_peekcb = PeekCallback;
+			_validatecb = ValidateCallback;
 
 			var config = _getConfig();
 			CheevosActive = config.RACheevosActive;
-			LBoardsActive = config.RALBoardsActive;
+			LBoardNotifsActive = config.RALBoardsActive;
 			RichPresenceActive = config.RARichPresenceActive;
 			_hardcoreMode = config.RAHardcoreMode;
 			EnableSoundEffects = config.RASoundEffects;
 			AllowUnofficialCheevos = config.RAAllowUnofficialCheevos;
 
+			Login();
 			BuildMenu(raDropDownItems);
 		}
 
 		public override void Dispose()
 		{
-			while (!_inactiveHttpRequests.IsEmpty)
-			{
-				// wait until all pending http requests are enqueued
-			}
-
 			_isActive = false;
-			_httpThread.Join();
+			_threadThrottle.Set(); // wakeup the thread
+			_httpThread.Join(); // note: the http thread handles disposing requests
+			_threadThrottle.Dispose();
 
 			_lib.rc_runtime_destroy(_runtime);
 			_runtime = IntPtr.Zero;
@@ -239,7 +271,7 @@ namespace BizHawk.Client.EmuHawk
 #if false
 			_lboardListForm.Dispose();
 #endif
-			_mainForm.EmuClient.BeforeQuickLoad -= QuickLoadCallback;
+			_mainForm.QuicksaveLoad -= QuickLoadCallback;
 		}
 
 		public override void OnSaveState(string path)
@@ -255,8 +287,8 @@ namespace BizHawk.Client.EmuHawk
 			if (size > 0)
 			{
 				var buffer = new byte[(int)size];
-				_lib.rc_runtime_serialize_progress(buffer, _runtime, IntPtr.Zero);
-				using var file = File.OpenWrite(path + ".rap");
+				_lib.rc_runtime_serialize_progress_sized(buffer, (uint)buffer.Length, _runtime, IntPtr.Zero);
+				using var file = File.Create(path + ".rap");
 				file.Write(buffer, 0, buffer.Length);
 			}
 		}
@@ -281,14 +313,17 @@ namespace BizHawk.Client.EmuHawk
 
 			using var file = File.OpenRead(path + ".rap");
 			var buffer = file.ReadAllBytes();
-			_lib.rc_runtime_deserialize_progress(_runtime, buffer, IntPtr.Zero);
+			_lib.rc_runtime_deserialize_progress_sized(_runtime, buffer, (uint)buffer.Length, IntPtr.Zero);
 		}
-		
+
 		private void QuickLoadCallback(object _, BeforeQuickLoadEventArgs e)
 		{
 			if (HardcoreMode)
 			{
-				e.Handled = _mainForm.ShowMessageBox2(null, "Loading a quicksave is not allowed in hardcode mode. Abort loading state?", "Warning", EMsgBoxIcon.Warning);
+				e.Handled = _dialogParent.ModalMessageBox2(
+					caption: "Warning",
+					icon: EMsgBoxIcon.Warning,
+					text: "Loading a quicksave is not allowed in hardcode mode. Abort loading state?");
 			}
 		}
 
@@ -298,13 +333,18 @@ namespace BizHawk.Client.EmuHawk
 		{
 			var config = _getConfig();
 			config.RACheevosActive = CheevosActive;
-			config.RALBoardsActive = LBoardsActive;
+			config.RALBoardsActive = LBoardNotifsActive;
 			config.RARichPresenceActive = RichPresenceActive;
 			config.RAHardcoreMode = HardcoreMode;
 			config.RASoundEffects = EnableSoundEffects;
 			config.RAAllowUnofficialCheevos = AllowUnofficialCheevos;
 		}
 
+		private bool ValidateCallback(uint address)
+			=> address < _readMap.Length && _readMap[address] != 0xFF;
+
+		/// <exception cref="Exception">unmanaged call failed</exception>
+		/// <exception cref="InvalidOperationException">core's <see cref="IMemoryDomains"/> totals to more than 255 'banks'</exception>
 		public override void Restart()
 		{
 			if (_firstRestart)
@@ -334,31 +374,39 @@ namespace BizHawk.Client.EmuHawk
 			_runtime = _lib.rc_runtime_alloc();
 			if (_runtime == IntPtr.Zero)
 			{
-				throw new("rc_runtime_alloc returned NULL!");
+				throw new Exception("rc_runtime_alloc returned NULL!");
 			}
 
 			// get console id
 			_consoleId = SystemIdToConsoleId();
 
 			// init the read map
-			_readMap.Clear();
+			_readMap = [ ];
 
 			if (Emu.HasMemoryDomains())
 			{
-				_memFunctions = CreateMemoryBanks(_consoleId, Domains, Emu.CanDebug() ? Emu.AsDebuggable() : null);
-
-				var addr = 0;
-				foreach (var memFunctions in _memFunctions)
+				_memFunctions = CreateMemoryBanks(_consoleId, Domains);
+				if (_memFunctions.Count > 255)
 				{
-					if (memFunctions.ReadFunc is not null)
+					throw new InvalidOperationException("_memFunctions must have less than 256 memory banks");
+				}
+
+				// this is kind of poop, it would prevent having >2GiB total banksize
+				// but no system needs that right now, the largest is just New 3DS at 256MiB
+				_readMap = new byte[_memFunctions.Sum(mfun => mfun.BankSize)];
+
+				uint addr = 0;
+				for (var i = 0; i < _memFunctions.Count; i++)
+				{
+					_memFunctions[i].StartAddress = addr;
+
+					var mapValue = _memFunctions[i].ReadFunc is not null ? i : 0xFF;
+					for (var j = 0; j < _memFunctions[i].BankSize; j++)
 					{
-						for (var i = 0; i < memFunctions.BankSize; i++)
-						{
-							_readMap.Add(addr + i, (memFunctions.ReadFunc, addr));
-						}
+						_readMap[addr + j] = (byte)mapValue;
 					}
 
-					addr += memFunctions.BankSize;
+					addr = checked(addr + _memFunctions[i].BankSize);
 				}
 			}
 
@@ -370,7 +418,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				var ids = GetRAGameIds(_mainForm.CurrentlyOpenRomArgs.OpenAdvanced, _consoleId);
 
-				AllGamesVerified = !ids.Contains(0);
+				AllGamesVerified = !ids.Contains(0u);
 
 				var gameId = ids.Count > 0 ? ids[0] : 0;
 				_gameData = new();
@@ -379,7 +427,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					_gameData = _cachedGameDatas.TryGetValue(gameId, out var cachedGameData)
 						? new(cachedGameData, () => AllowUnofficialCheevos)
-						: GetGameData(gameId);
+						: GetGameData(gameId) ?? new();
 				}
 
 				// this check seems redundant, but it covers the case where GetGameData failed somehow
@@ -404,9 +452,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			// validate addresses now that we have cheevos init
-			// ReSharper disable once ConvertToLocalFunction
-			LibRCheevos.rc_runtime_validate_address_t peekcb = address => _readMap.ContainsKey(address);
-			_lib.rc_runtime_validate_addresses(_runtime, _eventcb, peekcb);
+			_lib.rc_runtime_validate_addresses(_runtime, _eventcb, _validatecb);
 
 			_gameInfoForm.Restart(_gameData.Title, _gameData.TotalCheevoPoints(HardcoreMode), CurrentRichPresence ?? "N/A");
 			_cheevoListForm.Restart(_gameData.GameID == 0 ? Array.Empty<Cheevo>() : _gameData.CheevoEnumerable, GetCheevoProgress);
@@ -417,7 +463,7 @@ namespace BizHawk.Client.EmuHawk
 			Update();
 
 			// note: this can only catch quicksaves (probably only case of accidential use from hotkeys)
-			_mainForm.EmuClient.BeforeQuickLoad += QuickLoadCallback;
+			_mainForm.QuicksaveLoad += QuickLoadCallback;
 		}
 
 		public override void Update()
@@ -454,13 +500,13 @@ namespace BizHawk.Client.EmuHawk
 
 							cheevo.SetUnlocked(HardcoreMode, true);
 							var prefix = HardcoreMode ? "[HARDCORE] " : "";
-							_mainForm.AddOnScreenMessage($"{prefix}Achievement Unlocked!");
-							_mainForm.AddOnScreenMessage(cheevo.Description);
-							if (EnableSoundEffects) _unlockSound.PlayNoExceptions();
+							_dialogParent.AddOnScreenMessage($"{prefix}Achievement Unlocked!");
+							_dialogParent.AddOnScreenMessage(cheevo.Description);
+							PlaySound(_unlockSound);
 
 							if (cheevo.IsOfficial)
 							{
-								_inactiveHttpRequests.Push(new CheevoUnlockRequest(Username, ApiToken, evt->id, HardcoreMode, _gameHash));
+								PushRequest(new CheevoUnlockRequest(Username, ApiToken, evt->id, HardcoreMode, _gameHash));
 							}
 						}
 
@@ -475,16 +521,16 @@ namespace BizHawk.Client.EmuHawk
 						{
 							cheevo.IsPrimed = true;
 							var prefix = HardcoreMode ? "[HARDCORE] " : "";
-							_mainForm.AddOnScreenMessage($"{prefix}Achievement Primed!");
-							_mainForm.AddOnScreenMessage(cheevo.Description);
-							if (EnableSoundEffects) _infoSound.PlayNoExceptions();
+							_dialogParent.AddOnScreenMessage($"{prefix}Achievement Primed!");
+							_dialogParent.AddOnScreenMessage(cheevo.Description);
+							PlaySound(_infoSound);
 						}
 
 						break;
 					}
 				case LibRCheevos.rc_runtime_event_type_t.RC_RUNTIME_EVENT_LBOARD_STARTED:
 					{
-						if (!LBoardsActive || !HardcoreMode) return;
+						if (!HardcoreMode) return;
 
 						var lboard = _gameData.GetLboardById(evt->id);
 						if (!lboard.Invalid)
@@ -494,9 +540,13 @@ namespace BizHawk.Client.EmuHawk
 							if (!lboard.Hidden)
 							{
 								CurrentLboard = lboard;
-								_mainForm.AddOnScreenMessage($"Leaderboard Attempt Started!");
-								_mainForm.AddOnScreenMessage(lboard.Description);
-								if (EnableSoundEffects) _lboardStartSound.PlayNoExceptions();
+
+								if (LBoardNotifsActive)
+								{
+									_dialogParent.AddOnScreenMessage("Leaderboard Attempt Started!");
+									_dialogParent.AddOnScreenMessage(lboard.Description);
+									PlaySound(_lboardStartSound);
+								}
 							}
 						}
 
@@ -504,7 +554,7 @@ namespace BizHawk.Client.EmuHawk
 					}
 				case LibRCheevos.rc_runtime_event_type_t.RC_RUNTIME_EVENT_LBOARD_CANCELED:
 					{
-						if (!LBoardsActive || !HardcoreMode) return;
+						if (!HardcoreMode) return;
 
 						var lboard = _gameData.GetLboardById(evt->id);
 						if (!lboard.Invalid)
@@ -516,19 +566,22 @@ namespace BizHawk.Client.EmuHawk
 									CurrentLboard = null;
 								}
 
-								_mainForm.AddOnScreenMessage($"Leaderboard Attempt Failed! ({lboard.Score})");
-								_mainForm.AddOnScreenMessage(lboard.Description);
-								if (EnableSoundEffects) _lboardFailedSound.PlayNoExceptions();
+								if (LBoardNotifsActive)
+								{
+									_dialogParent.AddOnScreenMessage($"Leaderboard Attempt Failed! ({lboard.Score})");
+									_dialogParent.AddOnScreenMessage(lboard.Description);
+									PlaySound(_lboardFailedSound);
+								}
 							}
 
 							lboard.SetScore(0);
 						}
-						
+
 						break;
 					}
 				case LibRCheevos.rc_runtime_event_type_t.RC_RUNTIME_EVENT_LBOARD_UPDATED:
 					{
-						if (!LBoardsActive || !HardcoreMode) return;
+						if (!HardcoreMode) return;
 
 						var lboard = _gameData.GetLboardById(evt->id);
 						if (!lboard.Invalid)
@@ -540,12 +593,12 @@ namespace BizHawk.Client.EmuHawk
 					}
 				case LibRCheevos.rc_runtime_event_type_t.RC_RUNTIME_EVENT_LBOARD_TRIGGERED:
 					{
-						if (!LBoardsActive || !HardcoreMode) return;
+						if (!HardcoreMode) return;
 
 						var lboard = _gameData.GetLboardById(evt->id);
 						if (!lboard.Invalid)
 						{
-							_inactiveHttpRequests.Push(new LboardTriggerRequest(Username, ApiToken, evt->id, evt->value, _gameHash));
+							PushRequest(new LboardTriggerRequest(Username, ApiToken, evt->id, evt->value, _gameHash));
 
 							if (!lboard.Hidden)
 							{
@@ -554,9 +607,12 @@ namespace BizHawk.Client.EmuHawk
 									CurrentLboard = null;
 								}
 
-								_mainForm.AddOnScreenMessage($"Leaderboard Attempt Complete! ({lboard.Score})");
-								_mainForm.AddOnScreenMessage(lboard.Description);
-								if (EnableSoundEffects) _unlockSound.PlayNoExceptions();
+								if (LBoardNotifsActive)
+								{
+									_dialogParent.AddOnScreenMessage($"Leaderboard Attempt Complete! ({lboard.Score})");
+									_dialogParent.AddOnScreenMessage(lboard.Description);
+									PlaySound(_lboardCompleteSound);
+								}
 							}
 						}
 
@@ -581,9 +637,9 @@ namespace BizHawk.Client.EmuHawk
 						{
 							cheevo.IsPrimed = false;
 							var prefix = HardcoreMode ? "[HARDCORE] " : "";
-							_mainForm.AddOnScreenMessage($"{prefix}Achievement Unprimed!");
-							_mainForm.AddOnScreenMessage(cheevo.Description);
-							if (EnableSoundEffects) _infoSound.PlayNoExceptions();
+							_dialogParent.AddOnScreenMessage($"{prefix}Achievement Unprimed!");
+							_dialogParent.AddOnScreenMessage(cheevo.Description);
+							PlaySound(_infoSound);
 						}
 
 						break;
@@ -591,19 +647,30 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		private int PeekCallback(int address, int num_bytes, IntPtr ud)
+		private uint Peek(uint address)
 		{
-			byte Peek(int addr)
-				=> _readMap.TryGetValue(addr, out var reader) ? reader.Func(addr - reader.Start) : (byte)0;
-
-			return num_bytes switch
+			if (address < _readMap.Length && _readMap[address] != 0xFF)
 			{
-				1 => Peek(address),
-				2 => Peek(address) | (Peek(address + 1) << 8),
-				4 => Peek(address) | (Peek(address + 1) << 8) | (Peek(address + 2) << 16) | (Peek(address + 3) << 24),
-				_ => throw new InvalidOperationException($"Requested {num_bytes} in {nameof(PeekCallback)}"),
-			};
+				var memFuncs = _memFunctions[_readMap[address]];
+				return memFuncs.ReadFunc(address - memFuncs.StartAddress);
+			}
+
+			return 0;
 		}
+
+		private uint PeekCallback(uint address, uint num_bytes, IntPtr ud) => num_bytes switch
+		{
+			1 => Peek(address),
+			2 => Peek(address) | (Peek(address + 1) << 8),
+			4 => BinaryPrimitives.ReadUInt32LittleEndian(unchecked(stackalloc byte[]
+			{
+				(byte) Peek(address),
+				(byte) Peek(address + 1),
+				(byte) Peek(address + 2),
+				(byte) Peek(address + 3),
+			})),
+			_ => throw new InvalidOperationException($"Requested {num_bytes} in {nameof(PeekCallback)}"),
+		};
 
 		public override void OnFrameAdvance()
 		{

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64
@@ -31,6 +32,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 		internal C64Settings Settings { get; private set; }
 		internal C64SyncSettings SyncSettings { get; private set; }
 
+		[CoreSettings]
 		public class C64Settings
 		{
 			[DisplayName("Border type")]
@@ -50,10 +52,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 
 			public C64Settings()
 			{
-				BizHawk.Common.SettingsUtil.SetDefaultValues(this);
+				SettingsUtil.SetDefaultValues(this);
 			}
 		}
 
+		[CoreSettings]
 		public class C64SyncSettings
 		{
 			[DisplayName("VIC type")]
@@ -93,7 +96,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 
 			public C64SyncSettings()
 			{
-				BizHawk.Common.SettingsUtil.SetDefaultValues(this);
+				SettingsUtil.SetDefaultValues(this);
 			}
 		}
 

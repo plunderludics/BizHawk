@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -12,7 +10,7 @@ namespace BizHawk.Client.Common
 		{
 			_outputProvider = new SoundOutputProvider(getCoreVsyncRateCallback, standaloneMode: true)
 			{
-				BaseSoundProvider = baseProvider
+				BaseSoundProvider = baseProvider,
 			};
 		}
 

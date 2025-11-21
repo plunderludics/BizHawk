@@ -32,11 +32,6 @@ namespace BizHawk.Client.Common
 		public virtual bool Changes { get; protected set; }
 		public bool IsCountingRerecords { get; set; } = true;
 
-		public ILogEntryGenerator LogGeneratorInstance(IController source)
-		{
-			return new Bk2LogEntryGenerator(Emulator?.SystemId ?? SystemID, source);
-		}
-
 		public override int FrameCount => Log.Count;
 		public int InputLogLength => Log.Count;
 
@@ -53,8 +48,7 @@ namespace BizHawk.Client.Common
 
 		public void AppendFrame(IController source)
 		{
-			var lg = LogGeneratorInstance(source);
-			Log.Add(lg.GenerateLogEntry());
+			Log.Add(Bk2LogEntryGenerator.GenerateLogEntry(source));
 			Changes = true;
 		}
 
@@ -68,8 +62,7 @@ namespace BizHawk.Client.Common
 				}
 			}
 
-			var lg = LogGeneratorInstance(source);
-			SetFrameAt(frame, lg.GenerateLogEntry());
+			SetFrameAt(frame, Bk2LogEntryGenerator.GenerateLogEntry(source));
 
 			Changes = true;
 		}
@@ -85,10 +78,10 @@ namespace BizHawk.Client.Common
 
 		public IMovieController GetInputState(int frame)
 		{
-			if (frame < FrameCount && frame >= 0)
+			if (frame < FrameCount && frame >= -1)
 			{
-				_adapter ??= new Bk2Controller(LogKey, Session.MovieController.Definition);
-				_adapter.SetFromMnemonic(Log[frame]);
+				_adapter ??= new Bk2Controller(Session.MovieController.Definition, LogKey);
+				_adapter.SetFromMnemonic(frame >= 0 ? Log[frame] : Bk2LogEntryGenerator.EmptyEntry(_adapter));
 				return _adapter;
 			}
 
@@ -97,8 +90,7 @@ namespace BizHawk.Client.Common
 
 		public virtual void PokeFrame(int frame, IController source)
 		{
-			var lg = LogGeneratorInstance(source);
-			SetFrameAt(frame, lg.GenerateLogEntry());
+			SetFrameAt(frame, Bk2LogEntryGenerator.GenerateLogEntry(source));
 			Changes = true;
 		}
 

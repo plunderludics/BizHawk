@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -19,7 +18,7 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 
 		public bool SaveRamModified => _nvramFilenames.Count > 0;
 
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			if (_nvramFilenames.Count == 0)
 			{

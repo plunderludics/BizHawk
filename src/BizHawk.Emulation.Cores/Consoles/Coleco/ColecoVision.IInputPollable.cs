@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.ColecoVision
@@ -20,7 +19,9 @@ namespace BizHawk.Emulation.Cores.ColecoVision
 		public IInputCallbackSystem InputCallbacks
 		{
 			[FeatureNotImplemented]
+#pragma warning disable CA1065 // convention for [FeatureNotImplemented] is to throw NIE
 			get => throw new NotImplementedException();
+#pragma warning restore CA1065
 		}
 
 		private int _lagCount = 0;

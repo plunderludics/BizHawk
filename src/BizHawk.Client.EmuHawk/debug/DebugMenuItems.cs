@@ -1,6 +1,5 @@
 #nullable enable
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
@@ -28,7 +27,7 @@ namespace BizHawk.Client.EmuHawk.ForDebugging
 
 		public DebugVSystemMenuItem(string sysID, params string[] extraSysIDs)
 		{
-			SysIDs = new[] { sysID }.Concat(extraSysIDs).ToHashSet();
+			SysIDs = extraSysIDs.Prepend(sysID).ToHashSet();
 			Text = sysID;
 		}
 	}

@@ -27,6 +27,12 @@ namespace BizHawk.Client.EmuHawk
 			void OpenTool<T>() where T : class, IToolForm => Tools.Load<T>();
 			ToolStripMenuItemEx firmwareAutopatchDebugItem = new() { Text = FirmwareAutopatchDebugToolForm.TOOL_NAME };
 			firmwareAutopatchDebugItem.Click += (_, _) => OpenTool<FirmwareAutopatchDebugToolForm>();
+			ToolStripMenuItemEx rcHashDebugItem = new() { Text = "Debug RC Hash" };
+			rcHashDebugItem.Click += (_, _) => RCheevos.DebugHash();
+			ToolStripMenuItemEx testModal1DebugItem = new() { Text = "Open Dummy Modal Dialog" };
+			testModal1DebugItem.Click += (_, _) => this.ModalMessageBox("This message is meaningless.\nPress\"OK\" to continue.");
+			ToolStripMenuItemEx testOSDDebugItem = new() { Text = "Queue Dummy OSD Message" };
+			testOSDDebugItem.Click += (_, _) => AddOnScreenMessage("This toast will last at least 5 seconds", 5);
 			ToolStripMenuItemEx debugMenu = new()
 			{
 				DropDownItems =
@@ -38,6 +44,23 @@ namespace BizHawk.Client.EmuHawk
 							firmwareAutopatchDebugItem,
 						},
 						Text = "Firmware",
+					},
+					new ToolStripMenuItemEx
+					{
+						DropDownItems =
+						{
+							rcHashDebugItem,
+						},
+						Text = "RCheevos",
+					},
+					new ToolStripMenuItemEx
+					{
+						DropDownItems =
+						{
+							testModal1DebugItem,
+							testOSDDebugItem,
+						},
+						Text = "WinForms/UI",
 					},
 					new ToolStripSeparatorEx(),
 					new DebugVSystemMenuItem(VSystemID.Raw.GB, VSystemID.Raw.GBC)

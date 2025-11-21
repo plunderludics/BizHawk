@@ -1,9 +1,10 @@
 ﻿using BizHawk.Common;
-using System;
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 {
@@ -15,7 +16,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 		public override DiskType DiskFormatType => DiskType.UDI;
 
 		/// <summary>
-		/// Attempts to parse incoming disk data 
+		/// Attempts to parse incoming disk data
 		/// </summary>
 		/// <returns>
 		/// TRUE:   disk parsed
@@ -26,7 +27,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			// look for standard magic string
 			string ident = Encoding.ASCII.GetString(data, 0, 4);
 
-			if (!ident.StartsWith("UDI!") && !ident.StartsWith("udi!"))
+			if (!ident.StartsWithOrdinal("UDI!") && !ident.StartsWithOrdinal("udi!"))
 			{
 				// incorrect format
 				return false;
@@ -83,7 +84,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			// look for standard magic string
 			string ident = Encoding.ASCII.GetString(data, 0, 4);
 
-			if (!ident.StartsWith("UDI!") && !ident.StartsWith("udi!"))
+			if (!ident.StartsWithOrdinal("UDI!") && !ident.StartsWithOrdinal("udi!"))
 			{
 				// incorrect format
 				return false;
@@ -141,7 +142,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				}
 				catch (Exception)
 				{
-
+					// ignore
 				}
 
 
@@ -181,7 +182,6 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 		public class UDIv1Sector : Sector
 		{
-
 		}
 
 
@@ -201,7 +201,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			ser.Sync(nameof(DirtyData), ref DirtyData);
 			if (DirtyData)
 			{
-
+				//TODO
 			}
 
 			// sync deterministic track and sector counters

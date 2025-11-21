@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -37,6 +36,9 @@ namespace BizHawk.Client.Common
 					return i;
 				}
 			}
+
+			if (newLog.Count != currentLog.Count)
+				return Math.Min(newLog.Count, currentLog.Count);
 
 			return null;
 		}
@@ -212,7 +214,7 @@ namespace BizHawk.Client.Common
 			}
 
 			void IEnumerator.Reset() { _index = -1; }
-			
+
 			public void Dispose() { }
 		}
 

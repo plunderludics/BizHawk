@@ -1,8 +1,8 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
+
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 {
@@ -52,7 +52,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			// check whether this is a valid wav format file by looking at the identifier in the header
 			string ident = Encoding.ASCII.GetString(data, 8, 4);
 
-			if (ident.ToUpper() != "WAVE")
+			if (!"WAVE".EqualsIgnoreCase(ident))
 			{
 				// this is not a valid WAV format file
 				return false;
@@ -74,7 +74,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 			// check whether this is a valid pzx format file by looking at the identifier in the header block
 			string ident = Encoding.ASCII.GetString(data, 8, 4);
 
-			if (ident.ToUpper() != "WAVE")
+			if (!"WAVE".EqualsIgnoreCase(ident))
 			{
 				// this is not a valid TZX format file
 				throw new Exception($"{nameof(WavConverter)}: This is not a valid WAV format file");
@@ -108,7 +108,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				smpCounter++;
 				if ((state < 0 && sample < 0) || (state >= 0 && sample >= 0))
 					continue;
-				t.DataPeriods.Add((int)(((double)smpCounter * (double)rate) / (double)0.9838560885608856));
+				t.DataPeriods.Add((int)((smpCounter * (double)rate) / (double)0.9838560885608856));
 				currLevel = !currLevel;
 				t.DataLevels.Add(currLevel);
 				smpCounter = 0;

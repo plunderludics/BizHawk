@@ -1,10 +1,11 @@
-﻿using System;
 using System.Windows.Forms;
 
 namespace BizHawk.Client.EmuHawk
 {
 	// http://www.codeproject.com/Articles/2130/NET-port-of-Joe-s-AutoRepeat-Button-class
+#pragma warning disable MA0104 // unlikely to conflict with System.Windows.Controls.Primitives.RepeatButton
 	public class RepeatButton : Button
+#pragma warning restore MA0104
 	{
 		private readonly Timer _mTimer;
 		private bool _down;
@@ -30,7 +31,6 @@ namespace BizHawk.Client.EmuHawk
 				_once = true;
 				PerformClick();
 			}
-
 		}
 
 		protected override void OnClick(EventArgs e)
@@ -79,6 +79,5 @@ namespace BizHawk.Client.EmuHawk
 				}
 			}
 		}
-
 	}
 }

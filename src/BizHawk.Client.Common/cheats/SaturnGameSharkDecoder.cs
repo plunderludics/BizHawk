@@ -1,6 +1,6 @@
-﻿using System;
 using System.Globalization;
 
+#pragma warning disable MA0089
 namespace BizHawk.Client.Common.cheats
 {
 	public static class SaturnGameSharkDecoder
@@ -18,7 +18,7 @@ namespace BizHawk.Client.Common.cheats
 				throw new ArgumentNullException(nameof(code));
 			}
 
-			if (code.IndexOf(" ") != 8)
+			if (code.IndexOf(" ", StringComparison.Ordinal) != 8)
 			{
 				return new InvalidCheatCode("All Saturn GameShark Codes need to contain a space after the eighth character.");
 			}
@@ -36,7 +36,7 @@ namespace BizHawk.Client.Common.cheats
 			{
 				result.Size = WatchSize.Byte;
 			}
-			
+
 			var s = code.Remove(0, 2);
 			result.Address = int.Parse(s.Remove(6, 5), NumberStyles.HexNumber);
 			result.Value = int.Parse(s.Remove(0, 7));
@@ -44,3 +44,4 @@ namespace BizHawk.Client.Common.cheats
 		}
 	}
 }
+#pragma warning restore MA0089

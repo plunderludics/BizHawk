@@ -4,23 +4,23 @@ namespace BizHawk.Emulation.Common
 {
 	public static class Waves
 	{
-		public static short[] SquareWave;
-		public static short[] ImperfectSquareWave;
-		public static short[] NoiseWave;
-		public static short[] PeriodicWave16;
+		public static short[] SquareWave { get; private set;  }
+		public static short[] ImperfectSquareWave { get; private set; }
+		public static short[] NoiseWave { get; private set; }
+		public static short[] PeriodicWave16 { get; private set; }
 
 		public static void InitWaves()
 		{
 			SquareWave = new short[]
 			{
 				-32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768, -32768,
-				32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767
+				32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
 			};
 
 			ImperfectSquareWave = new short[]
 			{
 				-32768, -30145, -27852, -26213, -24902, -23592, -22282, -20971, -19988, -19005, -18350, -17694, -17366, -17039, -16711, -16711,
-				32767, 30145, 27852, 26213, 24902, 23592, 22282, 20971, 19988, 19005, 18350, 17694, 17366, 17039, 16711, 16711
+				32767, 30145, 27852, 26213, 24902, 23592, 22282, 20971, 19988, 19005, 18350, 17694, 17366, 17039, 16711, 16711,
 			};
 
 			PeriodicWave16 = new short[] { 32767, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };

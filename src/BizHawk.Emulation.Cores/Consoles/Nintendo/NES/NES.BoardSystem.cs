@@ -1,11 +1,10 @@
-﻿using System;
 using System.Collections.Generic;
 using BizHawk.Emulation.Common;
 
 //TODO - could stringpool the BootGod DB for a pedantic optimization
 namespace BizHawk.Emulation.Cores.Nintendo.NES
 {
-	partial class NES
+	public sealed partial class NES
 	{
 		private static readonly List<Type> INESBoardImplementors = new List<Type>();
 
@@ -142,7 +141,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 		{
 			foreach (var hash in hash_sha1)
 			{
-				List<CartInfo> choices = BootGodDb.Identify(hash);
+				var choices = BootGodDb.Identify(hash);
 				//pick the first board for this hash arbitrarily. it probably doesn't make a difference
 				if (choices.Count != 0)
 					return choices[0];
@@ -158,7 +157,9 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			var gi = Database.CheckDatabase(hash);
 			if (gi == null) return null;
 
+#pragma warning disable MA0084 // shadows `CartInfo this.cart`
 			CartInfo cart = new CartInfo();
+#pragma warning restore MA0084
 
 			//try generating a bootgod cart descriptor from the game database
 			var dict = gi.GetOptions();

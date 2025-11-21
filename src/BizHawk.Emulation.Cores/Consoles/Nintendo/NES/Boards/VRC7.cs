@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
 using BizHawk.Emulation.Cores.Components;
@@ -252,7 +251,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 					SyncIRQ();
 
 					break;
-				
+
 				case 0x7001: //(ack)
 					irq_pending = false;
 					irq_enabled = irq_autoen;

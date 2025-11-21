@@ -1,21 +1,18 @@
-﻿using System;
-
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Components;
 using BizHawk.Emulation.Cores.Components.Z80A;
 
 /*****************************************************
-  TODO: 
+  TODO:
   + HCounter (Manually set for light phaser emulation... should be only case it's polled)
-  + Try to clean up the organization of the source code. 
+  + Try to clean up the organization of the source code.
   + Mode 1 not implemented in VDP TMS modes. (I don't have a test case in SG1000 or Coleco)
- 
+
 **********************************************************/
 
 namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 {
 	[Core(CoreNames.SMSHawk, "Vecna")]
-	[ServiceNotApplicable(new[] { typeof(IDriveLight) })]
 	public partial class SMS : IEmulator, ISoundProvider, ISaveRam, IInputPollable, IRegionable,
 		IDebuggable, ISettable<SMS.SmsSettings, SMS.SmsSyncSettings>, ICodeDataLogger
 	{
@@ -26,8 +23,8 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 		{
 			var ser = new BasicServiceProvider(this);
 			ServiceProvider = ser;
-			Settings = (SmsSettings)settings ?? new SmsSettings();
-			SyncSettings = (SmsSyncSettings)syncSettings ?? new SmsSyncSettings();
+			Settings = settings ?? new SmsSettings();
+			SyncSettings = syncSettings ?? new SmsSyncSettings();
 
 			IsGameGear = game.System == VSystemID.Raw.GG;
 			IsGameGear_C = game.System == VSystemID.Raw.GG;
@@ -79,17 +76,8 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 				HasYM2413 = true;
 			}
 
-			Cpu = new Z80A
-			{
-				ReadHardware = ReadPort,
-				WriteHardware = WritePort,
-				FetchMemory = FetchMemory,
-				ReadMemory = ReadMemory,
-				WriteMemory = WriteMemory,
-				MemoryCallbacks = MemoryCallbacks,
-				OnExecFetch = OnExecMemory
-			};
-			
+			Cpu = new Z80A<CpuLink>(new CpuLink(this));
+
 			// set this before turning off GG system for GG_in_SMS games
 			bool sms_reg_compat = !IsGameGear && (_region == SmsSyncSettings.Regions.Japan);
 
@@ -177,7 +165,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 				{
 					throw new MissingFirmwareException("No BIOS found");
 				}
-				
+
 				if (!game["RequireBios"] && !SyncSettings.UseBios)
 				{
 					// we are skipping the BIOS
@@ -210,9 +198,6 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 			ser.Register<IDisassemblable>(Cpu);
 			ser.Register<IStatable>(new StateSerializer(SyncState));
 			Vdp.ProcessOverscan();
-
-			Cpu.ReadMemory = ReadMemory;
-			Cpu.WriteMemory = WriteMemory;
 
 			// Z80 SP initialization
 			// stops a few SMS and GG games from crashing
@@ -248,7 +233,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 		private readonly byte[] BiosRom;
 
 		// Machine resources
-		public Z80A Cpu;
+		public Z80A<CpuLink> Cpu;
 		public byte[] SystemRam;
 		public VDP Vdp;
 		public SN76489sms PSG;
@@ -293,17 +278,17 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 		{
 			if (gameRegion == null)
 				return SmsSyncSettings.Regions.Export;
-			if (gameRegion.IndexOf("USA") >= 0)
+			if (gameRegion.IndexOf("USA", StringComparison.Ordinal) >= 0)
 				return SmsSyncSettings.Regions.Export;
-			if (gameRegion.IndexOf("Europe") >= 0)
+			if (gameRegion.IndexOf("Europe", StringComparison.Ordinal) >= 0)
 				return SmsSyncSettings.Regions.Export;
-			if (gameRegion.IndexOf("World") >= 0)
+			if (gameRegion.IndexOf("World", StringComparison.Ordinal) >= 0)
 				return SmsSyncSettings.Regions.Export;
-			if (gameRegion.IndexOf("Brazil") >= 0)
+			if (gameRegion.IndexOf("Brazil", StringComparison.Ordinal) >= 0)
 				return SmsSyncSettings.Regions.Export;
-			if (gameRegion.IndexOf("Australia") >= 0)
+			if (gameRegion.IndexOf("Australia", StringComparison.Ordinal) >= 0)
 				return SmsSyncSettings.Regions.Export;
-			if (gameRegion.IndexOf("Korea") >= 0)
+			if (gameRegion.IndexOf("Korea", StringComparison.Ordinal) >= 0)
 				return SmsSyncSettings.Regions.Korea;
 			return SmsSyncSettings.Regions.Japan;
 		}
@@ -312,7 +297,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 		{
 			if (display == SmsSyncSettings.DisplayTypes.Ntsc) return DisplayType.NTSC;
 			if (display == SmsSyncSettings.DisplayTypes.Pal) return DisplayType.PAL;
-			if (region != null && region == "Europe") return DisplayType.PAL;
+			if (region is "Europe") return DisplayType.PAL;
 			return DisplayType.NTSC;
 		}
 
@@ -367,7 +352,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 			port &= 0xFF;
 			if (port < 0x40) // General IO ports
 			{
-				
+
 				switch (port)
 				{
 					case 0x00: if (stand_alone) { return ReadPort0(); } else { _lagged = false; return cntr_rd_0; }
@@ -395,7 +380,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 				else
 					return Vdp.ReadVdpStatus();
 			}
-			switch (port) 
+			switch (port)
 			{
 				case 0xC0:
 				case 0xDC: if (stand_alone) { return ReadControls1(); } else { _lagged = false; return cntr_rd_1; }

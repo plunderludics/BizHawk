@@ -1,4 +1,3 @@
-﻿using System;
 using System.IO;
 using BizHawk.Client.Common;
 
@@ -6,7 +5,11 @@ namespace BizHawk.Client.EmuHawk
 {
 	public class LuaAutocompleteInstaller
 	{
-		public enum TextEditors { Sublime2, NotePad }
+		public enum TextEditors
+		{
+			Sublime2,
+			NotePad,
+		}
 
 		public bool IsInstalled(TextEditors editor)
 		{
@@ -14,7 +17,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				TextEditors.Sublime2 => IsSublimeInstalled(),
 				TextEditors.NotePad => IsNotepadInstalled(),
-				_ => false
+				_ => false,
 			};
 		}
 
@@ -24,7 +27,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				TextEditors.Sublime2 => IsBizLuaSublimeInstalled(),
 				TextEditors.NotePad => IsBizLuaNotepadInstalled(),
-				_ => false
+				_ => false,
 			};
 		}
 

@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
@@ -48,7 +47,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			for (int i = 0; i < _outputBufferIndex; i++)
 			{
 				_mixer = _outputBufferNotFiltered[i] + _outputBufferFiltered[i];
-				_mixer = _mixer >> 7;
+				_mixer >>= 7;
 				_mixer = (_mixer * _volumeAtSampleTime[i]) >> 4;
 				_mixer -= _volumeAtSampleTime[i] << 8;
 
@@ -64,7 +63,6 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 
 				_outputBuffer[i * 2] = unchecked((short)_mixer);
 				_outputBuffer[i * 2 + 1] = unchecked((short)_mixer);
-				
 			}
 
 			samples = _outputBuffer;
@@ -73,6 +71,5 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_outputBufferIndex = 0;
 			_filterIndex = 0;
 		}
-
 	}
 }

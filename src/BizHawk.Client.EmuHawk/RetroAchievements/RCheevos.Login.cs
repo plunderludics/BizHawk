@@ -1,4 +1,4 @@
-using System;
+using BizHawk.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -11,7 +11,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private sealed class LoginRequest : RCheevoHttpRequest
 		{
-			private LibRCheevos.rc_api_login_request_t _apiParams;
+			private readonly LibRCheevos.rc_api_login_request_t _apiParams;
 			public string Username { get; private set; }
 			public string ApiToken { get; private set; }
 
@@ -24,7 +24,7 @@ namespace BizHawk.Client.EmuHawk
 
 			public override void DoRequest()
 			{
-				var apiParamsResult = _lib.rc_api_init_login_request(out var api_req, ref _apiParams);
+				var apiParamsResult = _lib.rc_api_init_login_request(out var api_req, in _apiParams);
 				InternalDoRequest(apiParamsResult, ref api_req);
 			}
 
@@ -46,7 +46,7 @@ namespace BizHawk.Client.EmuHawk
 		private bool DoLogin(string username, string apiToken = null, string password = null)
 		{
 			var loginRequest = new LoginRequest(username, apiToken, password);
-			_inactiveHttpRequests.Push(loginRequest);
+			PushRequest(loginRequest);
 			loginRequest.Wait();
 
 			Username = loginRequest.Username;
@@ -59,7 +59,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			var config = _getConfig();
 			Username = config.RAUsername;
-			ApiToken = config.RAToken;
+			ApiToken = SecretStrings.DecryptString(config.RAToken);
 
 			if (LoggedIn)
 			{
@@ -67,8 +67,8 @@ namespace BizHawk.Client.EmuHawk
 				if (DoLogin(Username, apiToken: ApiToken))
 				{
 					config.RAUsername = Username;
-					config.RAToken = ApiToken;
-					if (EnableSoundEffects) _loginSound.PlayNoExceptions();
+					config.RAToken = SecretStrings.EncryptString(ApiToken);
+					PlaySound(_loginSound);
 					return;
 				}
 			}
@@ -77,11 +77,11 @@ namespace BizHawk.Client.EmuHawk
 			loginForm.ShowDialog();
 
 			config.RAUsername = Username;
-			config.RAToken = ApiToken;
+			config.RAToken = SecretStrings.EncryptString(ApiToken);
 
-			if (LoggedIn && EnableSoundEffects)
+			if (LoggedIn)
 			{
-				_loginSound.PlayNoExceptions();
+				PlaySound(_loginSound);
 			}
 		}
 

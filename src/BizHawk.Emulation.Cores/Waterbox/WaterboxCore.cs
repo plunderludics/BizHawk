@@ -1,18 +1,22 @@
-﻿using BizHawk.Common;
-using BizHawk.BizInvoke;
-using BizHawk.Emulation.Common;
-using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+
+using BizHawk.Common;
+using BizHawk.BizInvoke;
+using BizHawk.Common.PathExtensions;
+using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Waterbox
 {
 	public abstract class WaterboxCore : IEmulator, IVideoProvider, ISoundProvider, IStatable,
 		IInputPollable, ISaveRam
 	{
+		private const int AUDIO_CHANNEL_COUNT = 2;
+
 		private LibWaterboxCore _core;
 		protected WaterboxHost _exe;
+		protected ICallingConventionAdapter _adapter;
 		protected LibWaterboxCore.MemoryArea[] _memoryAreas;
 		private readonly LibWaterboxCore.EmptyCallback _inputCallback;
 		protected CoreComm CoreComm { get; }
@@ -34,7 +38,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			BufferWidth = c.DefaultWidth;
 			BufferHeight = c.DefaultHeight;
 			_videoBuffer = new int[c.MaxWidth * c.MaxHeight];
-			_soundBuffer = new short[c.MaxSamples * 2];
+			_soundBuffer = new short[AUDIO_CHANNEL_COUNT * c.MaxSamples]; //TODO rename prop to MaxSamplesPerChannel
 			VsyncNumerator = c.DefaultFpsNumerator;
 			VsyncDenominator = c.DefaultFpsDenominator;
 			_serviceProvider = new BasicServiceProvider(this);
@@ -46,14 +50,15 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		protected T PreInit<T>(WaterboxOptions options, IEnumerable<Delegate> allExtraDelegates = null)
 			where T : LibWaterboxCore
 		{
-			options.Path ??= CoreComm.CoreFileProvider.DllPath();
+			options.Path ??= PathUtils.DllDirectoryPath;
 			_exe = new WaterboxHost(options);
 			var delegates = new Delegate[] { _inputCallback }.AsEnumerable();
 			if (allExtraDelegates != null)
 				delegates = delegates.Concat(allExtraDelegates);
 			using (_exe.EnterExit())
 			{
-				var ret = BizInvoker.GetInvoker<T>(_exe, _exe, CallingConventionAdapters.MakeWaterbox(delegates, _exe));
+				_adapter = CallingConventionAdapters.MakeWaterbox(delegates, _exe);
+				var ret = BizInvoker.GetInvoker<T>(_exe, _exe, _adapter);
 				_core = ret;
 				return ret;
 			}
@@ -137,7 +142,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 								int nread = stream.Read(buff, 0, 4096);
 								if (nread == 0)
 									break;
-								
+
 								int* p = (int*)bp;
 								int* pend = p + nread / sizeof(int);
 								while (p < pend)
@@ -153,7 +158,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			}
 		}
 
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			if (_saveramSize == 0)
 				return null;
@@ -171,17 +176,22 @@ namespace BizHawk.Emulation.Cores.Waterbox
 
 		public void StoreSaveRam(byte[] data)
 		{
+			// Checking if the size of the SaveRAM provided coincides with that expected. This is important for cores whose SaveRAM size can vary depending on their configuration.
+			if (data.Length != _saveramSize)
+			{
+				Console.WriteLine($"Could not push SaveRam into the core: the length of the data provided ({data.Length}) is different than expected ({_saveramSize})");
+
+				// Here, the exception was too traumatic. The emulator shuts down when in debug mode, and is left in an unstable state on release.
+				// Using a softer landing here, although returning true/false plus a string explanation would be more adequate.
+				return;
+			}
+
 			using (_exe.EnterExit())
 			{
-				if (data.Length != _saveramSize)
-					throw new InvalidOperationException("Saveram size mismatch");
-				using (_exe.EnterExit())
+				var source = new MemoryStream(data, false);
+				foreach (var area in _saveramAreas)
 				{
-					var source = new MemoryStream(data, false);
-					foreach (var area in _saveramAreas)
-					{
-						WaterboxUtils.CopySome(source, new MemoryDomainStream(area), area.Size);
-					}
+					MemoryBlockUtils.CopySome(source, new MemoryDomainStream(area), area.Size);
 				}
 			}
 		}
@@ -202,6 +212,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 					var frame = FrameAdvancePrep(controller, render, rendersound);
 					frame.VideoBuffer = (IntPtr)vp;
 					frame.SoundBuffer = (IntPtr)sp;
+					//TODO it seems no-one thought to let the core know the LENGTH of either buffer; is it actually writing past the end? --yoshi
 
 					_core.FrameAdvance(frame);
 
@@ -238,7 +249,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		{
 			if (!_disposed)
 			{
-				_exe.Dispose();
+				_exe?.Dispose();
 				_disposed = true;
 			}
 		}
@@ -262,6 +273,8 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		public bool DeterministicEmulation { get; protected set; } = true;
 		public IInputCallbackSystem InputCallbacks { get; } = new InputCallbackSystem();
 		public virtual ControllerDefinition ControllerDefinition { get; protected set; } = NullController.Instance.Definition;
+
+		public bool AvoidRewind => false;
 
 		public void LoadStateBinary(BinaryReader reader)
 		{
@@ -307,20 +320,14 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		/// variables that it needs to.
 		/// the default implementation does nothing
 		/// </summary>
-		protected virtual void SaveStateBinaryInternal(BinaryWriter writer)
-		{
-
-		}
+		protected virtual void SaveStateBinaryInternal(BinaryWriter writer) {}
 
 		/// <summary>
 		/// called after the base core loads state.  the core must load any other variables
 		/// that were in SaveStateBinaryInternal and reset any native pointers.
 		/// the default implementation does nothing
 		/// </summary>
-		protected virtual void LoadStateBinaryInternal(BinaryReader reader)
-		{
-
-		}
+		protected virtual void LoadStateBinaryInternal(BinaryReader reader) {}
 
 		public void SetSyncMode(SyncSoundMode mode)
 		{
@@ -330,10 +337,20 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			}
 		}
 
+		private string/*?*/ _finalCoreName = null;
+
+		private string FinalCoreName => _finalCoreName ??= this.Attributes().CoreName;
+
 		public void GetSamplesSync(out short[] samples, out int nsamp)
 		{
 			samples = _soundBuffer;
 			nsamp = _numSamples;
+			var maxPerChannel = samples.Length / AUDIO_CHANNEL_COUNT;
+			if (maxPerChannel < nsamp)
+			{
+				Util.DebugWriteLine($"FrameAdvance in Waterbox core {FinalCoreName} claimed to have written {AUDIO_CHANNEL_COUNT}x{nsamp} audio samples but buffer is only {AUDIO_CHANNEL_COUNT}x{maxPerChannel} long!");
+				nsamp = maxPerChannel;
+			}
 		}
 
 		public void GetSamplesAsync(short[] samples)

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -22,7 +21,8 @@ namespace BizHawk.Client.EmuHawk
 	public partial class InputRoll : Control
 	{
 		private readonly IControlRenderer _renderer;
-		private readonly SortedSet<Cell> _selectedItems = new SortedSet<Cell>(new SortCell());
+
+		private CellList _selectedItems = new();
 
 		// scrollbar location(s) are calculated later (e.g. on resize)
 		private readonly VScrollBar _vBar = new VScrollBar { Visible = false };
@@ -31,8 +31,21 @@ namespace BizHawk.Client.EmuHawk
 		private readonly Timer _hoverTimer = new Timer();
 		private readonly byte[] _lagFrames = new byte[256]; // Large enough value that it shouldn't ever need resizing. // apparently not large enough for 4K
 
-		private readonly Color _foreColor;
-		private readonly Color _backColor;
+		private Color _backColor;
+
+		public override Color BackColor
+		{
+			get => _backColor;
+			set => base.BackColor = _backColor = value;
+		}
+
+		private Color _foreColor;
+
+		public override Color ForeColor
+		{
+			get => _foreColor;
+			set => base.ForeColor = _foreColor = value;
+		}
 
 		private RollColumns _columns = new RollColumns();
 		private bool _horizontalOrientation;
@@ -41,10 +54,9 @@ namespace BizHawk.Client.EmuHawk
 		private int _rowCount;
 		private SizeF _charSize;
 
-		private int[] _horizontalColumnTops; // Updated on paint, contains one extra item to allow inference of last column height
+		private RollColumn/*?*/ _columnDown;
 
-		private RollColumn _columnDown;
-		private RollColumn _columnResizing;
+		private RollColumn/*?*/ _columnResizing;
 
 		private int? _currentX;
 		private int? _currentY;
@@ -67,12 +79,14 @@ namespace BizHawk.Client.EmuHawk
 		/// Gets or sets a value indicating whether or not the control will respond to right-click events with a context menu
 		/// </summary>
 		[Category("Behavior")]
+		[DefaultValue(true)]
 		public bool AllowRightClickSelection { get; set; } = true;
 
 		/// <summary>
 		/// Gets or sets a value indicating whether or not Home and End will navigate to the beginning or end of the list
 		/// </summary>
 		[Category("Behavior")]
+		[DefaultValue(true)]
 		public bool AllowMassNavigationShortcuts { get; set; } = true;
 
 		[Category("Behavior")]
@@ -117,8 +131,8 @@ namespace BizHawk.Client.EmuHawk
 			_hoverTimer.Tick += HoverTimerEventProcessor;
 			_hoverTimer.Stop();
 
-			_foreColor = ForeColor;
-			_backColor = BackColor;
+			_backColor = Color.White;
+			_foreColor = Color.Black;
 		}
 
 		private void HoverTimerEventProcessor(object sender, EventArgs e)
@@ -163,13 +177,14 @@ namespace BizHawk.Client.EmuHawk
 				}
 				else
 				{
-					var maxLength = CurrentCell.Column.Text?.Length ?? 0;
+					var col = CurrentCell.Column!;
+					var maxLength = col.Text.Length;
 
 					for (int i = 0; i < RowCount; i++)
 					{
 						string text = "";
 						int offSetX = 0, offSetY = 0;
-						QueryItemText?.Invoke(i, CurrentCell.Column, out text, ref offSetX, ref offSetY);
+						QueryItemText?.Invoke(i, col, out text, ref offSetX, ref offSetY);
 						if (text.Length > maxLength)
 						{
 							maxLength = text.Length;
@@ -177,11 +192,10 @@ namespace BizHawk.Client.EmuHawk
 					}
 
 					var newWidth = (maxLength * _charSize.Width) + (CellWidthPadding * 2);
-					CurrentCell.Column.Width = (int)newWidth;
+					col.Width = (int) newWidth;
 					_columns.ColumnsChanged();
 					Refresh();
 				}
-				
 			}
 
 			base.OnDoubleClick(e);
@@ -192,14 +206,14 @@ namespace BizHawk.Client.EmuHawk
 		/// </summary>
 		[DefaultValue(3)]
 		[Category("Behavior")]
-		public int CellWidthPadding { get; set; }
+		public int CellWidthPadding { get; set; } = 3;
 
 		/// <summary>
 		/// Gets or sets the amount of top and bottom padding on the text inside a cell
 		/// </summary>
 		[DefaultValue(1)]
 		[Category("Behavior")]
-		public int CellHeightPadding { get; set; }
+		public int CellHeightPadding { get; set; } = 1;
 
 		/// <summary>
 		/// Gets or sets a value indicating whether grid lines are displayed around cells
@@ -252,9 +266,11 @@ namespace BizHawk.Client.EmuHawk
 
 					_rowCount = value;
 
-					if (_selectedItems.Max(s => s.RowIndex) >= _rowCount)
+					if (_selectedItems.LastOrDefault()?.RowIndex >= _rowCount)
 					{
-						_selectedItems.RemoveWhere(i => i.RowIndex >= _rowCount);
+						var iLastToKeep = _selectedItems.LowerBoundBinarySearch(static c => c.RowIndex ?? -1, _rowCount);
+						while (iLastToKeep > -1 && (_selectedItems[iLastToKeep + 1].RowIndex ?? -1) >= _rowCount) iLastToKeep--;
+						_selectedItems = _selectedItems.Slice(start: 0, length: iLastToKeep + 1);
 					}
 
 					RecalculateScrollBars();
@@ -281,9 +297,7 @@ namespace BizHawk.Client.EmuHawk
 				int x = MaxColumnWidth;
 				int y = 0;
 				int w = Width - x;
-				int h = VisibleColumns.Any()
-					? GetHColBottom(VisibleColumns.Count() - 1)
-					: 0;
+				int h = TotalColWidth;
 				h = Math.Min(h, _drawHeight);
 
 				Invalidate(new Rectangle(x, y, w, h));
@@ -355,16 +369,10 @@ namespace BizHawk.Client.EmuHawk
 		public bool AlwaysScroll { get; set; }
 
 		/// <summary>
-		/// Gets or sets the lowest seek interval to activate the progress bar
-		/// </summary>
-		[Category("Behavior")]
-		public int SeekingCutoffInterval { get; set; }
-
-		/// <summary>
 		/// Gets or sets a value indicating whether pressing page up/down will cause
 		/// the current selection to change
 		/// </summary>
-		[DefaultValue(false)]
+		[DefaultValue(true)]
 		[Category("Behavior")]
 		public bool ChangeSelectionWhenPaging { get; set; } = true;
 
@@ -469,6 +477,10 @@ namespace BizHawk.Client.EmuHawk
 		[Description("Occurs when a cell is dragged and then dropped into a new cell, old cell is the cell that was being dragged, new cell is its new destination")]
 		public event CellDroppedEvent CellDropped;
 
+		[Category("Property Changed")]
+		[Description("Fires after rotation has been changed.")]
+		public event EventHandler RotationChanged;
+
 		/// <summary>
 		/// Retrieve the text for a cell
 		/// </summary>
@@ -520,24 +532,26 @@ namespace BizHawk.Client.EmuHawk
 
 		public class ColumnClickEventArgs
 		{
-			public ColumnClickEventArgs(RollColumn column)
+			public ColumnClickEventArgs(RollColumn/*?*/ column)
 			{
 				Column = column;
 			}
 
-			public RollColumn Column { get; }
+			public RollColumn/*?*/ Column { get; }
 		}
 
+		/// <remarks>this is only used in TAStudio, which ignores the args param completely</remarks>
 		public class ColumnReorderedEventArgs
 		{
-			public ColumnReorderedEventArgs(int oldDisplayIndex, int newDisplayIndex, RollColumn column)
+			public ColumnReorderedEventArgs(int oldDisplayIndex, int newDisplayIndex, RollColumn/*?*/ column)
 			{
 				Column = column;
 				OldDisplayIndex = oldDisplayIndex;
 				NewDisplayIndex = newDisplayIndex;
 			}
 
-			public RollColumn Column { get; }
+			public RollColumn/*?*/ Column { get; }
+
 			public int OldDisplayIndex { get; }
 			public int NewDisplayIndex { get; }
 		}
@@ -553,14 +567,13 @@ namespace BizHawk.Client.EmuHawk
 					SelectCell(new Cell
 					{
 						RowIndex = index,
-						Column = _columns[0]
+						Column = _columns[0],
 					});
 					_lastSelectedRow = index;
 				}
 				else
 				{
-					IEnumerable<Cell> items = _selectedItems.Where(cell => cell.RowIndex == index);
-					_selectedItems.RemoveWhere(items.Contains);
+					_selectedItems.RemoveAll(cell => cell.RowIndex == index);
 					_lastSelectedRow = _selectedItems.LastOrDefault()?.RowIndex;
 				}
 			}
@@ -568,6 +581,7 @@ namespace BizHawk.Client.EmuHawk
 
 		public void SelectAll()
 		{
+			_selectedItems.Clear();
 			var oldFullRowVal = FullRowSelect;
 			FullRowSelect = true;
 			for (int i = 0; i < RowCount; i++)
@@ -596,7 +610,7 @@ namespace BizHawk.Client.EmuHawk
 
 		public void TruncateSelection(int index)
 		{
-			_selectedItems.RemoveWhere(cell => cell.RowIndex > index);
+			_selectedItems.RemoveAll(cell => cell.RowIndex > index);
 			_lastSelectedRow = _selectedItems.LastOrDefault()?.RowIndex;
 		}
 
@@ -608,13 +622,13 @@ namespace BizHawk.Client.EmuHawk
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int? SelectionStartIndex
-			=> AnyRowsSelected ? SelectedRowsWithDuplicates.Min() : null;
+			=> AnyRowsSelected ? SelectedRowsWithDuplicates.First() : null;
 
 		/// <returns>the <see cref="Cell.RowIndex"/> of the selected row with the latest index, or <see langword="null"/> if no rows are selected</returns>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public int? SelectionEndIndex
-			=> AnyRowsSelected ? SelectedRowsWithDuplicates.Max() : null;
+			=> AnyRowsSelected ? SelectedRowsWithDuplicates.Last() : null;
 
 		/// <summary>
 		/// Gets or sets the current Cell that the mouse was in.
@@ -646,6 +660,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				_columns = rollSettings.Columns;
 				_columns.ChangedCallback = ColumnChangedCallback;
+				_columns.ColumnsChanged();
 				HorizontalOrientation = rollSettings.HorizontalOrientation;
 				LagFramesToHide = rollSettings.LagFramesToHide;
 				HideWasLagFrames = rollSettings.HideWasLagFrames;
@@ -657,7 +672,7 @@ namespace BizHawk.Client.EmuHawk
 			Columns = _columns,
 			HorizontalOrientation = HorizontalOrientation,
 			LagFramesToHide = LagFramesToHide,
-			HideWasLagFrames = HideWasLagFrames
+			HideWasLagFrames = HideWasLagFrames,
 		};
 
 		public class InputRollSettings
@@ -778,7 +793,6 @@ namespace BizHawk.Client.EmuHawk
 					}
 
 					// Small jump, more accurate
-					var range = 0.RangeTo(_lagFrames[VisibleRows - halfRow]);
 					int lastVisible = LastFullyVisibleRow;
 					do
 					{
@@ -794,7 +808,7 @@ namespace BizHawk.Client.EmuHawk
 						SetLagFramesArray();
 						lastVisible = LastFullyVisibleRow;
 					}
-					while (!range.Contains(lastVisible - value) && FirstVisibleRow != 0);
+					while ((lastVisible - value < 0 || _lagFrames[VisibleRows - halfRow] < lastVisible - value) && FirstVisibleRow != 0);
 				}
 				_programmaticallyChangingRow = false;
 				PointMouseToNewCell();
@@ -803,13 +817,13 @@ namespace BizHawk.Client.EmuHawk
 
 		private bool IsVisible(int index)
 		{
-			Debug.Assert(FirstVisibleRow < LastFullyVisibleRow);
+			Debug.Assert(FirstVisibleRow < LastFullyVisibleRow, "rows out of order?");
 			return FirstVisibleRow <= index && index <= LastFullyVisibleRow;
 		}
 
 		public bool IsPartiallyVisible(int index)
 		{
-			Debug.Assert(FirstVisibleRow < LastVisibleRow);
+			Debug.Assert(FirstVisibleRow < LastVisibleRow, "rows out of order?");
 			return FirstVisibleRow <= index && index <= LastVisibleRow;
 		}
 
@@ -936,7 +950,7 @@ namespace BizHawk.Client.EmuHawk
 
 		[Browsable(false)]
 		private IEnumerable<int> SelectedRowsWithDuplicates
-			=> _selectedItems.Where(static cell => cell.RowIndex is not null).Select(static cell => cell.RowIndex.Value);
+			=> _selectedItems.Select(static cell => cell.RowIndex ?? -1).Where(static i => i >= 0);
 
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -954,25 +968,19 @@ namespace BizHawk.Client.EmuHawk
 			=> SelectedRowsWithDuplicates.First();
 
 		public bool IsRowSelected(int rowIndex)
-			=> _selectedItems.Any(cell => cell.RowIndex == rowIndex);
+			=> _selectedItems.IncludesRow(rowIndex);
 
 		public IEnumerable<ToolStripItem> GenerateContextMenuItems()
 		{
-			if (Rotatable)
+			if (!Rotatable) return [ ];
+			var rotate = new ToolStripMenuItem
 			{
-				yield return new ToolStripSeparator();
-
-				var rotate = new ToolStripMenuItem
-				{
-					Name = "RotateMenuItem",
-					Text = "Rotate",
-					ShortcutKeyDisplayString = RotateHotkeyStr
-				};
-
-				rotate.Click += (o, ev) => { HorizontalOrientation ^= true; };
-
-				yield return rotate;
-			}
+				Name = "RotateMenuItem",
+				Text = "Rotate",
+				ShortcutKeyDisplayString = RotateHotkeyStr,
+			};
+			rotate.Click += (_, _) => HorizontalOrientation = !HorizontalOrientation;
+			return [ new ToolStripSeparator(), rotate ];
 		}
 
 		public string RotateHotkeyStr => "Ctrl+Shift+F";
@@ -1035,7 +1043,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			Cell newCell = CalculatePointedCell(_currentX.Value, _currentY.Value);
-			
+
 			// SuuperW: Hide lag frames
 			if (QueryFrameLag != null && newCell.RowIndex.HasValue)
 			{
@@ -1079,7 +1087,7 @@ namespace BizHawk.Client.EmuHawk
 			CurrentCell = new Cell
 			{
 				Column = null,
-				RowIndex = null
+				RowIndex = null,
 			};
 
 			base.OnMouseEnter(e);
@@ -1142,63 +1150,39 @@ namespace BizHawk.Client.EmuHawk
 					{
 						// do marker drag here
 					}
-					else if (ModifierKeys == Keys.Shift && CurrentCell.Column.Type == ColumnType.Text)
+					else if (ModifierKeys is Keys.Shift && CurrentCell.Column! is { Type: ColumnType.Text } col)
 					{
-						if (_selectedItems.Any())
+						if (_selectedItems.Count is not 0)
 						{
 							if (FullRowSelect)
 							{
-								var selected = _selectedItems.Any(c => c.RowIndex.HasValue && CurrentCell.RowIndex.HasValue && c.RowIndex == CurrentCell.RowIndex);
-
-								if (!selected)
+								var targetRow = CurrentCell.RowIndex.Value;
+								if (!_selectedItems.IncludesRow(targetRow))
 								{
-									var rowIndices = _selectedItems
-										.Where(c => c.RowIndex.HasValue)
-										.Select(c => c.RowIndex ?? -1)
-										.Where(c => c >= 0) // Hack to avoid possible Nullable exceptions
-										.Distinct()
-										.ToList();
-
+									int additionStart, additionEndExcl;
+									SortedList<int> rowIndices = new(SelectedRows);
 									var firstIndex = rowIndices.Min();
-									var lastIndex = rowIndices.Max();
-
-									if (CurrentCell.RowIndex.Value < firstIndex)
+									if (targetRow < firstIndex)
 									{
-										for (int i = CurrentCell.RowIndex.Value; i < firstIndex; i++)
+										additionStart = targetRow;
+										additionEndExcl = firstIndex;
+									}
+									else
+									{
+										var lastIndex = rowIndices.Max();
+										if (targetRow > lastIndex)
 										{
-											SelectCell(new Cell
-												{
-													RowIndex = i,
-													Column = CurrentCell.Column
-												});
+											additionStart = lastIndex + 1;
+											additionEndExcl = targetRow + 1;
+										}
+										else // Somewhere in between, a scenario that can happen with ctrl-clicking, find the previous and highlight from there --adelikat // shouldn't it be from the previous click target? --yoshi
+										{
+											var insertionPoint = ~rowIndices.BinarySearch(targetRow); // the search will never succeed since we already know the target row isn't among those selected
+											additionStart = rowIndices[insertionPoint - 1]; // insertionPoint is strictly greater than needle, so subtract 1 (this is safe because insertionPoint would only be 0 if needle was less than the first element, which it isn't)
+											additionEndExcl = targetRow + 1;
 										}
 									}
-									else if (CurrentCell.RowIndex.Value > lastIndex)
-									{
-										for (int i = lastIndex + 1; i <= CurrentCell.RowIndex.Value; i++)
-										{
-											SelectCell(new Cell
-											{
-												RowIndex = i,
-												Column = CurrentCell.Column
-											});
-										}
-									}
-									else // Somewhere in between, a scenario that can happen with ctrl-clicking, find the previous and highlight from there
-									{
-										var nearest = rowIndices
-											.Where(x => x < CurrentCell.RowIndex.Value)
-											.Max();
-
-										for (int i = nearest + 1; i <= CurrentCell.RowIndex.Value; i++)
-										{
-											SelectCell(new Cell
-											{
-												RowIndex = i,
-												Column = CurrentCell.Column
-											});
-										}
-									}
+									for (var i = additionStart; i < additionEndExcl; i++) SelectCell(new() { RowIndex = i, Column = col });
 								}
 							}
 							else
@@ -1211,7 +1195,7 @@ namespace BizHawk.Client.EmuHawk
 							SelectCell(CurrentCell);
 						}
 					}
-					else if (ModifierKeys == Keys.Control && CurrentCell.Column.Type == ColumnType.Text)
+					else if (ModifierKeys is Keys.Control && CurrentCell.Column!.Type is ColumnType.Text)
 					{
 						SelectCell(CurrentCell, toggle: true);
 					}
@@ -1340,17 +1324,19 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
+#pragma warning disable MA0091 // passing through `sender` is intentional
 		private void DoRightMouseScroll(object sender, MouseEventArgs e)
 		{
 			RightMouseScrolled?.Invoke(sender, e);
 		}
+#pragma warning restore MA0091
 
-		private void ColumnClickEvent(RollColumn column)
+		private void ColumnClickEvent(RollColumn/*?*/ column)
 		{
 			ColumnClick?.Invoke(this, new ColumnClickEventArgs(column));
 		}
 
-		private void ColumnRightClickEvent(RollColumn column)
+		private void ColumnRightClickEvent(RollColumn/*?*/ column)
 		{
 			ColumnRightClick?.Invoke(this, new ColumnClickEventArgs(column));
 		}
@@ -1358,7 +1344,7 @@ namespace BizHawk.Client.EmuHawk
 		// This allows arrow keys to be detected by KeyDown.
 		protected override void OnPreviewKeyDown(PreviewKeyDownEventArgs e)
 		{
-			if (e.KeyCode == Keys.Left || e.KeyCode == Keys.Right || e.KeyCode == Keys.Up || e.KeyCode == Keys.Down)
+			if (e.KeyCode is Keys.Left or Keys.Right or Keys.Up or Keys.Down)
 			{
 				e.IsInputKey = true;
 			}
@@ -1375,10 +1361,7 @@ namespace BizHawk.Client.EmuHawk
 				}
 				else if (e.IsCtrlShift(Keys.F))
 				{
-					if (Rotatable)
-					{
-						HorizontalOrientation ^= true;
-					}
+					if (Rotatable) HorizontalOrientation = !HorizontalOrientation;
 				}
 				// Scroll
 				else if (e.IsPressed(Keys.PageUp))
@@ -1396,12 +1379,13 @@ namespace BizHawk.Client.EmuHawk
 						FirstVisibleRow = newSelectedRow;
 						DeselectAll();
 						SelectRow(newSelectedRow, true);
-						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 					else if (FirstVisibleRow > 0)
 					{
 						LastVisibleRow = FirstVisibleRow;
 					}
+					Refresh();
 				}
 				else if (e.IsPressed(Keys.PageDown))
 				{
@@ -1418,12 +1402,13 @@ namespace BizHawk.Client.EmuHawk
 						LastVisibleRow = newSelectedRow;
 						DeselectAll();
 						SelectRow(newSelectedRow, true);
-						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 					else if (LastVisibleRow < RowCount)
 					{
 						FirstVisibleRow = LastVisibleRow;
 					}
+					Refresh();
 				}
 				else if (AllowMassNavigationShortcuts && e.IsPressed(Keys.Home))
 				{
@@ -1431,6 +1416,7 @@ namespace BizHawk.Client.EmuHawk
 					SelectRow(0, true);
 					FirstVisibleRow = 0;
 					Refresh();
+					SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 				}
 				else if (AllowMassNavigationShortcuts && e.IsPressed(Keys.End))
 				{
@@ -1438,6 +1424,7 @@ namespace BizHawk.Client.EmuHawk
 					SelectRow(RowCount - 1, true);
 					LastVisibleRow = RowCount;
 					Refresh();
+					SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 				}
 				else if (e.IsPressed(Keys.Up))
 				{
@@ -1451,6 +1438,7 @@ namespace BizHawk.Client.EmuHawk
 							SelectRow(targetSelectedRow, true);
 							ScrollToIndex(targetSelectedRow);
 							Refresh();
+							SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 						}
 					}
 				}
@@ -1466,6 +1454,7 @@ namespace BizHawk.Client.EmuHawk
 							SelectRow(targetSelectedRow, true);
 							ScrollToIndex(targetSelectedRow);
 							Refresh();
+							SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 						}
 					}
 				}
@@ -1473,8 +1462,8 @@ namespace BizHawk.Client.EmuHawk
 				{
 					if (MultiSelect && _lastSelectedRow > 0)
 					{
-						if (_selectedItems.Any(i => i.RowIndex == _lastSelectedRow.Value)
-							&& _selectedItems.Any(i => i.RowIndex == _lastSelectedRow - 1)) // Unhighlight if already highlighted
+						if (_selectedItems.IncludesRow(_lastSelectedRow.Value)
+							&& _selectedItems.IncludesRow(_lastSelectedRow.Value - 1)) // Unhighlight if already highlighted
 						{
 							SelectRow(_lastSelectedRow.Value, false);
 						}
@@ -1484,14 +1473,15 @@ namespace BizHawk.Client.EmuHawk
 						}
 
 						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 				}
 				else if (e.IsShift(Keys.Down))
 				{
 					if (MultiSelect && _lastSelectedRow < RowCount - 1)
 					{
-						if (_selectedItems.Any(i => i.RowIndex == _lastSelectedRow.Value)
-							&& _selectedItems.Any(i => i.RowIndex == _lastSelectedRow + 1)) // Unhighlight if already highlighted
+						if (_selectedItems.IncludesRow(_lastSelectedRow.Value)
+							&& _selectedItems.IncludesRow(_lastSelectedRow.Value + 1)) // Unhighlight if already highlighted
 						{
 							var origIndex = _lastSelectedRow.Value;
 							SelectRow(origIndex, false);
@@ -1502,10 +1492,10 @@ namespace BizHawk.Client.EmuHawk
 						else
 						{
 							SelectRow(_lastSelectedRow.Value + 1, true);
-							
 						}
 
 						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 				}
 				// Selection cursor
@@ -1518,6 +1508,9 @@ namespace BizHawk.Client.EmuHawk
 							SelectRow(row - 1, true);
 							SelectRow(row, false);
 						}
+
+						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 				}
 				else if (e.IsCtrl(Keys.Down))
@@ -1529,6 +1522,9 @@ namespace BizHawk.Client.EmuHawk
 							SelectRow(row + 1, true);
 							SelectRow(row, false);
 						}
+
+						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 				}
 				else if (e.IsCtrl(Keys.Left))
@@ -1536,6 +1532,8 @@ namespace BizHawk.Client.EmuHawk
 					if (AnyRowsSelected && LetKeysModifySelection)
 					{
 						SelectRow(SelectedRows.Last(), false);
+						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 				}
 				else if (e.IsCtrl(Keys.Right))
@@ -1543,6 +1541,8 @@ namespace BizHawk.Client.EmuHawk
 					if (AnyRowsSelected && LetKeysModifySelection && SelectedRows.Last() < _rowCount - 1)
 					{
 						SelectRow(SelectedRows.Last() + 1, true);
+						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 				}
 				else if (e.IsCtrlShift(Keys.Left))
@@ -1550,6 +1550,8 @@ namespace BizHawk.Client.EmuHawk
 					if (AnyRowsSelected && LetKeysModifySelection && FirstSelectedRowIndex > 0)
 					{
 						SelectRow(FirstSelectedRowIndex - 1, true);
+						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 				}
 				else if (e.IsCtrlShift(Keys.Right))
@@ -1557,6 +1559,8 @@ namespace BizHawk.Client.EmuHawk
 					if (AnyRowsSelected && LetKeysModifySelection)
 					{
 						SelectRow(FirstSelectedRowIndex, false);
+						Refresh();
+						SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
 					}
 				}
 				else if (e.IsCtrl(Keys.PageUp))
@@ -1564,7 +1568,7 @@ namespace BizHawk.Client.EmuHawk
 					//jump to above marker with selection courser
 					if (LetKeysModifySelection)
 					{
-						
+						//TODO
 					}
 				}
 				else if (e.IsCtrl(Keys.PageDown))
@@ -1572,7 +1576,7 @@ namespace BizHawk.Client.EmuHawk
 					//jump to below marker with selection courser
 					if (LetKeysModifySelection)
 					{
-
+						//TODO
 					}
 				}
 			}
@@ -1589,6 +1593,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void OrientationChanged()
 		{
+			RotationChanged?.Invoke(this, EventArgs.Empty);
 			// TODO scroll to correct positions
 			ColumnChangedCallback();
 			Refresh();
@@ -1602,13 +1607,13 @@ namespace BizHawk.Client.EmuHawk
 			_lastCell = CurrentCell;
 			CurrentCell = newCell;
 
-			if (PointedCellChanged != null &&
-				(_lastCell?.Column != CurrentCell.Column || _lastCell?.RowIndex != CurrentCell.RowIndex))
+			if (PointedCellChanged is not null
+				&& !(_lastCell?.Column == CurrentCell.Column && _lastCell?.RowIndex == CurrentCell.RowIndex)) //TODO isn't this just `Cell.==`? --yoshi
 			{
 				PointedCellChanged(this, new CellEventArgs(_lastCell, CurrentCell));
 			}
 
-			if (CurrentCell?.Column != null && CurrentCell.RowIndex.HasValue)
+			if (CurrentCell?.Column is not null)
 			{
 				_hoverTimer.Start();
 			}
@@ -1625,6 +1630,7 @@ namespace BizHawk.Client.EmuHawk
 				Refresh();
 			}
 
+#pragma warning disable MA0091 // unorthodox, but I think this is sound --yoshi
 			if (_horizontalOrientation)
 			{
 				ColumnScroll?.Invoke(_hBar, e);
@@ -1633,6 +1639,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				RowScroll?.Invoke(_vBar, e);
 			}
+#pragma warning restore MA0091
 		}
 
 		private void HorizontalBar_ValueChanged(object sender, EventArgs e)
@@ -1642,6 +1649,7 @@ namespace BizHawk.Client.EmuHawk
 				Refresh();
 			}
 
+#pragma warning disable MA0091 // unorthodox, but I think this is sound --yoshi
 			if (_horizontalOrientation)
 			{
 				RowScroll?.Invoke(_hBar, e);
@@ -1650,6 +1658,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				ColumnScroll?.Invoke(_vBar, e);
 			}
+#pragma warning restore MA0091
 		}
 
 		private void ColumnChangedCallback()
@@ -1657,45 +1666,62 @@ namespace BizHawk.Client.EmuHawk
 			RecalculateScrollBars();
 			if (_columns.VisibleColumns.Any())
 			{
-				MaxColumnWidth = _columns.VisibleColumns.Max(c => c.Width) + CellWidthPadding * 4;
+				MaxColumnWidth = _columns.VisibleColumns.Max(c => c.VerticalWidth);
 			}
 		}
 
 		private void DoColumnReorder()
 		{
-			if (_columnDown != CurrentCell.Column)
+			if (_columnDown! != CurrentCell.Column!)
 			{
 				var oldIndex = _columns.IndexOf(_columnDown);
 				var newIndex = _columns.IndexOf(CurrentCell.Column);
 
 				ColumnReordered?.Invoke(this, new ColumnReorderedEventArgs(oldIndex, newIndex, _columnDown));
 
+				//TODO surely this only works properly in one direction?
+				// also the event is "...Reordered"--past tense--so it should be called AFTER the change --yoshi
 				_columns.Remove(_columnDown);
 				_columns.Insert(newIndex, _columnDown);
 			}
+		}
+
+		private void CalculateScrollbarsNeeded()
+		{
+			if (HorizontalOrientation)
+			{
+				NeedsVScrollbar = TotalColWidth > _drawHeight;
+				NeedsHScrollbar = RowCount > 1;
+			}
+			else
+			{
+				NeedsVScrollbar = ColumnHeight + (RowCount * CellHeight) > _drawHeight;
+				NeedsHScrollbar = TotalColWidth - _drawWidth + 1 > 0;
+			}
+
+			UpdateDrawSize();
+
+			// if either NeedsVScrollbar or NeedsHScrollbar changed we need to recalculate, so just run this again
+			if (HorizontalOrientation)
+			{
+				NeedsVScrollbar = TotalColWidth > _drawHeight;
+				NeedsHScrollbar = RowCount > 1;
+			}
+			else
+			{
+				NeedsVScrollbar = ColumnHeight + (RowCount * CellHeight) > _drawHeight;
+				NeedsHScrollbar = TotalColWidth - _drawWidth + 1 > 0;
+			}
+
+			UpdateDrawSize();
 		}
 
 		// ScrollBar.Maximum = DesiredValue + ScrollBar.LargeChange - 1
 		// See MSDN Page for more information on the dumb ScrollBar.Maximum Property
 		private void RecalculateScrollBars()
 		{
-			UpdateDrawSize();
+			CalculateScrollbarsNeeded();
 
-			var columns = _columns.VisibleColumns.ToList();
-			int iLastColumn = columns.Count - 1;
-
-			if (HorizontalOrientation)
-			{
-				NeedsVScrollbar = GetHColBottom(iLastColumn) > _drawHeight;
-				NeedsHScrollbar = RowCount > 1;
-			}
-			else
-			{
-				NeedsVScrollbar = ColumnHeight + (RowCount * CellHeight)  > Height;
-				NeedsHScrollbar = TotalColWidth - _drawWidth + 1 > 0;
-			}
-
-			UpdateDrawSize();
 			if (VisibleRows > 0)
 			{
 				if (HorizontalOrientation)
@@ -1719,7 +1745,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				if (HorizontalOrientation)
 				{
-					_vBar.Maximum = GetHColBottom(iLastColumn) - _drawHeight + _vBar.LargeChange;
+					_vBar.Maximum = TotalColWidth - _drawHeight + _vBar.LargeChange;
 					if (_vBar.Maximum < 0)
 					{
 						_vBar.Maximum = 0;
@@ -1785,7 +1811,7 @@ namespace BizHawk.Client.EmuHawk
 		/// <param name="toggle">Specifies whether or not to toggle the current state, rather than force the value to true</param>
 		private void SelectCell(Cell cell, bool toggle = false)
 		{
-			if (cell.RowIndex.HasValue && cell.RowIndex < RowCount)
+			if (cell.RowIndex is int row && row < RowCount)
 			{
 				if (!MultiSelect)
 				{
@@ -1795,28 +1821,24 @@ namespace BizHawk.Client.EmuHawk
 
 				if (FullRowSelect)
 				{
-					if (toggle && _selectedItems.Any(x => x.RowIndex.HasValue && x.RowIndex == cell.RowIndex))
+					if (toggle && _selectedItems.IncludesRow(row))
 					{
-						_selectedItems.RemoveWhere(x => x.RowIndex.HasValue && x.RowIndex == cell.RowIndex);
+						_selectedItems.RemoveAll(x => x.RowIndex == row);
 						_lastSelectedRow = _selectedItems.LastOrDefault()?.RowIndex;
 					}
 					else
 					{
 						foreach (var column in _columns)
 						{
-							_selectedItems.Add(new Cell
-							{
-								RowIndex = cell.RowIndex,
-								Column = column
-							});
-							_lastSelectedRow = cell.RowIndex;
+							_selectedItems.Add(new() { RowIndex = row, Column = column });
+							_lastSelectedRow = row;
 						}
 					}
 				}
 				else
 				{
 					_lastSelectedRow = null; // TODO: tracking this by cell is a lot more work
-					if (toggle && _selectedItems.Any(x => x.RowIndex.HasValue && x.RowIndex == cell.RowIndex))
+					if (toggle && _selectedItems.IncludesRow(row))
 					{
 						var item = _selectedItems
 							.FirstOrDefault(x => x.Equals(cell));
@@ -1856,10 +1878,9 @@ namespace BizHawk.Client.EmuHawk
 		private Cell CalculatePointedCell(int x, int y)
 		{
 			var newCell = new Cell();
-			var columns = _columns.VisibleColumns.ToList();
 
 			// If pointing to a column header
-			if (columns.Any())
+			if (_columns.VisibleColumns.Any())
 			{
 				if (HorizontalOrientation)
 				{
@@ -1897,15 +1918,15 @@ namespace BizHawk.Client.EmuHawk
 		/// </summary>
 		/// <param name="pixel">The pixel coordinate.</param>
 		/// <returns>RollColumn object that contains the pixel coordinate or null if none exists.</returns>
-		private RollColumn ColumnAtPixel(int pixel)
+		private RollColumn/*?*/ ColumnAtPixel(int pixel)
 		{
 			if (_horizontalOrientation)
 			{
 				return _columns.VisibleColumns.Select(static (n, i) => (Column: n, Index: i))
-					.FirstOrNull(item => (GetHColTop(item.Index) - _vBar.Value).RangeTo(GetHColBottom(item.Index) - _vBar.Value).Contains(pixel))
+					.FirstOrNull(item => pixel >= item.Column.Left - _vBar.Value && pixel <= item.Column.Right - _vBar.Value)
 					?.Column;
 			}
-			return _columns.VisibleColumns.FirstOrDefault(column => (column.Left - _hBar.Value).RangeTo(column.Right - _hBar.Value).Contains(pixel));
+			return _columns.VisibleColumns.FirstOrDefault(column => pixel >= column.Left - _hBar.Value && pixel <= column.Right - _hBar.Value);
 		}
 
 		/// <summary>
@@ -1938,32 +1959,17 @@ namespace BizHawk.Client.EmuHawk
 			return (int)Math.Floor((float)(pixels - ColumnHeight) / CellHeight);
 		}
 
-		private int GetHColTop(int index) =>
-			_horizontalColumnTops != null && 0.RangeToExclusive(_horizontalColumnTops.Length).Contains(index)
-				? _horizontalColumnTops[index]
-				: index * CellHeight;
-
-		private int GetHColHeight(int index) =>
-			_horizontalColumnTops != null && 0.RangeToExclusive(_horizontalColumnTops.Length - 1).Contains(index)
-				? _horizontalColumnTops[index + 1] - _horizontalColumnTops[index]
-				: CellHeight;
-
-		private int GetHColBottom(int index) =>
-			GetHColTop(index + 1);
-
 		// The width of the largest column cell in Horizontal Orientation
 		private int MaxColumnWidth { get; set; }
 
 		// The height of a column cell in Vertical Orientation.
 		private int ColumnHeight => CellHeight + 2;
 
-		// The width of a cell in Horizontal Orientation. Only can be changed by changing the Font or CellPadding.
-		private int CellWidth { get; set; }
+		// The width of a cell in Horizontal Orientation.
+		private int CellWidth => Math.Max((int)_charSize.Height + CellHeightPadding * 2, (int)_charSize.Width + CellWidthPadding * 2);
 
-		/// <summary>
-		/// Gets or sets a value indicating the height of a cell in Vertical Orientation. Only can be changed by changing the Font or CellPadding.
-		/// </summary>
-		private int CellHeight { get; set; } = 8;
+		// The height of a cell in Vertical Orientation.
+		private int CellHeight => (int)_charSize.Height + CellHeightPadding * 2;
 
 		/// <summary>
 		/// Call when _charSize, MaxCharactersInHorizontal, or CellPadding is changed.
@@ -1976,16 +1982,12 @@ namespace BizHawk.Client.EmuHawk
 				// Measure width change to ignore extra padding at start/end
 				var size1 = _renderer.MeasureString("A", Font);
 				var size2 = _renderer.MeasureString("AA", Font);
-				_charSize = new SizeF(size2.Width - size1.Width, size1.Height); // TODO make this a property so changing it updates other values.
+				_charSize = new SizeF(size2.Width - size1.Width, size1.Height);
 			}
 
-			// TODO: Should we round instead of truncate?
-			CellHeight = (int)_charSize.Height + (CellHeightPadding * 2);
-			CellWidth = (int)_charSize.Width + (CellWidthPadding * 4); // Double the padding for horizontal because it looks better
-			
 			if (_columns.VisibleColumns.Any())
 			{
-				MaxColumnWidth = _columns.VisibleColumns.Max(c => c.Width) + CellWidthPadding * 4;
+				MaxColumnWidth = _columns.VisibleColumns.Max(c => c.VerticalWidth);
 			}
 		}
 

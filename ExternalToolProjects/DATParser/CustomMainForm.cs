@@ -3,7 +3,6 @@ using System.Drawing;
 using System.Windows.Forms;
 
 using BizHawk.Client.Common;
-using BizHawk.Common;
 using BizHawk.Client.EmuHawk;
 
 namespace BizHawk.DATTool
@@ -44,12 +43,12 @@ namespace BizHawk.DATTool
 						AutoSize = true,
 						Controls = {
 							btnDATConv,
-							CreateArgsLabel("Parse External DAT Files (NoIntro / TOSEC)")
-						}
-					}					
+							CreateArgsLabel("Parse External DAT Files (NoIntro / TOSEC)"),
+						},
+					},
 				},
 				Dock = DockStyle.Fill,
-				FlowDirection = FlowDirection.TopDown
+				FlowDirection = FlowDirection.TopDown,
 			});
 			ResumeLayout();
 		}

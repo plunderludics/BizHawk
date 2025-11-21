@@ -1,13 +1,11 @@
-﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.WonderSwan
 {
 	[PortedCore(CoreNames.Cygne, "Dox, Mednafen Team", "1.24.3", "https://mednafen.github.io/releases/")]
-	[ServiceNotApplicable(new[] { typeof(IDriveLight), typeof(IRegionable) })]
+	[ServiceNotApplicable(typeof(IRegionable))]
 	public partial class WonderSwan : IEmulator, IVideoProvider, ISoundProvider,
 		IInputPollable, IDebuggable
 	{
@@ -15,9 +13,9 @@ namespace BizHawk.Emulation.Cores.WonderSwan
 		public WonderSwan(byte[] file, bool deterministic, WonderSwan.Settings settings, WonderSwan.SyncSettings syncSettings)
 		{
 			ServiceProvider = new BasicServiceProvider(this);
-			_settings = (Settings)settings ?? new Settings();
-			_syncSettings = (SyncSettings)syncSettings ?? new SyncSettings();
-			
+			_settings = settings ?? new Settings();
+			_syncSettings = syncSettings ?? new SyncSettings();
+
 			DeterministicEmulation = deterministic; // when true, remember to force the RTC flag!
 			Core = BizSwan.bizswan_new();
 			if (Core == IntPtr.Zero)
@@ -53,6 +51,8 @@ namespace BizHawk.Emulation.Cores.WonderSwan
 
 		public void Dispose()
 		{
+			_inputCallbacks.ActiveChanged -= SetInputCallback;
+			_memorycallbacks.ActiveChanged -= SetMemoryCallbacks;
 			if (Core != IntPtr.Zero)
 			{
 				BizSwan.bizswan_delete(Core);
@@ -129,7 +129,9 @@ namespace BizHawk.Emulation.Cores.WonderSwan
 		public void Step(StepType type) => throw new NotImplementedException();
 
 		[FeatureNotImplemented]
+#pragma warning disable CA1065 // convention for [FeatureNotImplemented] is to throw NIE
 		public long TotalExecutedCycles => throw new NotImplementedException();
+#pragma warning restore CA1065
 
 		private BizSwan.MemoryCallback ReadCallbackD;
 		private BizSwan.MemoryCallback WriteCallbackD;
@@ -179,9 +181,7 @@ namespace BizHawk.Emulation.Cores.WonderSwan
 		}
 
 		private void SetInputCallback()
-		{
-			BizSwan.bizswan_setbuttoncallback(Core, InputCallbacks.Any() ? ButtonCallbackD : null);
-		}
+			=> BizSwan.bizswan_setbuttoncallback(Core, InputCallbacks.Count is 0 ? null : ButtonCallbackD);
 
 		private void SetMemoryCallbacks()
 		{

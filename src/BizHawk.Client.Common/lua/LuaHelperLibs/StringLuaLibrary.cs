@@ -1,7 +1,8 @@
-﻿using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Text;
 
+using BizHawk.Common.StringExtensions;
 using NLua;
 
 // ReSharper disable UnusedMember.Global
@@ -14,6 +15,29 @@ namespace BizHawk.Client.Common
 
 		public StringLuaLibrary(ILuaLibraries luaLibsImpl, ApiContainer apiContainer, Action<string> logOutputCallback)
 			: base(luaLibsImpl, apiContainer, logOutputCallback) {}
+
+		[LuaMethodExample("""
+			local str = bizstring.decode(memory.read_bytes_as_array(0x1234, 0x20, "WRAM"), "shift_jis");
+		""")]
+		[LuaMethod(
+			name: "decode",
+			description: "Reads a string from an array-like table of bytes."
+				+ " The encoding parameter determines which scheme is used (and it will then be converted to Lua's native encoding if necessary).")]
+		public string Decode(LuaTable bytes, string encoding = "utf-8")
+		{
+			var bytes1 = _th.EnumerateValues<long>(bytes).Select(static l => (byte) l).ToArray();
+			return Encoding.GetEncoding(encoding).GetString(bytes1);
+		}
+
+		[LuaMethodExample("""
+			local bytes = bizstring.encode("こんにちは", "shift_jis");
+		""")]
+		[LuaMethod(
+			name: "encode",
+			description: "Encodes a string to a byte array (table)."
+				+ " The encoding parameter determines which scheme is used (and it will first be converted from Lua's native encoding if necessary).")]
+		public LuaTable Encode(string str, string encoding = "utf-8")
+			=> _th.EnumerateToLuaTable(Encoding.GetEncoding(encoding).GetBytes(str));
 
 		[LuaMethodExample("local stbizhex = bizstring.hex( -12345 );")]
 		[LuaMethod("hex", "Converts the number to a string representation of the hexadecimal value of the given number")]
@@ -127,12 +151,12 @@ namespace BizHawk.Client.Common
 		[LuaMethodExample("if ( bizstring.startswith( \"Some string\", \"Some\") ) then\r\n\tconsole.log( \"Returns whether str starts with str2\" );\r\nend;")]
 		[LuaMethod("startswith", "Returns whether str starts with str2")]
 		public static bool StartsWith(string str, string str2)
-			=> !string.IsNullOrEmpty(str) && str.StartsWith(str2); // don't bother fixing encoding, will match (or not match) regardless
+			=> !string.IsNullOrEmpty(str) && str.StartsWithOrdinal(str2); // don't bother fixing encoding, will match (or not match) regardless
 
 		[LuaMethodExample("if ( bizstring.endswith( \"Some string\", \"string\") ) then\r\n\tconsole.log( \"Returns whether str ends wth str2\" );\r\nend;")]
 		[LuaMethod("endswith", "Returns whether str ends wth str2")]
 		public static bool EndsWith(string str, string str2)
-			=> !string.IsNullOrEmpty(str) && str.EndsWith(str2); // don't bother fixing encoding, will match (or not match) regardless
+			=> !string.IsNullOrEmpty(str) && str.EndsWithOrdinal(str2); // don't bother fixing encoding, will match (or not match) regardless
 
 		[LuaMethodExample("local nlbizspl = bizstring.split( \"Some, string\", \", \" );")]
 		[LuaMethod("split", "Splits str into a Lua-style array using the given separator (consecutive separators in str will NOT create empty entries in the array). If the separator is not a string exactly one char long, ',' will be used.")]

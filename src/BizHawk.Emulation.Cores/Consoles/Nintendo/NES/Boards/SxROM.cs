@@ -1,4 +1,3 @@
-using System;
 using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
 
@@ -282,14 +281,14 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			if (_is_snrom)
 			{
 				if (!mmc1.wram_disable && chr_wram_enable)
-					return base.ReadWram(addr);	
+					return base.ReadWram(addr);
 				else
-					return NES.DB;	
+					return NES.DB;
 			}
 			else
 			{
 				return base.ReadWram(addr);
-			}	
+			}
 		}
 
 		public override byte ReadPrg(int addr)
@@ -329,7 +328,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			{
 				if (NES._isVS)
 				{
-					addr = addr - 0x2000;
+					addr -= 0x2000;
 					if (addr < 0x800)
 					{
 						return NES.CIRAM[addr];
@@ -341,7 +340,6 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				}
 				else
 					return base.ReadPpu(addr);
-					
 			}
 		}
 
@@ -356,7 +354,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				}
 				else
 				{
-					addr = addr - 0x2000;
+					addr -= 0x2000;
 					if (addr < 0x800)
 					{
 						NES.CIRAM[addr] = value;
@@ -393,7 +391,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			if (NES._isVS)
 				ser.Sync("VS_CIRAM", ref CIRAM_VS, false);
 		}
-	
+
 		public override bool Configure(EDetectionOrigin origin)
 		{
 			switch (Cart.BoardType)
@@ -427,7 +425,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 					SetMirrorType(Cart.PadH, Cart.PadV);
 					break;
 				case "NES-SAROM": //dragon warrior
-					AssertPrg(64); AssertChr(16, 32, 64); AssertVram(0); AssertWram(8); 
+					AssertPrg(64); AssertChr(16, 32, 64); AssertVram(0); AssertWram(8);
 					break;
 				case "NES-SBROM": //dance aerobics
 					AssertPrg(64); AssertChr(16, 32, 64);  AssertVram(0); AssertWram(0);
@@ -491,7 +489,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				case "HVC-SLRROM":
 					AssertPrg(128); AssertChr(128); AssertVram(0); AssertWram(0);
 					break;
-				case "HVC-SMROM": //Hokkaidou Rensa Satsujin: Okhotsu ni Shoyu  
+				case "HVC-SMROM": //Hokkaidou Rensa Satsujin: Okhotsu ni Shoyu
 					AssertPrg(256); AssertChr(0); AssertVram(8); AssertWram(0);
 					break;
 				case "HVC-SNROM": // Morita Kazuo no Shougi (J)

@@ -1,8 +1,6 @@
-﻿using System;
-
 namespace BizHawk.Emulation.Cores.Components.M68000
 {
-	partial class MC68000
+	public sealed partial class MC68000
 	{
 		private bool TestCondition(int condition)
 		{
@@ -20,10 +18,10 @@ namespace BizHawk.Emulation.Cores.Components.M68000
 				case 0x09: return V;        // Overflow Set
 				case 0x0A: return !N;       // Plus (Positive)
 				case 0x0B: return N;        // Minus (Negative)
-				case 0x0C: return N && V || !N && !V;             // Greater or Equal
-				case 0x0D: return N && !V || !N && V;             // Less Than
-				case 0x0E: return N && V && !Z || !N && !V && !Z; // Greater Than
-				case 0x0F: return Z || N && !V || !N && V;        // Less or Equal
+				case 0x0C: return /*N && V || !N && !V*/N == V;         // Greater or Equal
+				case 0x0D: return /*N && !V || !N && V*/N ^ V;          // Less Than
+				case 0x0E: return (/*N && V || !N && !V*/N == V) && !Z; // Greater Than
+				case 0x0F: return Z || (/*N && !V || !N && V*/N ^ V);   // Less or Equal
 				default:
 					throw new Exception("Invalid condition " + condition);
 			}
@@ -58,7 +56,7 @@ namespace BizHawk.Emulation.Cores.Components.M68000
 			sbyte displacement8 = (sbyte)op;
 			int cond = (op >> 8) & 0x0F;
 
-			if (TestCondition(cond) == true)
+			if (TestCondition(cond))
 			{
 				if (displacement8 != 0)
 				{
@@ -169,7 +167,7 @@ namespace BizHawk.Emulation.Cores.Components.M68000
 
 		private void DBcc()
 		{
-			if (TestCondition((op >> 8) & 0x0F) == true)
+			if (TestCondition((op >> 8) & 0x0F))
 			{
 				PC += 2; // condition met, break out of loop
 				PendingCycles -= 12;
@@ -712,7 +710,7 @@ namespace BizHawk.Emulation.Cores.Components.M68000
 			int mode = (op >> 3) & 7;
 			int reg = (op >> 0) & 7;
 
-			if (TestCondition(cond) == true)
+			if (TestCondition(cond))
 			{
 				WriteValueB(mode, reg, -1);
 				if (mode == 0) PendingCycles -= 6;

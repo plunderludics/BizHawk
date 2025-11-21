@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections;
 
 namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
@@ -27,14 +26,9 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
             // if this is detected just return the kempston byte
             if (lowByte == 0x1f)
             {
-                if (LocateUniqueJoystick(JoystickType.Kempston) != null)
-				{
-					InputRead = true;
-					return (byte)((KempstonJoystick)LocateUniqueJoystick(JoystickType.Kempston) as KempstonJoystick).JoyLine;
-				}
-
-				InputRead = true;
-			}
+                InputRead = true;
+                if (LocateUniqueJoystick(JoystickType.Kempston) is KempstonJoystick j) return (byte) j.JoyLine;
+            }
             else
             {
                 if (KeyboardDevice.ReadPort(port, ref result))
@@ -52,7 +46,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
             if (!deviceAddressed)
             {
                 // If this is an unused port the floating memory bus should be returned
-                ULADevice.ReadFloatingBus((int)CurrentFrameCycle, ref result, port);                
+                ULADevice.ReadFloatingBus((int)CurrentFrameCycle, ref result, port);
             }
 
             return (byte)result;
@@ -179,12 +173,6 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
             {
                 // calculate the ROMpage from the high and low bits
                 var rp = ZXSpectrum.GetIntFromBitArray(new BitArray(new bool[] { ROMlow, ROMhigh }));
-
-                if (rp != 0)
-                {
-
-                }
-
                 return rp;
             }
             set => ROMPaged = value;

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -11,18 +10,41 @@ using System.Windows.Forms;
 using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
 using BizHawk.Common.StringExtensions;
-using BizHawk.Common.IOExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk.Properties;
 using BizHawk.Client.EmuHawk.ToolExtensions;
 using BizHawk.Common.CollectionExtensions;
+using BizHawk.WinForms.Controls;
 
 namespace BizHawk.Client.EmuHawk
 {
 	// int to long TODO: 32 bit domains have more digits than the hex editor can account for and the address covers up the 0 column
 	public partial class HexEditor : ToolFormBase, IToolFormAutoConfig
 	{
+		private sealed class N64MatrixDisplayDialog : Form
+		{
+			public N64MatrixDisplayDialog(IReadOnlyList<IReadOnlyList<string>> strings)
+			{
+				TableLayoutPanel tlp = new() { Size = new(352, 104) };
+				const int SIZE = 4;
+				for (var y = 0; y < SIZE; y++) tlp.RowStyles.Add(new());
+				for (var x = 0; x < SIZE; x++) tlp.ColumnStyles.Add(new());
+				for (var y = 0; y < SIZE; y++) for (var x = 0; x < SIZE; x++) tlp.Controls.Add(
+					new SzTextBoxEx { ReadOnly = true, Size = new(80, 23), Text = strings[y][x] },
+					row: y,
+					column: x);
+				SzButtonEx btnCopyTSV = new() { Size = new(128, 23), Text = ".tsv --> Clipboard" };
+				btnCopyTSV.Click += (_, _) => Clipboard.SetText(string.Join(
+					"\n",
+					strings.Select(static l => string.Join("\t", l))));
+				ClientSize = new(352, 144);
+				SuspendLayout();
+				Controls.Add(new SingleColumnFLP { Controls = { tlp, btnCopyTSV } });
+				ResumeLayout();
+			}
+		}
+
 		private class NullMemoryDomain : MemoryDomain
 		{
 			public override byte PeekByte(long addr) => 0;
@@ -73,6 +95,14 @@ namespace BizHawk.Client.EmuHawk
 		private long? _highlightedAddress;
 		private readonly List<long> _secondaryHighlightedAddresses = new List<long>();
 
+		private IEnumerable<long> AllHighlightedAddresses
+			=> _highlightedAddress is long l
+				? _secondaryHighlightedAddresses.Prepend(l)
+				: _secondaryHighlightedAddresses;
+
+		private bool AreAnyHighlighted
+			=> _highlightedAddress is not null || _secondaryHighlightedAddresses.Count is not 0;
+
 		private readonly Dictionary<int, char> _textTable = new Dictionary<int, char>();
 
 		private int _rowsVisible;
@@ -80,14 +110,13 @@ namespace BizHawk.Client.EmuHawk
 		private string _numDigitsStr = "{0:X4}";
 		private string _digitFormatString = "{0:X2}";
 		private long _addressOver = -1;
-		
+
 		private long _maxRow;
 
 		private MemoryDomain _domain = new NullMemoryDomain();
 
 		private string _findStr = "";
 		private bool _mouseIsDown;
-		private byte[] _rom;
 		private MemoryDomain _romDomain;
 		private HexFind _hexFind;
 		private string _lastRom = "";
@@ -119,7 +148,8 @@ namespace BizHawk.Client.EmuHawk
 
 		private WatchSize WatchSize => (WatchSize)DataSize;
 
-		private readonly Pen _blackPen = new Pen(Color.Black);
+		private readonly Pen _blackPen = Pens.Black;
+
 		private SolidBrush _freezeBrush;
 		private SolidBrush _freezeHighlightBrush;
 		private SolidBrush _highlightBrush;
@@ -208,24 +238,26 @@ namespace BizHawk.Client.EmuHawk
 
 		public override void Restart()
 		{
-			if (Emulator.SystemId is not VSystemID.Raw.Arcade)
+			_romDomain = null;
+			if (Emulator.SystemId is not (VSystemID.Raw.Arcade or VSystemID.Raw.N3DS))
 			{
-				_rom = GetRomBytes();
-				_romDomain = new MemoryDomainByteArray(ROM_DOMAIN_NAME, MemoryDomain.Endian.Little, _rom, writable: true, wordSize: 1);
-
-				if (_domain.Name == _romDomain.Name)
+				var rom = GetRomBytes();
+				if (rom is not null)
 				{
-					_domain = _romDomain;
+					_romDomain = new MemoryDomainByteArray(ROM_DOMAIN_NAME, MemoryDomain.Endian.Little, rom, writable: true, wordSize: 1);
 				}
+			}
+
+			if (_domain.Name == ROM_DOMAIN_NAME && _romDomain is not null)
+			{
+				_domain = _romDomain;
 			}
 			else
 			{
-				_romDomain = null;
+				_domain = MemoryDomains.Any(x => x.Name == _domain.Name)
+					? MemoryDomains[_domain.Name]
+					: MemoryDomains.MainMemory;
 			}
-			
-			_domain = MemoryDomains.Any(x => x.Name == _domain.Name)
-				? MemoryDomains[_domain.Name]
-				: MemoryDomains.MainMemory;
 
 			BigEndian = _domain.EndianType == MemoryDomain.Endian.Big;
 
@@ -237,7 +269,7 @@ namespace BizHawk.Client.EmuHawk
 				_lastRom = MainForm.CurrentlyOpenRom;
 				ResetScrollBar();
 			}
-			
+
 			SetDataSize(DataSize);
 			SetHeader();
 
@@ -249,7 +281,7 @@ namespace BizHawk.Client.EmuHawk
 			DataSize = (int)size;
 			SetDataSize(DataSize);
 			var addrList = addresses.ToList();
-			if (addrList.Any())
+			if (addrList.Count is not 0)
 			{
 				SetMemoryDomain(domain.Name);
 				SetHighlighted(addrList[0]);
@@ -263,7 +295,7 @@ namespace BizHawk.Client.EmuHawk
 
 		public byte[] ConvertTextToBytes(string str)
 		{
-			if (_textTable.Any())
+			if (_textTable.Count is not 0)
 			{
 				var byteArr = new byte[str.Length];
 				for (var i = 0; i < str.Length; i++)
@@ -281,7 +313,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			long found = -1;
 
-			var search = value.Replace(" ", "").ToUpper();
+			var search = value.Replace(" ", "").ToUpperInvariant();
 			if (string.IsNullOrEmpty(search))
 			{
 				return;
@@ -329,7 +361,7 @@ namespace BizHawk.Client.EmuHawk
 				GoToAddress(found);
 				_findStr = search;
 			}
-			else if (wrap == false)
+			else if (!wrap)
 			{
 				FindPrev(value, true); // Search the opposite direction if not found
 			}
@@ -341,7 +373,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			long found = -1;
 
-			var search = value.Replace(" ", "").ToUpper();
+			var search = value.Replace(" ", "").ToUpperInvariant();
 			if (string.IsNullOrEmpty(search))
 			{
 				return;
@@ -376,7 +408,7 @@ namespace BizHawk.Client.EmuHawk
 				GoToAddress(found);
 				_findStr = search;
 			}
-			else if (wrap == false)
+			else if (!wrap)
 			{
 				FindPrev(value, true); // Search the opposite direction if not found
 			}
@@ -395,12 +427,12 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			byte[] bytes = new byte[str.Length / 2];
-			
+
 			for (int i = 0; i < str.Length; i += 2)
 			{
 				bytes[i / 2] = Convert.ToByte(str.Substring(i, 2), 16);
 			}
-			
+
 			return bytes;
 		}
 
@@ -434,23 +466,24 @@ namespace BizHawk.Client.EmuHawk
 			var path = MainForm.CurrentlyOpenRomArgs.OpenAdvanced.SimplePath;
 			if (string.IsNullOrEmpty(path))
 			{
-				return new byte[] { 0xFF };
-			}
-
-			using var file = new HawkFile(path);
-
-			if (!file.Exists)
-			{
 				return null;
 			}
 
-			if (file.IsArchive)
+			try
 			{
-				var stream = file.GetStream();
-				return stream.ReadAllBytes();
+				using var file = new HawkFile(path);
+				if (file.Exists)
+				{
+					return file.ReadAllBytes();
+				}
+			}
+			catch (Exception ex)
+			{
+				using var exceptionBox = new ExceptionBox(ex);
+				this.ShowDialogWithTempMute(exceptionBox);
 			}
 
-			return File.ReadAllBytes(path);
+			return null;
 		}
 
 		private static int GetNumDigits(long i)
@@ -469,17 +502,17 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return true;
 			}
-			
+
 			if (key >= 'a' && key <= 'f') // A-F
 			{
 				return true;
 			}
-			
+
 			if (key >= 'A' && key <= 'F') // A-F
 			{
 				return true;
 			}
-			
+
 			return false;
 		}
 
@@ -570,7 +603,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					if (addr + k < _domain.Size)
 					{
-						
+
 						byte b = (byte)charValues[addr + k];
 						char c = Remap(b);
 						rowStr.Append(c);
@@ -673,8 +706,7 @@ namespace BizHawk.Client.EmuHawk
 				? SystemColors.ControlText
 				: SystemColors.ControlDarkDark;
 
-			if (_highlightedAddress >= _domain.Size
-				|| (_secondaryHighlightedAddresses.Any() && _secondaryHighlightedAddresses.Max() >= _domain.Size))
+			if (AllHighlightedAddresses.DefaultIfEmpty().Max() >= _domain.Size)
 			{
 				_highlightedAddress = null;
 				_secondaryHighlightedAddresses.Clear();
@@ -690,7 +722,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			var addressesString = "0x" + $"{_domain.Size / DataSize:X8}".TrimStart('0');
 			var viewerText = $"{Emulator.SystemId} {_domain}{(_domain.Writable ? string.Empty : " (READ-ONLY)")}  -  {addressesString} addresses";
-			if (_nibbles.Any())
+			if (_nibbles.Count is not 0)
 			{
 				viewerText += $"  Typing: ({MakeNibbles()})";
 			}
@@ -761,7 +793,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				var newTitle = "Hex Editor";
 				newTitle += " - Editing Address 0x" + string.Format(_numDigitsStr, _highlightedAddress);
-				if (_secondaryHighlightedAddresses.Any())
+				if (_secondaryHighlightedAddresses.Count is not 0)
 				{
 					newTitle += $" (Selected 0x{_secondaryHighlightedAddresses.Count + (_secondaryHighlightedAddresses.Contains(_highlightedAddress.Value) ? 0 : 1):X})";
 				}
@@ -825,66 +857,34 @@ namespace BizHawk.Client.EmuHawk
 
 		private void FreezeHighlighted()
 		{
-			if (!_highlightedAddress.HasValue && !_secondaryHighlightedAddresses.Any())
-			{
-				return;
-			}
-
-			if (_highlightedAddress >= 0)
+			if (!AreAnyHighlighted) return;
+			MainForm.CheatList.AddRange(AllHighlightedAddresses.Select(address =>
 			{
 				var watch = Watch.GenerateWatch(
 					_domain,
-					_highlightedAddress.Value,
+					address,
 					WatchSize,
 					Common.WatchDisplayType.Hex,
 					BigEndian);
-
-				MainForm.CheatList.Add(new Cheat(
-					watch,
-					watch.Value));
-			}
-
-			if (_secondaryHighlightedAddresses.Any())
-			{
-				var cheats = new List<Cheat>();
-				foreach (var address in _secondaryHighlightedAddresses)
-				{
-					var watch = Watch.GenerateWatch(
-						_domain,
-						address,
-						WatchSize,
-						Common.WatchDisplayType.Hex,
-						BigEndian);
-
-					cheats.Add(new Cheat(
-						watch,
-						watch.Value));
-				}
-
-				MainForm.CheatList.AddRange(cheats);
-			}
-
+				return new Cheat(watch, watch.Value);
+			}));
 			MemoryViewerBox.Refresh();
 		}
 
 		private void UnfreezeHighlighted()
 		{
-			if (!_highlightedAddress.HasValue && !_secondaryHighlightedAddresses.Any())
-			{
-				return;
-			}
-
+			if (!AreAnyHighlighted) return;
+			//TODO reconcile the logic between these two
 			if (_highlightedAddress >= 0)
 			{
 				MainForm.CheatList.RemoveRange(MainForm.CheatList.Where(x => x.Contains(_highlightedAddress.Value)));
 			}
 
-			if (_secondaryHighlightedAddresses.Any())
+			if (_secondaryHighlightedAddresses.Count is not 0)
 			{
 				MainForm.CheatList.RemoveRange(
-					MainForm.CheatList.Where(
-						cheat => !cheat.IsSeparator && cheat.Domain == _domain &&
-							_secondaryHighlightedAddresses.Contains(cheat.Address ?? 0)));
+					MainForm.CheatList.Where(cheat => !cheat.IsSeparator && cheat.Domain == _domain
+						&& _secondaryHighlightedAddresses.Contains(cheat.Address ?? 0)));
 			}
 
 			MemoryViewerBox.Refresh();
@@ -904,7 +904,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			get
 			{
-				string path = Config.RecentRoms.MostRecent;
+				string path = MainForm.CurrentlyOpenRomArgs.OpenAdvanced.SimplePath;
 
 				if (string.IsNullOrWhiteSpace(path))
 				{
@@ -918,7 +918,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			get
 			{
-				string path = Config.RecentRoms.MostRecent;
+				string path = MainForm.CurrentlyOpenRomArgs.OpenAdvanced.SimplePath;
 
 				if (string.IsNullOrWhiteSpace(path))
 				{
@@ -1164,7 +1164,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return string.Format(_digitFormatString, MakeValue(DataSize, address)).Trim();
 			}
-			
+
 			return "";
 		}
 
@@ -1175,7 +1175,7 @@ namespace BizHawk.Client.EmuHawk
 				var values = ValueString(_highlightedAddress.Value);
 				return _secondaryHighlightedAddresses.Aggregate(values, (current, x) => current + ValueString(x));
 			}
-			
+
 			return "";
 		}
 
@@ -1222,7 +1222,7 @@ namespace BizHawk.Client.EmuHawk
 				}
 
 				var parts = line.Split('=');
-				_textTable.Add(int.Parse(parts[0], NumberStyles.HexNumber), parts[1].First());
+				_textTable.Add(int.Parse(parts[0], NumberStyles.HexNumber), parts[1][0]);
 			}
 
 			return true;
@@ -1241,9 +1241,9 @@ namespace BizHawk.Client.EmuHawk
 				SaveAsBinaryMenuItem.Text = "Save as binary...";
 			}
 
-			CloseTableFileMenuItem.Enabled = _textTable.Any();
+			CloseTableFileMenuItem.Enabled = _textTable.Count is not 0;
 		}
-		
+
 		private void SaveMenuItem_Click(object sender, EventArgs e)
 		{
 			if (!CurrentRomIsArchive())
@@ -1312,7 +1312,7 @@ namespace BizHawk.Client.EmuHawk
 				discardCWDChange: false,
 				filter: TextTablesFSFilterSet,
 				initDir: Config!.PathEntries.ToolsAbsolutePath(),
-				initFileName: $"{Path.GetFileNameWithoutExtension(Config.RecentRoms.MostRecent.SubstringAfterLast('|'))}.tbl");
+				initFileName: $"{Path.GetFileNameWithoutExtension(MainForm.CurrentlyOpenRomArgs.OpenAdvanced.SimplePath.SubstringAfterLast('|'))}.tbl");
 			if (result is null) return;
 			LoadTable(result);
 			RecentTables.Add(result);
@@ -1345,40 +1345,15 @@ namespace BizHawk.Client.EmuHawk
 		private void EditMenuItem_DropDownOpened(object sender, EventArgs e)
 		{
 			var data = Clipboard.GetDataObject();
-			PasteMenuItem.Enabled =
-				_domain.Writable
-				&& (_highlightedAddress.HasValue || _secondaryHighlightedAddresses.Any())
-				&& data != null
-				&& data.GetDataPresent(DataFormats.Text);
-
+			PasteMenuItem.Enabled = _domain.Writable && AreAnyHighlighted
+				&& data?.GetDataPresent(DataFormats.Text) is true;
 			FindNextMenuItem.Enabled = !string.IsNullOrWhiteSpace(_findStr);
 		}
 
 		private string MakeCopyExportString(bool export)
 		{
-			// make room for an array with _secondaryHighlightedAddresses and optionally HighlightedAddress
-			long[] addresses = new long[_secondaryHighlightedAddresses.Count + (_highlightedAddress.HasValue ? 1 : 0)];
-
-			// if there was actually nothing to do, return
-			if (addresses.Length == 0)
-			{
-				return null;
-			}
-
-			// fill the array with _secondaryHighlightedAddresses
-			for (int i = 0; i < _secondaryHighlightedAddresses.Count; i++)
-			{
-				addresses[i] = _secondaryHighlightedAddresses[i];
-			}
-
-			// and add HighlightedAddress if present
-			if (_highlightedAddress.HasValue)
-			{
-				addresses[addresses.Length - 1] = _highlightedAddress.Value;
-			}
-
-			// these need to be sorted. it's not just for HighlightedAddress, _secondaryHighlightedAddresses can even be jumbled
-			Array.Sort(addresses);
+			var addresses = AllHighlightedAddresses.Order().ToArray();
+			if (addresses.Length is 0) return null;
 
 			// find the maximum length of the exported string
 			int maximumLength = addresses.Length * (export ? 3 : 2) + 8;
@@ -1437,7 +1412,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return;
 			}
-			
+
 			var clipboardRaw = (string)data.GetData(DataFormats.Text);
 			var hex = clipboardRaw.OnlyHex();
 
@@ -1472,7 +1447,7 @@ namespace BizHawk.Client.EmuHawk
 					InitialLocation = PointToScreen(AddressesLabel.Location),
 					InitialValue = _findStr,
 					SearchTypeChangedCallback = SearchTypeChanged,
-					InitialText = _lastSearchWasText
+					InitialText = _lastSearchWasText,
 				};
 
 				_hexFind.Show();
@@ -1480,7 +1455,7 @@ namespace BizHawk.Client.EmuHawk
 			else
 			{
 				_hexFind.InitialValue = _findStr;
-				_hexFind.Focus();
+				_hexFind.Activate();
 			}
 		}
 
@@ -1515,10 +1490,8 @@ namespace BizHawk.Client.EmuHawk
 			AddToRamWatchMenuItem.Enabled =
 				_highlightedAddress.HasValue;
 
-			PokeAddressMenuItem.Enabled =
-				FreezeAddressMenuItem.Enabled =
-				_highlightedAddress.HasValue &&
-				_domain.Writable;
+			PokeAddressMenuItem.Enabled = FreezeAddressMenuItem.Enabled
+				= _highlightedAddress is not null && _domain.Writable;
 		}
 
 		private void MemoryDomainsMenuItem_DropDownOpened(object sender, EventArgs e)
@@ -1530,7 +1503,7 @@ namespace BizHawk.Client.EmuHawk
 				var romMenuItem = new ToolStripMenuItem
 				{
 					Text = _romDomain.Name,
-					Checked = _domain.Name == _romDomain.Name
+					Checked = _domain.Name == _romDomain.Name,
 				};
 
 				MemoryDomainsMenuItem.DropDownItems.Add(new ToolStripSeparator());
@@ -1557,7 +1530,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void BigEndianMenuItem_Click(object sender, EventArgs e)
 		{
-			BigEndian ^= true;
+			BigEndian = !BigEndian;
 			GeneralUpdate();
 		}
 
@@ -1567,7 +1540,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				Text = "Go to Address",
 				StartLocation = this.ChildPointToScreen(MemoryViewerBox),
-				Message = "Enter a hexadecimal value"
+				Message = "Enter a hexadecimal value",
 			};
 
 			if (this.ShowDialogWithTempMute(inputPrompt).IsOk() && inputPrompt.PromptText.IsHex())
@@ -1580,18 +1553,9 @@ namespace BizHawk.Client.EmuHawk
 
 		private void AddToRamWatchMenuItem_Click(object sender, EventArgs e)
 		{
-			if (_highlightedAddress.HasValue || _secondaryHighlightedAddresses.Any())
-			{
-				Tools.LoadRamWatch(true);
-			}
-
-			if (_highlightedAddress.HasValue)
-			{
-				Tools.RamWatch.AddWatch(MakeWatch(_highlightedAddress.Value));
-			}
-
-			_secondaryHighlightedAddresses.ForEach(addr =>
-				Tools.RamWatch.AddWatch(MakeWatch(addr)));
+			if (!AreAnyHighlighted) return;
+			Tools.LoadRamWatch(true);
+			foreach (var addr in AllHighlightedAddresses) Tools.RamWatch.AddWatch(MakeWatch(addr));
 		}
 
 		private void FreezeAddressMenuItem_Click(object sender, EventArgs e)
@@ -1614,52 +1578,31 @@ namespace BizHawk.Client.EmuHawk
 				}
 			}
 
-			Tools.UpdateCheatRelatedTools(null, null);
+			Tools.UpdateCheatRelatedTools(null, new(null));
 			MemoryViewerBox.Refresh();
 		}
 
 		private void UnfreezeAllMenuItem_Click(object sender, EventArgs e)
 		{
-			MainForm.CheatList.RemoveAll();
+			MainForm.CheatList.Clear();
 		}
 
 		private void PokeAddressMenuItem_Click(object sender, EventArgs e)
 		{
-			if (!_domain.Writable)
+			if (!_domain.Writable || !AreAnyHighlighted) return;
+			var watches = AllHighlightedAddresses.Select(address => Watch.GenerateWatch(
+				_domain,
+				address,
+				WatchSize,
+				Common.WatchDisplayType.Hex,
+				BigEndian));
+			using var poke = new RamPoke(DialogController, watches, MainForm.CheatList)
 			{
-				return;
-			}
-
-			var addresses = new List<long>();
-			if (_highlightedAddress.HasValue)
-			{
-				addresses.Add(_highlightedAddress.Value);
-			}
-
-			if (_secondaryHighlightedAddresses.Any())
-			{
-				addresses.AddRange(_secondaryHighlightedAddresses);
-			}
-
-			if (addresses.Any())
-			{
-				var watches = addresses.Select(
-					address => Watch.GenerateWatch(
-						_domain,
-						address,
-						(WatchSize)DataSize,
-						Common.WatchDisplayType.Hex,
-						BigEndian));
-
-				using var poke = new RamPoke(DialogController, watches, MainForm.CheatList)
-				{
-					InitialLocation = this.ChildPointToScreen(AddressLabel),
-					ParentTool = this
-				};
-
-				this.ShowDialogWithTempMute(poke);
-				GeneralUpdate();
-			}
+				InitialLocation = this.ChildPointToScreen(AddressLabel),
+				ParentTool = this,
+			};
+			this.ShowDialogWithTempMute(poke);
+			GeneralUpdate();
 		}
 
 		private void SetColorsMenuItem_Click(object sender, EventArgs e)
@@ -1866,7 +1809,7 @@ namespace BizHawk.Client.EmuHawk
 				case Keys.Delete:
 					if (e.Modifiers == Keys.Shift)
 					{
-						MainForm.CheatList.RemoveAll();
+						MainForm.CheatList.Clear();
 					}
 					else
 					{
@@ -1942,25 +1885,18 @@ namespace BizHawk.Client.EmuHawk
 		{
 			var data = Clipboard.GetDataObject();
 
-			CopyContextItem.Visible =
-				AddToRamWatchContextItem.Visible =
-				_highlightedAddress.HasValue || _secondaryHighlightedAddresses.Any();
+			CopyContextItem.Visible = AddToRamWatchContextItem.Visible = AreAnyHighlighted;
 
-			FreezeContextItem.Visible =
-				PokeContextItem.Visible =
-				IncrementContextItem.Visible =
-				DecrementContextItem.Visible =
-				ContextSeparator2.Visible =
-				(_highlightedAddress.HasValue || _secondaryHighlightedAddresses.Any()) &&
-				_domain.Writable;
+			FreezeContextItem.Visible = PokeContextItem.Visible
+				= IncrementContextItem.Visible
+				= DecrementContextItem.Visible
+				= ContextSeparator2.Visible
+					= AreAnyHighlighted && _domain.Writable;
 
 			UnfreezeAllContextItem.Visible = MainForm.CheatList.AnyActive;
 			PasteContextItem.Visible = _domain.Writable && data != null && data.GetDataPresent(DataFormats.Text);
 
-			ContextSeparator1.Visible =
-				_highlightedAddress.HasValue ||
-				_secondaryHighlightedAddresses.Any() ||
-				(data != null && data.GetDataPresent(DataFormats.Text));
+			ContextSeparator1.Visible = AreAnyHighlighted || data?.GetDataPresent(DataFormats.Text) is true;
 
 			if (_highlightedAddress.HasValue && IsFrozen(_highlightedAddress.Value))
 			{
@@ -1973,8 +1909,9 @@ namespace BizHawk.Client.EmuHawk
 				FreezeContextItem.Image = Resources.Freeze;
 			}
 
-
-			toolStripMenuItem1.Visible = viewN64MatrixToolStripMenuItem.Visible = DataSize == 4;
+			var shouldShowN64Matrix = _highlightedAddress is not null && Emulator.SystemId is VSystemID.Raw.N64;
+			toolStripMenuItem1.Visible = viewN64MatrixToolStripMenuItem.Visible = shouldShowN64Matrix;
+			viewN64MatrixToolStripMenuItem.Enabled = shouldShowN64Matrix && (_highlightedAddress.Value & 0b11) is 0;
 		}
 
 		private void IncrementContextItem_Click(object sender, EventArgs e)
@@ -1983,14 +1920,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return;
 			}
-
-			if (_highlightedAddress.HasValue)
-			{
-				IncrementAddress(_highlightedAddress.Value);
-			}
-
-			_secondaryHighlightedAddresses.ForEach(IncrementAddress);
-
+			foreach (var addr in AllHighlightedAddresses) IncrementAddress(addr);
 			GeneralUpdate();
 		}
 
@@ -2000,14 +1930,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return;
 			}
-
-			if (_highlightedAddress.HasValue)
-			{
-				DecrementAddress(_highlightedAddress.Value);
-			}
-
-			_secondaryHighlightedAddresses.ForEach(DecrementAddress);
-
+			foreach (var addr in AllHighlightedAddresses) DecrementAddress(addr);
 			GeneralUpdate();
 		}
 
@@ -2033,7 +1956,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				newValue = HexScrollBar.Maximum - HexScrollBar.LargeChange + 1;
 			}
-			
+
 			if (newValue != HexScrollBar.Value)
 			{
 				HexScrollBar.Value = newValue;
@@ -2058,7 +1981,7 @@ namespace BizHawk.Client.EmuHawk
 						}
 
 						if (gaps < 0) { gaps = 0; }
-						
+
 						var width = (_fontWidth * 2 * (int)cheat.Size) + (gaps * _fontWidth);
 
 						var rect = new Rectangle(GetAddressCoordinates(cheat.Address ?? 0), new Size(width, _fontHeight));
@@ -2162,13 +2085,9 @@ namespace BizHawk.Client.EmuHawk
 						{
 							ClearHighlighted();
 						}
-						else if (_secondaryHighlightedAddresses.Contains(pointedAddress))
-						{
-							_secondaryHighlightedAddresses.Remove(pointedAddress);
-						}
 						else
 						{
-							_secondaryHighlightedAddresses.Add(pointedAddress);
+							_ = _secondaryHighlightedAddresses.ToggleMembership(pointedAddress);
 						}
 					}
 					else if ((ModifierKeys & Keys.Shift) == Keys.Shift)
@@ -2207,44 +2126,28 @@ namespace BizHawk.Client.EmuHawk
 
 		private void viewN64MatrixToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			if (!_highlightedAddress.HasValue)
+			static double Wat(uint n)
+				=> unchecked((int) n) / 65536.0;
+			if (_highlightedAddress is null) return;
+			var addr = _highlightedAddress.Value & ~0b11L;
+			const int SIZE = 4;
+			var raw = new ushort[2 * SIZE * SIZE];
+			_domain.BulkPeekUshort(addr.RangeTo(addr + (SIZE * SIZE * sizeof(float) - 1)), bigEndian: true, raw);
+			List<List<string>> strings = new();
+			for (var y = 0; y < SIZE; y++)
 			{
-				return;
+				strings.Add(new());
+				for (var x = 0; x < SIZE; x++)
+				{
+					var i = y * SIZE + x;
+					uint n = raw[i];
+					n <<= 16;
+					n |= raw[SIZE * SIZE + i];
+					strings[y].Add(((float) Wat(n)).ToString(CultureInfo.InvariantCulture)); // was going to right-pad, as the previous code did (poorly), but I realised that's not necessary and not really helpful, as well as being hard to get right --yoshi
+				}
 			}
-
-			bool bigEndian = true;
-			long addr = _highlightedAddress.Value;
-			//ushort  = _domain.PeekWord(addr, bigEndian);
-
-			float[,] matVals = new float[4,4];
-
-			for (int i = 0; i < 4; i++)
-			{
-					for (int j = 0; j < 4; j++)
-					{
-						ushort hi = _domain.PeekUshort(((addr+(i<<3)+(j<<1)     )^0x0), bigEndian);
-						ushort lo = _domain.PeekUshort(((addr+(i<<3)+(j<<1) + 32)^0x0), bigEndian);
-						matVals[i,j] = (int)(((hi << 16) | lo)) / 65536.0f;
-					}
-			}
-
-#if false // if needed
-			DialogController.ShowMessageBox(new SlimDX.Matrix {
-				M11 = matVals[0, 0], M12 = matVals[0, 1], M13 = matVals[0, 2], M14 = matVals[0, 3],
-				M21 = matVals[1, 0], M22 = matVals[1, 1], M23 = matVals[1, 2], M24 = matVals[1, 3],
-				M31 = matVals[2, 0], M32 = matVals[2, 1], M33 = matVals[2, 2], M34 = matVals[2, 3],
-				M41 = matVals[3, 0], M42 = matVals[3, 1], M43 = matVals[3, 2], M44 = matVals[3, 3]
-			}.ToString());
-#endif
-
-			using var sw = new StringWriter();
-			for (int i = 0; i < 4; i++)
-			{
-				sw.WriteLine("{0,18:0.00000} {1,18:0.00000} {2,18:0.00000} {3,18:0.00000}", matVals[i, 0], matVals[i, 1], matVals[i, 2], matVals[i, 3]);
-			}
-
-			var str = sw.ToString();
-			DialogController.ShowMessageBox(str);
+			using N64MatrixDisplayDialog dialog = new(strings);
+			this.ShowDialogAsChild(dialog);
 		}
 	}
 }

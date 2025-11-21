@@ -1,4 +1,3 @@
-﻿using System;
 using System.Diagnostics;
 
 using BizHawk.Emulation.Common;
@@ -7,7 +6,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 {
 	public partial class Gameboy : IEmulator, IBoardInfo
 	{
-		public IEmulatorServiceProvider ServiceProvider { get; }
+		private readonly BasicServiceProvider _serviceProvider;
+		public IEmulatorServiceProvider ServiceProvider => _serviceProvider;
 
 		public ControllerDefinition ControllerDefinition { get; }
 
@@ -49,7 +49,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 					{
 						// target number of samples to emit: length of 1 frame minus whatever overflow
 						samplesEmitted = TICKSINFRAME - frameOverflow;
-						Debug.Assert(samplesEmitted * 2 <= _soundbuff.Length);
+						Debug.Assert(samplesEmitted * 2 <= _soundbuff.Length, "buffer capacity exceeded");
 						if (LibGambatte.gambatte_runfor(GambatteState, FrameBuffer, 160, _soundbuff, ref samplesEmitted) > 0)
 						{
 							Array.Copy(FrameBuffer, VideoBuffer, FrameBuffer.Length);
@@ -90,7 +90,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 							inputFrameLengthInt = TICKSINFRAME;
 						}
 						samplesEmitted = inputFrameLengthInt - frameOverflow;
-						Debug.Assert(samplesEmitted * 2 <= _soundbuff.Length);
+						Debug.Assert(samplesEmitted * 2 <= _soundbuff.Length, "buffer capacity exceeded");
 						if (LibGambatte.gambatte_runfor(GambatteState, FrameBuffer, 160, _soundbuff, ref samplesEmitted) > 0)
 						{
 							Array.Copy(FrameBuffer, VideoBuffer, FrameBuffer.Length);
@@ -120,11 +120,13 @@ namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 						}
 					}
 					break;
+				default:
+					throw new InvalidOperationException();
 			}
 
 			if (IsSgb)
 			{
-				ProcessSgbSound((int)samplesEmittedInFrame, rendersound && !Muted);
+				ProcessSgbSound(rendersound && !Muted);
 			}
 
 			ProcessMbcSound(rendersound && !Muted);
@@ -161,6 +163,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 
 		public void Dispose()
 		{
+			_memorycallbacks.ActiveChanged -= SetMemoryCallbacks;
 			if (GambatteState != IntPtr.Zero)
 			{
 				LibGambatte.gambatte_destroy(GambatteState);

@@ -1,15 +1,14 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
-using BizHawk.BizInvoke;
+
+using BizHawk.Common;
 using BizHawk.Emulation.Common;
 using NymaTypes;
 
 namespace BizHawk.Emulation.Cores.Waterbox
 {
-	public partial class NymaCore : ISettable<NymaCore.NymaSettings, NymaCore.NymaSyncSettings>
+	public abstract partial class NymaCore : ISettable<NymaCore.NymaSettings, NymaCore.NymaSyncSettings>
 	{
 		public NymaSettingsInfo SettingsInfo { get; private set; }
 		private NymaSettings _settings;
@@ -113,8 +112,8 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				var possible = info.AllOverrides.Where(kvp => kvp.Value.NonSync && kvp.Value.NoRestart).Select(kvp => kvp.Key);
 				return possible.Where(key =>
 				{
-					x.MednafenValues.TryGetValue(key, out var xx);
-					y.MednafenValues.TryGetValue(key, out var yy);
+					_ = x.MednafenValues.TryGetValue(key, out var xx);
+					_ = y.MednafenValues.TryGetValue(key, out var yy);
 					return xx != yy;
 				});
 			}
@@ -124,8 +123,8 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				var restarters = info.AllOverrides.Where(kvp => kvp.Value.NonSync && !kvp.Value.NoRestart).Select(kvp => kvp.Key);
 				foreach (var key in restarters)
 				{
-					x.MednafenValues.TryGetValue(key, out var xx);
-					y.MednafenValues.TryGetValue(key, out var yy);
+					_ = x.MednafenValues.TryGetValue(key, out var xx);
+					_ = y.MednafenValues.TryGetValue(key, out var yy);
 					if (xx != yy)
 						return PutSettingsDirtyBits.RebootCore;
 				}
@@ -186,8 +185,8 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				var restarters = info.AllOverrides.Where(kvp => !kvp.Value.NonSync && !kvp.Value.NoRestart).Select(kvp => kvp.Key);
 				foreach (var key in restarters)
 				{
-					x.MednafenValues.TryGetValue(key, out var xx);
-					y.MednafenValues.TryGetValue(key, out var yy);
+					_ = x.MednafenValues.TryGetValue(key, out var xx);
+					_ = y.MednafenValues.TryGetValue(key, out var yy);
 					if (xx != yy)
 						return PutSettingsDirtyBits.RebootCore;
 				}
@@ -206,7 +205,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			{
 				// try to get actual value from settings
 				var dict = ovr.NonSync ? _settings.MednafenValues : _syncSettingsActual.MednafenValues;
-				dict.TryGetValue(name, out val);
+				_ = dict.TryGetValue(name, out val);
 			}
 			if (val == null)
 			{
@@ -219,11 +218,14 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		private void SettingsQuery(string name, IntPtr dest)
 		{
 			var val = SettingsQuery(name);
-			var bytes = Encoding.UTF8.GetBytes(val);
+			var bytes = val is null ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(val);
 			if (bytes.Length > 255)
+			{
 				throw new InvalidOperationException($"Value {val} for setting {name} was too long");
-			WaterboxUtils.ZeroMemory(dest, 256);
-			Marshal.Copy(bytes, 0, dest, bytes.Length);
+			}
+			var dstSpan = Util.UnsafeSpanFromPointer(ptr: dest, length: 256);
+			dstSpan.Clear();
+			bytes.CopyTo(dstSpan);
 		}
 
 		private LibNymaCore.FrontendSettingQuery _settingsQueryDelegate;
@@ -319,6 +321,8 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		private static readonly IReadOnlyDictionary<string, SettingOverride> ExtraOverrides = new Dictionary<string, SettingOverride>
 		{
 			{ "nyma.constantfb", new() { NonSync = true, NoRestart = true } },
+			// global setting... needs a value set if it gets used (only use case in practice is ST-V with Saturnus)
+			{ "filesys.untrusted_fip_check", new() { Hide = true, Default = "0" } },
 		};
 
 		private static readonly IReadOnlyCollection<SettingT> ExtraSettings = new List<SettingT>

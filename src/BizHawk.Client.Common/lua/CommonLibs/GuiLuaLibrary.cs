@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Linq;
 
@@ -21,6 +20,7 @@ namespace BizHawk.Client.Common
 			=> DisplaySurfaceIDParser.Parse(surfaceName) ?? _rememberedSurfaceID;
 
 #pragma warning disable CS0612
+#pragma warning disable CS0618
 		[LuaDeprecatedMethod]
 		[LuaMethod("DrawNew", "Changes drawing target to the specified lua surface name. This may clobber any previous drawing to this surface (pass false if you don't want it to)")]
 		public void DrawNew(string name, bool? clear = true)
@@ -31,6 +31,7 @@ namespace BizHawk.Client.Common
 		public void DrawFinish()
 			=> APIs.Gui.DrawFinish();
 #pragma warning restore CS0612
+#pragma warning restore CS0618
 
 		[LuaMethodExample("gui.addmessage( \"Some message\" );")]
 		[LuaMethod("addmessage", "Adds a message to the OSD's message area")]
@@ -92,7 +93,7 @@ namespace BizHawk.Client.Common
 			}
 			catch (Exception)
 			{
-				return;
+				// ignored
 			}
 		}
 
@@ -120,8 +121,14 @@ namespace BizHawk.Client.Common
 			string surfaceName = null)
 				=> APIs.Gui.DrawEllipse(x, y, width, height, _th.SafeParseColor(line), _th.SafeParseColor(background), surfaceID: UseOrFallback(surfaceName));
 
-		[LuaMethodExample("gui.drawIcon( \"C:\\sample.ico\", 16, 32, 18, 24 );")]
-		[LuaMethod("drawIcon", "draws an Icon (.ico) file from the given path at the given coordinate. width and height are optional. If specified, it will resize the image accordingly")]
+		[LuaMethodExample("""
+			gui.drawIcon("C:\\sample.ico", 16, 32, 18, 24);
+		""")]
+		[LuaMethod(
+			name: "drawIcon",
+			description: "Draws the image in the given .ico file to the surface specified by the surfaceName parameter, or the current surface if nil/unset."
+				+ " The image will be positioned such that its top-left corner will be at (x, y) on the surface."
+				+ " If width and height are both nil/unset, the image will be drawn at full size (100%). If both are specified, the image will be stretched to that size.")]
 		public void DrawIcon(
 			string path,
 			int x,
@@ -131,8 +138,15 @@ namespace BizHawk.Client.Common
 			string surfaceName = null)
 				=> APIs.Gui.DrawIcon(path, x, y, width, height, surfaceID: UseOrFallback(surfaceName));
 
-		[LuaMethodExample("gui.drawImage( \"C:\\sample.bmp\", 16, 32, 18, 24, false );")]
-		[LuaMethod("drawImage", "draws an image file from the given path at the given coordinate. width and height are optional. If specified, it will resize the image accordingly")]
+		[LuaMethodExample("""
+			gui.drawImage("C:\\sample.bmp", 16, 32, 18, 24, false);
+		""")]
+		[LuaMethod(
+			name: "drawImage",
+			description: "Draws the image in the given file (.bmp, .gif, .jpg, .png, or .tif) to the surface specified by the surfaceName parameter, or the current surface if nil/unset."
+				+ " The image will be positioned such that its top-left corner will be at (x, y) on the surface."
+				+ " If width and height are both nil/unset, the image will be drawn at full size (100%). If both are specified, the image will be stretched to that size." // technically width or height can be specified w/o the other but let's leave that as UB
+				+ " If true is passed for the cache parameter, or if it's omitted, the file contents will be cached and re-used next time this function is called with the same path. The cache can be cleared with gui.clearImageCache.")]
 		public void DrawImage(
 			string path,
 			int x,
@@ -148,8 +162,14 @@ namespace BizHawk.Client.Common
 		public void ClearImageCache()
 			=> APIs.Gui.ClearImageCache();
 
-		[LuaMethodExample("gui.drawImageRegion( \"C:\\sample.png\", 11, 22, 33, 44, 21, 43, 34, 45 );")]
-		[LuaMethod("drawImageRegion", "draws a given region of an image file from the given path at the given coordinate, and optionally with the given size")]
+		[LuaMethodExample("""
+			gui.drawImageRegion("C:\\sample.png", 11, 22, 33, 44, 21, 43, 34, 45);
+		""")]
+		[LuaMethod(
+			name: "drawImageRegion",
+			description: "Draws part of the image in the given file (.bmp, .gif, .jpg, .png, or .tif) to the surface specified by the surfaceName parameter, or the current surface if nil/unset."
+				+ " Consult this diagram to see its usage (renders embedded on the TASVideos Wiki): [https://user-images.githubusercontent.com/13409956/198868522-55dc1e5f-ae67-4ebb-a75f-558656cb4468.png|alt=Diagram showing how to use forms.drawImageRegion]"
+				+ " The file contents will be cached and re-used next time this function is called with the same path. The cache can be cleared with gui.clearImageCache.")]
 		public void DrawImageRegion(
 			string path,
 			int source_x,
@@ -207,8 +227,16 @@ namespace BizHawk.Client.Common
 			string surfaceName = null)
 				=> APIs.Gui.DrawPixel(x, y, _th.SafeParseColor(color), surfaceID: UseOrFallback(surfaceName));
 
-		[LuaMethodExample("gui.drawPolygon( { { 5, 10 }, { 10, 10 }, { 10, 20 }, { 5, 20 } }, 10, 30, 0x007F00FF, 0x7F7F7FFF );")]
-		[LuaMethod("drawPolygon", "Draws a polygon using the table of coordinates specified in points. This should be a table of tables(each of size 2). If x or y is passed, the polygon will be translated by the passed coordinate pair. Line is the color of the polygon. Background is the optional fill color")]
+		[LuaMethodExample("""
+			gui.drawPolygon({ { 5, 10 }, { 10, 10 }, { 10, 20 }, { 5, 20 } }, 10, 30, 0x007F00FF, 0x7F7F7FFF);
+		""")]
+		[LuaMethod(
+			name: "drawPolygon",
+			description: "Draws a polygon (cyclic polyline) to the surface specified by the surfaceName parameter, or the current surface if nil/unset."
+				+ " The polygon must be given as a list of length-2 lists (co-ordinate pairs). Each pair is interpreted as the absolute co-ordinates of one of the vertices, and these are joined together in sequence to form a polygon. The last is connected to the first; you DON'T need to end with a copy of the first to close the cycle."
+				+ " If the offsetX and offsetY parameters are both specified, the whole polygon will be offset by that amount." // technically x or y can be specified w/o the other but let's leave that as UB
+				+ " If a value is passed for the line parameter, the polygon's edges are drawn in that color (i.e. the stroke color)."
+				+ " If a value is passed for the background parameter, the polygon's face is filled in that color.")]
 		public void DrawPolygon(
 			LuaTable points,
 			int? offsetX = null,
@@ -232,7 +260,7 @@ namespace BizHawk.Client.Common
 			}
 			catch (Exception)
 			{
-				return;
+				// ignored
 			}
 		}
 
@@ -304,7 +332,7 @@ namespace BizHawk.Client.Common
 					surfaceName: surfaceName);
 
 		[LuaMethodExample("gui.pixelText( 16, 32, \"Some message\", 0x7F0000FF, 0x00007FFF, \"Arial Narrow\" );")]
-		[LuaMethod("pixelText", "Draws the given message in the emulator screen space (like all draw functions) at the given x,y coordinates and the given color. The default color is white. Two font families are available, \"fceux\" and \"gens\" (or  \"0\" and \"1\" respectively), both are monospace and have the same size as in the emulators they've been taken from. If no font family is specified, it uses \"gens\" font, unless that's overridden via gui.defaultPixelFont()")]
+		[LuaMethod("pixelText", "Draws the given message in the emulator screen space (like all draw functions) at the given x,y coordinates and the given color. The default color is white. Two font families are available, \"fceux\" and \"gens\" (or  \"0\" and \"1\" respectively), both are monospace and have the same size as in the emulators they've been taken from. If no font family is specified, it uses \"gens\" font, unless that's overridden via gui.defaultPixelFont().")]
 		public void PixelText(
 			int x,
 			int y,
@@ -313,10 +341,10 @@ namespace BizHawk.Client.Common
 			[LuaColorParam] object backcolor = null,
 			string fontfamily = null,
 			string surfaceName = null)
-				=> APIs.Gui.PixelText(x, y, message, _th.SafeParseColor(forecolor), _th.SafeParseColor(backcolor) ?? APIs.Gui.GetDefaultTextBackground().Value, fontfamily, surfaceID: UseOrFallback(surfaceName));
+				=> APIs.Gui.PixelText(x, y, message, _th.SafeParseColor(forecolor), _th.SafeParseColor(backcolor) ?? APIs.Gui.GetDefaultTextBackground(), fontfamily, surfaceID: UseOrFallback(surfaceName));
 
 		[LuaMethodExample("gui.text( 16, 32, \"Some message\", 0x7F0000FF, \"bottomleft\" );")]
-		[LuaMethod("text", "Displays the given text on the screen at the given coordinates. Optional Foreground color. The optional anchor flag anchors the text to one of the four corners. Anchor flag parameters: topleft, topright, bottomleft, bottomright")]
+		[LuaMethod("text", "Displays the given text on the screen at the given coordinates. Optional Foreground color. The optional anchor flag anchors the text to one of the four corners. Anchor flag parameters: topleft, topright, bottomleft, bottomright. This function is generally much faster than other text drawing functions, at the cost of customization.")]
 		public void Text(
 			int x,
 			int y,
@@ -325,8 +353,14 @@ namespace BizHawk.Client.Common
 			string anchor = null)
 				=> APIs.Gui.Text(x, y, message, _th.SafeParseColor(forecolor), anchor);
 
-		[LuaMethodExample("local nlguicre = gui.createcanvas( 77, 99, 2, 48 );")]
-		[LuaMethod("createcanvas", "Creates a canvas of the given size and, if specified, the given coordinates.")]
+		[LuaMethodExample("""
+			local canvas = gui.createcanvas(77, 99, 2, 48);
+		""")]
+		[LuaMethod(
+			name: "createcanvas",
+			description: "Creates a dedicated canvas window, returning a table containing some callbacks for drawing. These are the LuaCanvas functions in the API reference."
+				+ " The width and height parameters determine the size of the canvas."
+				+ " If the x and y parameters are both nil/unset, the form (window) will appear at the default position. If both are specified, the form will be positioned at (x, y) on the screen.")] // technically x can be specified w/o y but let's leave that as UB
 		public LuaTable CreateCanvas(int width, int height, int? x = null, int? y = null)
 			=> CreateLuaCanvasCallback(width, height, x, y);
 

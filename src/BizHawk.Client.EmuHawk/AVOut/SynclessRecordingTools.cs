@@ -1,11 +1,11 @@
-﻿using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
-using BizHawk.Bizware.BizwareGL;
+using BizHawk.Bizware.Graphics;
 using BizHawk.Client.Common;
+using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.EmuHawk
@@ -43,24 +43,20 @@ namespace BizHawk.Client.EmuHawk
 			if (result is null) return;
 
 			_mSynclessConfigFile = result;
-			
+
 			//---- this is pretty crappy:
 			var lines = File.ReadAllLines(_mSynclessConfigFile);
 
 			string framesDir = "";
 			foreach (var line in lines)
 			{
-				int idx = line.IndexOf('=');
-				string key = line.Substring(0, idx);
-				string value = line.Substring(idx + 1, line.Length - (idx + 1));
-				if (key == "framesdir")
-				{
-					framesDir = value;
-				}
+				const string KEY = "framesdir=";
+				if (line.StartsWithOrdinal(KEY)) framesDir = line.Substring(startIndex: KEY.Length);
+				// and continue
 			}
 
 			_mFramesDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_mSynclessConfigFile)), framesDir);
-			
+
 			// scan frames directory
 			int frame = 1; // hacky! skip frame 0, because we have a problem with dumping that frame somehow
 			for (;;)
@@ -74,9 +70,9 @@ namespace BizHawk.Client.EmuHawk
 				_mFrameInfos.Add(new FrameInfo
 				{
 					PngPath = png,
-					WavPath = wav
+					WavPath = wav,
 				});
-				
+
 				frame++;
 			}
 

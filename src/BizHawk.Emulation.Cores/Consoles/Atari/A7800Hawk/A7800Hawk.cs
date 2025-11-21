@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Components.M6502;
@@ -7,10 +5,12 @@ using BizHawk.Common.NumberExtensions;
 
 namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 {
-	[Core(CoreNames.A7800Hawk, "")]
-	[ServiceNotApplicable(new[] { typeof(IDriveLight), typeof(ISettable<,>) })]
+	[Core(
+		name: CoreNames.A7800Hawk,
+		author: "alyosha and BizHawk contributors")]
+	[ServiceNotApplicable(typeof(ISettable<,>))]
 	public partial class A7800Hawk : IEmulator, ISaveRam, IDebuggable, IInputPollable,
-		IRegionable, IBoardInfo, ISettable<A7800Hawk.A7800Settings, A7800Hawk.A7800SyncSettings>
+		IRegionable, IBoardInfo, ISettable<object, A7800Hawk.A7800SyncSettings>
 	{
 		internal static class RomChecksums
 		{
@@ -76,7 +76,7 @@ namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 		}
 
 		[CoreConstructor(VSystemID.Raw.A78)]
-		public A7800Hawk(CoreComm comm, byte[] rom, A7800Hawk.A7800Settings settings, A7800Hawk.A7800SyncSettings syncSettings)
+		public A7800Hawk(CoreComm comm, byte[] rom, A7800SyncSettings syncSettings)
 		{
 			var ser = new BasicServiceProvider(this);
 
@@ -94,8 +94,7 @@ namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 
 			_blip.SetRates(1789773, 44100);
 
-			_settings = (A7800Settings)settings ?? new A7800Settings();
-			_syncSettings = (A7800SyncSettings)syncSettings ?? new A7800SyncSettings();
+			_syncSettings = syncSettings ?? new A7800SyncSettings();
 			_controllerDeck = new A7800HawkControllerDeck(_syncSettings.Port1, _syncSettings.Port2);
 
 			var highscoreBios = comm.CoreFileProvider.GetFirmware(new("A78", "Bios_HSC"), "Some functions may not work without the high score BIOS.");
@@ -183,7 +182,7 @@ namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 					{
 						s_mapper = "1";
 					}
-					
+
 					if (cart_2.Bit(2))
 					{
 						cart_RAM = 8;
@@ -225,7 +224,7 @@ namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 			_rom = rom;
 
 			Reset_Mapper(s_mapper);
-			
+
 			_hsbios = highscoreBios;
 			_bios = _isPAL ? palBios : ntscBios;
 
@@ -285,7 +284,7 @@ namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 			maria.Reset();
 			m6532.Reset();
 			pokey.Reset();
-			
+
 			Maria_regs = new byte[0x20];
 			RAM = new byte[0x1000];
 
@@ -350,8 +349,8 @@ namespace BizHawk.Emulation.Cores.Atari.A7800Hawk
 		 * PAL Table: Copyright © 2004 Mike Murphy
 		 *
 		 * NTSC Table Source: http://atariage.com/forums/topic/95498-7800-color-palette-in-mess/?p=1174461
-		 * 
-		 * 
+		 *
+		 *
 		 */
 
 		public static readonly int[] NTSCPalette =

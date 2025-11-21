@@ -1,4 +1,4 @@
-﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -11,6 +11,8 @@ namespace BizHawk.Client.EmuHawk
 {
 	public sealed class ConsoleLuaLibrary : LuaLibraryBase
 	{
+		public Lazy<string> AllAPINames { get; set; }
+
 		public ToolManager Tools { get; set; }
 
 		public ConsoleLuaLibrary(ILuaLibraries luaLibsImpl, ApiContainer apiContainer, Action<string> logOutputCallback)
@@ -31,15 +33,7 @@ namespace BizHawk.Client.EmuHawk
 		[LuaMethodExample("local stconget = console.getluafunctionslist( );")]
 		[LuaMethod("getluafunctionslist", "returns a list of implemented functions")]
 		public string GetLuaFunctionsList()
-		{
-			var list = new StringBuilder();
-			foreach (var function in _luaLibsImpl.Docs)
-			{
-				list.AppendLine(function.Name);
-			}
-
-			return list.ToString();
-		}
+			=> AllAPINames.Value;
 
 		[LuaMethodExample("console.log( \"New log.\" );")]
 		[LuaMethod("log", "Outputs the given object to the output box on the Lua Console dialog. Note: Can accept a LuaTable")]
@@ -67,23 +61,12 @@ namespace BizHawk.Client.EmuHawk
 		{
 			static string SerializeTable(LuaTable lti)
 			{
-				var keyObjs = lti.Keys;
-				var valueObjs = lti.Values;
-				if (keyObjs.Count != valueObjs.Count)
-				{
-					throw new ArgumentException(message: "each value must be paired with one key, they differ in number", paramName: nameof(lti));
-				}
-
-				var values = new object[keyObjs.Count];
-				var kvpIndex = 0;
-				foreach (var valueObj in valueObjs)
-				{
-					values[kvpIndex++] = valueObj;
-				}
-
-				return string.Concat(keyObjs.Cast<object>()
-					.Select((kObj, i) => $"\"{kObj}\": \"{values[i]}\"\n")
-					.Order());
+				var entries = lti.ToArray();
+				return string.Concat(entries.All(static kvp => kvp.Key is long)
+					? entries.OrderBy(static kvp => (long) kvp.Key, Comparer<long>.Default)
+						.Select(static kvp => $"{kvp.Key}: \"{kvp.Value}\"\n")
+					: entries.OrderBy(static kvp => kvp.Key)
+						.Select(static kvp => $"\"{kvp.Key}\": \"{kvp.Value}\"\n"));
 			}
 
 			if (!Tools.Has<LuaConsole>())
@@ -98,12 +81,12 @@ namespace BizHawk.Client.EmuHawk
 				{
 					null => "nil",
 					LuaTable table => SerializeTable(table),
-					_ => output.ToString()
+					_ => output.ToString(),
 				});
 
 			if (outputs == null || outputs.Length == 0 || (outputs.Length == 1 && outputs[0] is null))
 			{
-				sb.Append($"(no return){terminator}");
+				Tools.LuaConsole.WriteToOutputWindow($"(no return){terminator}");
 				return;
 			}
 

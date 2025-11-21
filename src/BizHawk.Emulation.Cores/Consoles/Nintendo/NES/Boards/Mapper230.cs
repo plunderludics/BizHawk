@@ -74,7 +74,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			}
 			else
 			{
-				if (prg_mode == false)
+				if (!prg_mode)
 				{
 					return Rom[((prg_page >> 1) * 0x8000) + addr + chip1_offset];
 				}
@@ -88,7 +88,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 
 		public override void NesSoftReset()
 		{
-			contra_mode ^= true;
+			contra_mode = !contra_mode;
 			prg_page = 0;
 			prg_mode = false;
 			SetMirrorType(EMirrorType.Vertical);

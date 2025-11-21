@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using System.IO;
 using System.Collections.Generic;
+using System.Globalization;
 
 using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk;
@@ -343,7 +344,7 @@ namespace Plunderludics.UnityHawk.Tool
 					/*(long address, float value, bool isBigEndian, string domain = null)*/
 					var args = mc.Argument.Split(',');
 					long address = long.Parse(args[0]);
-					float value = float.Parse(args[1]);
+					float value = float.Parse(args[1], CultureInfo.InvariantCulture);
 					bool isBigEndian = bool.Parse(args[2]);
 					string domain = (args.Length > 3) ? args[3] : APIs.Memory.MainMemoryName;
 					APIs.Memory.SetBigEndian(isBigEndian);
@@ -571,7 +572,7 @@ namespace Plunderludics.UnityHawk.Tool
 					{
 						4 => APIs.Memory.ReadFloat(addr, actualDomain),
 						_ => throw new InvalidOperationException($"Invalid size {size} for float watch")
-					}).ToString("R"), // Full-precision
+					}).ToString("R", CultureInfo.InvariantCulture), // Full-precision
 					_ => throw new InvalidOperationException($"Unknown WatchType {type}")
 				};
 

@@ -6,7 +6,7 @@ namespace BizHawk.Client.EmuHawk
 	public partial class ExceptionBox : Form
 	{
 		// [UnityHawk: hack to allow suppressing all popup dialogs]
-		public static bool SuppressAll = false;
+		public static bool SuppressAll {get; set;} = false;
 		public new void ShowDialog() { // Nasty hack to 'override' non-virtual method in Form ckass
 			if (!SuppressAll) base.ShowDialog();
 		}

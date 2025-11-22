@@ -183,15 +183,15 @@ namespace BizHawk.Common.PathExtensions
 		/// returned string omits trailing slash<br/>
 		/// on Windows, the env. var is ignored and the fallback of <see cref="ExeDirectoryPath"/> is always used
 		/// </remarks>
-		public static /*readonly*/ string DataDirectoryPath;
+		public static readonly string DataDirectoryPath;
 
 		/// <returns>absolute path of the dll dir (sibling of EmuHawk.exe)</returns>
 		/// <remarks>returned string omits trailing slash</remarks>
-		public static /*readonly*/ string DllDirectoryPath;
+		public static readonly string DllDirectoryPath;
 
 		/// <returns>absolute path of the parent dir of DiscoHawk.exe/EmuHawk.exe, commonly referred to as <c>%exe%</c> though none of our code adds it to the environment</returns>
 		/// <remarks>returned string omits trailing slash</remarks>
-		public static /*readonly*/ string ExeDirectoryPath;
+		public static readonly string ExeDirectoryPath;
 
 		public static string SpecialRecentsDir
 			=> Environment.GetFolderPath(Environment.SpecialFolder.Recent, Environment.SpecialFolderOption.DoNotVerify);

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Windows.Forms;
-using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
 
@@ -74,7 +73,7 @@ namespace Plunderludics.UnityHawk.Tool
 			this.PerformLayout();
 		}
 
-		/// When emuhawk opens, and whenever new rom is loaded
+		// When emuhawk opens, and whenever new rom is loaded
 		public override void Restart() {
 			Console.WriteLine("Restarting UnityHawk plugin...");
 
@@ -408,7 +407,7 @@ namespace Plunderludics.UnityHawk.Tool
 						2 => APIs.Memory.ReadU16(address, domain),
 						3 => APIs.Memory.ReadU24(address, domain),
 						4 => APIs.Memory.ReadU32(address, domain),
-						_ => throw new InvalidOperationException($"Invalid size {size} for Freeze")
+						_ => throw new InvalidOperationException($"Invalid size {size} for Freeze"),
 					};
 
 					Console.WriteLine($"UnityHawk: Freezing {domain} {address} to uint {currentValue}");
@@ -558,7 +557,7 @@ namespace Plunderludics.UnityHawk.Tool
 						2 => APIs.Memory.ReadU16(addr, actualDomain),
 						3 => APIs.Memory.ReadU24(addr, actualDomain),
 						4 => APIs.Memory.ReadU32(addr, actualDomain),
-						_ => throw new InvalidOperationException($"Invalid size {size} for unsigned watch")
+						_ => throw new InvalidOperationException($"Invalid size {size} for unsigned watch"),
 					}).ToString(),
 					WatchType.Signed => (size switch
 					{
@@ -566,14 +565,14 @@ namespace Plunderludics.UnityHawk.Tool
 						2 => APIs.Memory.ReadS16(addr, actualDomain),
 						3 => APIs.Memory.ReadS24(addr, actualDomain),
 						4 => APIs.Memory.ReadS32(addr, actualDomain),
-						_ => throw new InvalidOperationException($"Invalid size {size} for signed watch")
+						_ => throw new InvalidOperationException($"Invalid size {size} for signed watch"),
 					}).ToString(),
 					WatchType.Float => (size switch
 					{
 						4 => APIs.Memory.ReadFloat(addr, actualDomain),
-						_ => throw new InvalidOperationException($"Invalid size {size} for float watch")
+						_ => throw new InvalidOperationException($"Invalid size {size} for float watch"),
 					}).ToString("R", CultureInfo.InvariantCulture), // Full-precision
-					_ => throw new InvalidOperationException($"Unknown WatchType {type}")
+					_ => throw new InvalidOperationException($"Unknown WatchType {type}"),
 				};
 
 				// Check if the value has changed since last frame

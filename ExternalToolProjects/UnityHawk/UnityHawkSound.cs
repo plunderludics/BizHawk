@@ -1,5 +1,3 @@
-using System;
-
 using BizHawk.Emulation.Common;
 using Plunderludics.UnityHawk.SharedBuffers;
 
@@ -19,9 +17,7 @@ namespace Plunderludics.UnityHawk.Tool
 		// Must be run once per emulated frame
 		public void Update() {
 			// Get latest samples from soundProvider and send directly to unity via rpc
-			short[] samples;
-			int nSamples;
-			_soundProvider.GetSamplesSync(out samples, out nSamples);
+			_soundProvider.GetSamplesSync(out short[] samples, out int nSamples);
 			// Confusing, only the first nSamples*2 shorts are meaningful (*2 because stereo)
 			_rpc.SendSamples(samples, nSamples*2);
 		}

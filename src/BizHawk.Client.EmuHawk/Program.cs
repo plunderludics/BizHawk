@@ -91,12 +91,9 @@ namespace BizHawk.Client.EmuHawk
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 		private static int SubMain(string[] args)
 		{
-			var customLocale = Environment.GetEnvironmentVariable("LOCALE");
-			if (!string.IsNullOrEmpty(customLocale))
-			{
-				Thread.CurrentThread.CurrentCulture = new CultureInfo(customLocale);
-				Thread.CurrentThread.CurrentUICulture = new CultureInfo(customLocale);
-			}
+			// [UnityHawk: force English error messages]
+			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
+			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-US");
 
 			// this check has to be done VERY early.  i stepped through a debug build with wrong .dll versions purposely used,
 			// and there was a TypeLoadException before the first line of SubMain was reached (some static ColorType init?)
@@ -201,9 +198,10 @@ namespace BizHawk.Client.EmuHawk
 			}
 			// [end UnityHawk]
 
-			EnsureWinFormsInitialized();
-			typeof(Form).GetField(OSTailoredCode.IsUnixHost ? "default_icon" : "defaultIcon", BindingFlags.NonPublic | BindingFlags.Static)!
-				.SetValue(null, Properties.Resources.Logo);
+			// [UnityHawk: disable this part, causes a crash for some reason]
+			// EnsureWinFormsInitialized();
+			// typeof(Form).GetField(OSTailoredCode.IsUnixHost ? "default_icon" : "defaultIcon", BindingFlags.NonPublic | BindingFlags.Static)!
+			// 	.SetValue(null, Properties.Resources.Logo);
 
 			var configPath = cliFlags.cmdConfigFile ?? Path.Combine(PathUtils.ExeDirectoryPath, "config.ini");
 

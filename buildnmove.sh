@@ -22,10 +22,6 @@ bizhawkDir="$packageDir/BizHawk~"
 
 mkdir -p $bizhawkDir/dll $bizhawkDir/gamedb $bizhawkDir/ExternalTools
 
-# For Mac:
-#buildProject=src/BizHawk.Client.Headless/
-#exeName=EmuHawk-Headless.exe
-
 buildProject=src/BizHawk.Client.EmuHawk/
 exeName=EmuHawk.exe
 
@@ -44,7 +40,6 @@ echo "copying dlls and assets into $packageDir"
 # TODO wonder if we could do this with automatic dependencies as part of dotnet build command or something
 for fn in \
 BizHawk.BizInvoke \
-BizHawk.Bizware.BizwareGL \
 BizHawk.Client.Common \
 BizHawk.Common \
 BizHawk.Emulation.Common \
@@ -55,9 +50,7 @@ FlatBuffers.GenOutput \
 Google.FlatBuffers \
 ISOParser \
 Microsoft.Bcl.HashCode \
-Microsoft.Extensions.FileSystemGlobbing \
 NLua \
-Plunderludics \
 Plunderludics.UnityHawk.Shared \
 Plunderludics.UnityHawk.SharedBuffers \
 SharedMemory \

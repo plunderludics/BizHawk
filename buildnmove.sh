@@ -40,21 +40,29 @@ echo "copying dlls and assets into $packageDir"
 # TODO wonder if we could do this with automatic dependencies as part of dotnet build command or something
 for fn in \
 BizHawk.BizInvoke \
+BizHawk.Bizware.Graphics \
+BizHawk.Bizware.Input \
 BizHawk.Client.Common \
 BizHawk.Common \
 BizHawk.Emulation.Common \
 BizHawk.Emulation.Cores \
 BizHawk.Emulation.DiscSystem \
+CommunityToolkit.HighPerformance \
 Cyotek.Drawing.BitmapFont \
 FlatBuffers.GenOutput \
 Google.FlatBuffers \
 ISOParser \
 Microsoft.Bcl.HashCode \
+Microsoft.Bcl.AsyncInterfaces \
+Microsoft.Data.Sqlite \
 NLua \
 Plunderludics.UnityHawk.Shared \
 Plunderludics.UnityHawk.SharedBuffers \
 SharedMemory \
 SharpCompress \
+System.CommandLine \
+SQLitePCLRaw.provider.e_sqlite3 \
+SQLitePCLRaw.core \
 System.Collections.Immutable \
 System.Drawing.Common \
 System.Runtime.CompilerServices.Unsafe \

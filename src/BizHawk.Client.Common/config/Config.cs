@@ -16,7 +16,7 @@ namespace BizHawk.Client.Common
 {
 	public class Config
 	{
-		public static string ControlDefaultPath = Path.Combine(PathUtils.ExeDirectoryPath, "defctrl.json");
+		public static string ControlDefaultPath => Path.Combine(PathUtils.ExeDirectoryPath, "defctrl.json");
 
 		/// <remarks>
 		/// <c>CoreNames[0]</c> is the default (out-of-the-box) core.<br/>

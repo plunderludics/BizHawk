@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel;
-using BizHawk.Common;
+
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.MSX
@@ -33,6 +33,7 @@ namespace BizHawk.Emulation.Cores.Computers.MSX
 		internal MSXSettings Settings { get; private set; }
 		internal MSXSyncSettings SyncSettings { get; private set; }
 
+		[CoreSettings]
 		public class MSXSettings
 		{
 			// graphics settings
@@ -62,6 +63,7 @@ namespace BizHawk.Emulation.Cores.Computers.MSX
 			}
 		}
 
+		[CoreSettings]
 		public class MSXSyncSettings
 		{
 			public enum ContrType

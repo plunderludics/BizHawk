@@ -1,10 +1,9 @@
-﻿using System;
-
 namespace BizHawk.Emulation.Common
 {
 	public enum SyncSoundMode
 	{
-		Sync, Async
+		Sync,
+		Async,
 	}
 
 	/// <summary>

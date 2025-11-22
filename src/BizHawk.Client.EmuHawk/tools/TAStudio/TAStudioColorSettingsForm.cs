@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -10,7 +9,6 @@ namespace BizHawk.Client.EmuHawk
 {
 	public sealed class TAStudioColorSettingsForm : Form
 	{
-		/// <remarks>TODO better labels</remarks>
 		public TAStudioColorSettingsForm(TAStudioPalette initPalette, Action<TAStudioPalette> save)
 		{
 			Dictionary<string, Color> colours = new();
@@ -96,7 +94,6 @@ namespace BizHawk.Client.EmuHawk
 			((FlowLayoutPanel) flpButtons).FlowDirection = FlowDirection.RightToLeft; // why did I disable this
 
 			SuspendLayout();
-			BackColor = Color.White;
 			ClientSize = new(240, 320);
 			Text = "Edit TAStudio Colors";
 			Controls.Add(new SingleColumnFLP { Controls = { flpButtons, flpPanels } });

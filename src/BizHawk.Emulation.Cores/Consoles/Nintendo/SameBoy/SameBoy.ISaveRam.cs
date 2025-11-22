@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.Sameboy
@@ -8,7 +6,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.Sameboy
 	{
 		public bool SaveRamModified => LibSameboy.sameboy_sramlen(SameboyState) != 0;
 
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			int length = LibSameboy.sameboy_sramlen(SameboyState);
 

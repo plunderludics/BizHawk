@@ -66,7 +66,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			}
 			else
 			{
-				addr = addr - 0x2000;
+				addr -= 0x2000;
 				if (addr<0x800)
 				{
 					return NES.CIRAM[addr];
@@ -75,7 +75,6 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				{
 					return CIRAM_VS[addr-0x800];
 				}
-				
 			}
 		}
 
@@ -88,7 +87,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			}
 			else
 			{
-				addr = addr - 0x2000;
+				addr -= 0x2000;
 				if (addr < 0x800)
 				{
 					NES.CIRAM[addr] = value;
@@ -115,13 +114,12 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				{
 					return Rom[(addr & 0x1FFF) + ((NES.VS_prg_reg*4) << 13)];
 				} else
-					return Rom[addr];	
+					return Rom[addr];
 			}
 			else
 			{
 				return Rom[addr];
 			}
-			
 		}
 	}
 }

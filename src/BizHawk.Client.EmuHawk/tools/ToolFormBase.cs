@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -29,7 +28,7 @@ namespace BizHawk.Client.EmuHawk
 
 		public virtual bool AskSaveChanges() => true;
 
-		public virtual bool IsActive => IsHandleCreated && !IsDisposed;
+		public virtual bool IsActive => true; /*IsHandleCreated && !IsDisposed;*/ // hack for UnityHawk - tool counts as active even if gui window is not open
 		public virtual bool IsLoaded => IsActive;
 
 		public virtual void Restart() {}
@@ -69,6 +68,9 @@ namespace BizHawk.Client.EmuHawk
 				case ToolFormUpdateType.FastPostFrame:
 					FastUpdateAfter();
 					break;
+				case ToolFormUpdateType.Paused: // [added for UnityHawk]
+					UpdatePaused();
+					break;
 			}
 		}
 
@@ -77,6 +79,7 @@ namespace BizHawk.Client.EmuHawk
 		protected virtual void GeneralUpdate() { }
 		protected virtual void FastUpdateBefore() { }
 		protected virtual void FastUpdateAfter() { }
+		protected virtual void UpdatePaused() { } // [added for UnityHawk]
 
 		public FileInfo OpenFileDialog(string currentFile, string path, FilesystemFilterSet filterSet)
 		{
@@ -135,5 +138,9 @@ namespace BizHawk.Client.EmuHawk
 			}
 			base.OnLoad(e);
 		}
+
+		public virtual void HandleHotkeyUpdate() { }
+
+		public virtual void OnPauseToggle(bool newPauseState) { }
 	}
 }

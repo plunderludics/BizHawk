@@ -1,4 +1,3 @@
-﻿using System;
 using System.Windows.Forms;
 
 using BizHawk.Client.Common;
@@ -7,10 +6,10 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class MovieHeaderEditor : Form
 	{
-		private readonly IMovie _movie;
+		private readonly IBasicMovieInfo _movie;
 		private readonly Config _config;
 
-		public MovieHeaderEditor(IMovie movie, Config config)
+		public MovieHeaderEditor(IBasicMovieInfo movie, Config config)
 		{
 			_movie = movie;
 			_config = config;

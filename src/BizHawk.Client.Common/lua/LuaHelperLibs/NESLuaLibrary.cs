@@ -1,4 +1,3 @@
-﻿using System;
 using System.ComponentModel;
 
 using BizHawk.Emulation.Cores.Nintendo.NES;
@@ -34,7 +33,7 @@ namespace BizHawk.Client.Common
 			{
 				NES.NESSettings nhs => nhs.AllowMoreThanEightSprites,
 				QuickNES.QuickNESSettings qns => qns.NumSprites != 8,
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 		/// <exception cref="InvalidOperationException">loaded core is not NESHawk or QuickNes</exception>
@@ -45,7 +44,7 @@ namespace BizHawk.Client.Common
 			{
 				NES.NESSettings nhs => pal ? nhs.PAL_BottomLine : nhs.NTSC_BottomLine,
 				QuickNES.QuickNESSettings qns => qns.ClipTopAndBottom ? 231 : 239,
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 		/// <exception cref="InvalidOperationException">loaded core is not NESHawk or QuickNes</exception>
@@ -56,7 +55,7 @@ namespace BizHawk.Client.Common
 			{
 				NES.NESSettings nhs => nhs.ClipLeftAndRight,
 				QuickNES.QuickNESSettings qns => qns.ClipLeftAndRight,
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 		/// <exception cref="InvalidOperationException">loaded core is not NESHawk or QuickNes</exception>
@@ -67,7 +66,7 @@ namespace BizHawk.Client.Common
 			{
 				NES.NESSettings nhs => nhs.DispBackground,
 				QuickNES.QuickNESSettings => true,
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 		/// <exception cref="InvalidOperationException">loaded core is not NESHawk or QuickNes</exception>
@@ -78,7 +77,7 @@ namespace BizHawk.Client.Common
 			{
 				NES.NESSettings nhs => nhs.DispSprites,
 				QuickNES.QuickNESSettings qns => qns.NumSprites > 0,
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 		/// <exception cref="InvalidOperationException">loaded core is not NESHawk or QuickNes</exception>
@@ -89,7 +88,7 @@ namespace BizHawk.Client.Common
 			{
 				NES.NESSettings nhs => pal ? nhs.PAL_TopLine : nhs.NTSC_TopLine,
 				QuickNES.QuickNESSettings qns => qns.ClipTopAndBottom ? 8 : 0,
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 		/// <exception cref="InvalidOperationException">loaded core is not NESHawk or QuickNes</exception>
@@ -143,7 +142,7 @@ namespace BizHawk.Client.Common
 					nhs.DispBackground = show;
 					Settings = nhs;
 					break;
-				case QuickNES.QuickNESSettings _:
+				case QuickNES.QuickNESSettings:
 					return;
 				default:
 					throw new InvalidOperationException();
@@ -209,7 +208,7 @@ namespace BizHawk.Client.Common
 
 					Settings = nhs;
 					break;
-				case QuickNES.QuickNESSettings _:
+				case QuickNES.QuickNESSettings:
 					return;
 				default:
 					throw new InvalidOperationException();

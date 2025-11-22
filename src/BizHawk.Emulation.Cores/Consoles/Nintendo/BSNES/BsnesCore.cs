@@ -1,20 +1,22 @@
-using System;
 using System.IO;
 using System.Runtime.InteropServices;
+
 using BizHawk.Common;
+using BizHawk.Common.PathExtensions;
+using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
-using BizHawk.Emulation.Common.Base_Implementations;
 using BizHawk.Emulation.Cores.Components.W65816;
 using BizHawk.Emulation.Cores.Nintendo.SNES;
+using BizHawk.Emulation.Cores.Waterbox;
 
 // http://wiki.superfamicom.org/snes/show/Backgrounds
 
 namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 {
 	[PortedCore(CoreNames.Bsnes115, "bsnes team", "v115+", "https://github.com/bsnes-emu/bsnes")]
-	[ServiceNotApplicable(new[] { typeof(IDriveLight) })]
 	public partial class BsnesCore : IEmulator, IDebuggable, IVideoProvider, ISaveRam, IStatable, IInputPollable, IRegionable, ISettable<BsnesCore.SnesSettings, BsnesCore.SnesSyncSettings>, IBSNESForGfxDebugger, IBoardInfo
 	{
+		[CoreConstructor(VSystemID.Raw.Satellaview)]
 		[CoreConstructor(VSystemID.Raw.SGB)]
 		[CoreConstructor(VSystemID.Raw.SNES)]
 		public BsnesCore(CoreLoadParameters<SnesSettings, SnesSyncSettings> loadParameters) : this(loadParameters, false) { }
@@ -23,12 +25,12 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 			var ser = new BasicServiceProvider(this);
 			ServiceProvider = ser;
 
-			this._romPath = Path.ChangeExtension(loadParameters.Roms[0].RomPath, null);
+			this._romPath = Path.ChangeExtension(loadParameters.Roms[0].RomPath.SubstringBefore('|'), null);
 			CoreComm = loadParameters.Comm;
-			_settings = loadParameters.Settings ?? new SnesSettings();
 			_syncSettings = loadParameters.SyncSettings ?? new SnesSyncSettings();
 			SystemId = loadParameters.Game.System;
 			_isSGB = SystemId == VSystemID.Raw.SGB;
+			_currentMsuTrack = new ProxiedFile();
 
 			byte[] sgbRomData = null;
 			if (_isSGB)
@@ -56,15 +58,19 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 				readHookCb = ReadHook,
 				writeHookCb = WriteHook,
 				execHookCb = ExecHook,
-				msuOpenCb = msu_open,
-				msuSeekCb = msu_seek,
-				msuReadCb = msu_read,
-				msuEndCb = msu_end
+				timeCb = snes_time,
+				msuOpenCb = MsuOpenAudio,
+				msuSeekCb = _currentMsuTrack.Seek,
+				msuReadCb = _currentMsuTrack.ReadByte,
+				msuEndCb = _currentMsuTrack.AtEnd
 			};
 
-			Api = new BsnesApi(CoreComm.CoreFileProvider.DllPath(), CoreComm, callbacks.AllDelegatesInMemoryOrder());
+			Api = new(PathUtils.DllDirectoryPath, CoreComm, callbacks.AllDelegatesInMemoryOrder());
 
 			_controllers = new BsnesControllers(_syncSettings, subframe);
+
+			DeterministicEmulation = !_syncSettings.UseRealTime || loadParameters.DeterministicEmulationRequested;
+			InitializeRtc(_syncSettings.InitialTime);
 
 			generate_palette();
 			BsnesApi.SnesInitData snesInitData = new()
@@ -80,6 +86,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 			};
 			Api.core.snes_init(ref snesInitData);
 			Api.SetCallbacks(callbacks);
+			PutSettings(loadParameters.Settings ?? new SnesSettings());
 
 			// start up audio resampler
 			InitAudio();
@@ -89,6 +96,26 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 			{
 				Api.core.snes_load_cartridge_super_gameboy(sgbRomData, loadParameters.Roms[0].RomData,
 					sgbRomData!.Length, loadParameters.Roms[0].RomData.Length);
+			}
+			else if (SystemId is VSystemID.Raw.Satellaview)
+			{
+				SATELLAVIEW_CARTRIDGE slottedCartridge = _syncSettings.SatellaviewCartridge;
+				if (slottedCartridge == SATELLAVIEW_CARTRIDGE.Autodetect)
+				{
+					if (loadParameters.Game.NotInDatabase)
+					{
+						CoreComm.ShowMessage("Unable to autodetect satellaview base cartridge for unknown game. Falling back to BS-X cartridge.");
+						slottedCartridge = SATELLAVIEW_CARTRIDGE.Rom_BSX;
+					}
+					else
+					{
+						// query gamedb for slotted cartridge id, assume BS-X cartridge if not otherwise specified in gamedb
+						slottedCartridge = (SATELLAVIEW_CARTRIDGE)loadParameters.Game.GetInt("baseCartridge", (int)SATELLAVIEW_CARTRIDGE.Rom_BSX);
+					}
+				}
+				byte[] cartridgeData = CoreComm.CoreFileProvider.GetFirmwareOrThrow(new FirmwareID("BSX", slottedCartridge.ToString()));
+				Api.core.snes_load_cartridge_bsmemory(cartridgeData, loadParameters.Roms[0].RomData,
+					cartridgeData.Length, loadParameters.Roms[0].RomData.Length);
 			}
 			else
 			{
@@ -124,6 +151,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 
 		private readonly BsnesControllers _controllers;
 		private readonly ITraceable _tracer;
+		private readonly ProxiedFile _currentMsuTrack;
 
 		private IController _controller;
 		private SimpleSyncSoundProvider _soundProvider;
@@ -295,19 +323,19 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 		private void snes_trace(string disassembly, string registerInfo)
 			=> _tracer.Put(new(disassembly: disassembly, registerInfo: registerInfo));
 
-		private void ReadHook(uint addr)
+		private void ReadHook(uint addr, ref byte value)
 		{
 			if (MemoryCallbacks.HasReads)
 			{
-				MemoryCallbacks.CallMemoryCallbacks(addr, 0, (uint) MemoryCallbackFlags.AccessRead, "System Bus");
+				value = (byte) MemoryCallbacks.CallMemoryCallbacks(addr, value, (uint) MemoryCallbackFlags.AccessRead, "System Bus");
 			}
 		}
 
-		private void WriteHook(uint addr, byte value)
+		private void WriteHook(uint addr, ref byte value)
 		{
 			if (MemoryCallbacks.HasWrites)
 			{
-				MemoryCallbacks.CallMemoryCallbacks(addr, value, (uint) MemoryCallbackFlags.AccessWrite, "System Bus");
+				value = (byte) MemoryCallbacks.CallMemoryCallbacks(addr, value, (uint) MemoryCallbackFlags.AccessWrite, "System Bus");
 			}
 		}
 
@@ -319,32 +347,25 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 			}
 		}
 
-		private FileStream _currentMsuTrack;
+		private static readonly DateTime _epoch = new(1970, 1, 1, 0, 0, 0);
+		private long _clockTime;
+		private int _clockRemainder;
 
-		private void msu_seek(long offset, bool relative)
-		{
-			_currentMsuTrack?.Seek(offset, relative ? SeekOrigin.Current : SeekOrigin.Begin);
-		}
-		private byte msu_read()
-		{
-			return (byte) (_currentMsuTrack?.ReadByte() ?? 0);
-		}
+		private void InitializeRtc(DateTime start)
+			=> _clockTime = (long)(start - _epoch).TotalSeconds;
 
-		private void msu_open(ushort trackId)
+		internal void AdvanceRtc()
 		{
-			_currentMsuTrack?.Dispose();
-			try
+			_clockRemainder += VsyncDenominator;
+			if (_clockRemainder >= VsyncNumerator)
 			{
-				_currentMsuTrack = File.OpenRead($"{_romPath}-{trackId}.pcm");
-			}
-			catch
-			{
-				_currentMsuTrack = null;
+				_clockRemainder -= VsyncNumerator;
+				_clockTime++;
 			}
 		}
-		private bool msu_end()
-		{
-			return _currentMsuTrack.Position == _currentMsuTrack.Length;
-		}
+
+		private bool MsuOpenAudio(ushort trackId) => _currentMsuTrack.OpenMsuTrack(_romPath, trackId);
+
+		private long snes_time() => DeterministicEmulation ? _clockTime : (long)(DateTime.Now - _epoch).TotalSeconds;
 	}
 }

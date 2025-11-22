@@ -1,41 +1,57 @@
 auto CPU::Recompiler::pool(u32 address) -> Pool* {
   auto& pool = pools[address >> 8 & 0x1fffff];
-  if(!pool) pool = (Pool*)allocator.acquire(sizeof(Pool));
+  if(!pool) {
+    pool = (Pool*)allocator.acquire(sizeof(Pool));
+    memory::jitprotect(false);
+    *pool = {};
+    memory::jitprotect(true);
+  }
   return pool;
 }
 
-auto CPU::Recompiler::block(u32 address) -> Block* {
+auto CPU::Recompiler::block(u32 vaddr, u32 address, bool singleInstruction) -> Block* {
   if(auto block = pool(address)->blocks[address >> 2 & 0x3f]) return block;
-  auto block = emit(address);
+  auto block = emit(vaddr, address, singleInstruction);
   pool(address)->blocks[address >> 2 & 0x3f] = block;
   memory::jitprotect(true);
   return block;
 }
 
-auto CPU::Recompiler::emit(u32 address) -> Block* {
+auto CPU::Recompiler::fastFetchBlock(u32 address) -> Block* {
+  auto& pool = pools[address >> 8 & 0x1fffff];
+  if(pool) return pool->blocks[address >> 2 & 0x3f];
+  return nullptr;
+}
+
+auto CPU::Recompiler::emit(u32 vaddr, u32 address, bool singleInstruction) -> Block* {
   if(unlikely(allocator.available() < 1_MiB)) {
     print("CPU allocator flush\n");
-    memory::jitprotect(false);
-    allocator.release(bump_allocator::zero_fill);
-    memory::jitprotect(true);
+    allocator.release();
     reset();
   }
 
   auto block = (Block*)allocator.acquire(sizeof(Block));
   beginFunction(3);
 
+  Thread thread;
   bool hasBranched = 0;
   while(true) {
-    u32 instruction = bus.read<Word>(address);
+    u32 instruction = bus.read<Word>(address, thread, "Ares Recompiler");
+    if(callInstructionPrologue) {
+      mov32(reg(1), imm(instruction));
+      call(&CPU::instructionPrologue);
+    }
     bool branched = emitEXECUTE(instruction);
-    if(unlikely(instruction == 0x1000'ffff)) {
+    if(unlikely(instruction == 0x1000'ffff  //beq 0,0,<pc>
+             || instruction == (2 << 26 | vaddr >> 2 & 0x3ff'ffff))) {  //j <pc>
       //accelerate idle loops
-      mov32(reg(1), imm(64));
+      mov32(reg(1), imm(64 * 2));
       call(&CPU::step);
     }
     call(&CPU::instructionEpilogue);
+    vaddr += 4;
     address += 4;
-    if(hasBranched || (address & 0xfc) == 0) break;  //block boundary
+    if(hasBranched || (address & 0xfc) == 0 || singleInstruction) break;  //block boundary
     hasBranched = branched;
     testJumpEpilog();
   }
@@ -284,7 +300,7 @@ auto CPU::Recompiler::emitEXECUTE(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x1c ... 0x1f: {
+  case range4(0x1c, 0x1f): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -599,9 +615,7 @@ auto CPU::Recompiler::emitSPECIAL(u32 instruction) -> bool {
 
   //SLLV Rd,Rt,Rs
   case 0x04: {
-    mov32(reg(0), mem(Rt32));
-    and32(reg(1), mem(Rs32), imm(31));
-    shl32(reg(0), reg(0), reg(1));
+    mshl32(reg(0), mem(Rt32), mem(Rs32));
     mov64_s32(reg(0), reg(0));
     mov64(mem(Rd), reg(0));
     return 0;
@@ -615,9 +629,7 @@ auto CPU::Recompiler::emitSPECIAL(u32 instruction) -> bool {
 
   //SRLV Rd,Rt,RS
   case 0x06: {
-    mov32(reg(0), mem(Rt32));
-    and32(reg(1), mem(Rs32), imm(31));
-    lshr32(reg(0), reg(0), reg(1));
+    mlshr32(reg(0), mem(Rt32), mem(Rs32));
     mov64_s32(reg(0), reg(0));
     mov64(mem(Rd), reg(0));
     return 0;
@@ -625,7 +637,7 @@ auto CPU::Recompiler::emitSPECIAL(u32 instruction) -> bool {
 
   //SRAV Rd,Rt,Rs
   case 0x07: {
-    and32(reg(1), mem(Rs32), imm(31));
+    and64(reg(1), mem(Rs), imm(31));
     ashr64(reg(0), mem(Rt), reg(1));
     mov64_s32(reg(0), reg(0));
     mov64(mem(Rd), reg(0));
@@ -648,7 +660,7 @@ auto CPU::Recompiler::emitSPECIAL(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x0a ... 0x0b: {
+  case range2(0x0a, 0x0b): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -853,13 +865,13 @@ auto CPU::Recompiler::emitSPECIAL(u32 instruction) -> bool {
   //NOR Rd,Rs,Rt
   case 0x27: {
     or64(reg(0), mem(Rs), mem(Rt));
-    not64(reg(0), reg(0));
+    xor64(reg(0), reg(0), imm(-1));
     mov64(mem(Rd), reg(0));
     return 0;
   }
 
   //INVALID
-  case 0x28 ... 0x29: {
+  case range2(0x28, 0x29): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1081,7 +1093,7 @@ auto CPU::Recompiler::emitREGIMM(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x04 ... 0x07: {
+  case range4(0x04, 0x07): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1179,7 +1191,7 @@ auto CPU::Recompiler::emitREGIMM(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x14 ... 0x1f: {
+  case range12(0x14, 0x1f): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1209,7 +1221,7 @@ auto CPU::Recompiler::emitSCC(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x02 ... 0x03: {
+  case range2(0x02, 0x03): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1231,7 +1243,7 @@ auto CPU::Recompiler::emitSCC(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x06 ... 0x0f: {
+  case range10(0x06, 0x0f): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1348,7 +1360,7 @@ auto CPU::Recompiler::emitFPU(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x09 ... 0x0f: {
+  case range7(0x09, 0x0f): {
     call(&CPU::INVALID);
     return 1;
   }
@@ -1951,12 +1963,12 @@ auto CPU::Recompiler::emitFPU(u32 instruction) -> bool {
 
   if((instruction >> 21 & 31) == 20)
   switch(instruction & 0x3f) {    
-  case 0x08 ... 0x0f: {
+  case range8(0x08, 0x0f): {
     call(&CPU::COP1UNIMPLEMENTED);
     return 1;
   }
 
-  case 0x24 ... 0x25: {
+  case range2(0x24, 0x25): {
     call(&CPU::COP1UNIMPLEMENTED);
     return 1;
   }
@@ -1981,11 +1993,11 @@ auto CPU::Recompiler::emitFPU(u32 instruction) -> bool {
 
   if((instruction >> 21 & 31) == 21)
   switch(instruction & 0x3f) {
-  case 0x08 ... 0x0f: {
+  case range8(0x08, 0x0f): {
     call(&CPU::COP1UNIMPLEMENTED);
     return 1;
   }
-  case 0x24 ... 0x25: {
+  case range2(0x24, 0x25): {
     call(&CPU::COP1UNIMPLEMENTED);
     return 1;
   }
@@ -2069,7 +2081,7 @@ auto CPU::Recompiler::emitCOP2(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x07 ... 0x0f: {
+  case range9(0x07, 0x0f): {
     call(&CPU::COP2INVALID);
     return 1;
   }

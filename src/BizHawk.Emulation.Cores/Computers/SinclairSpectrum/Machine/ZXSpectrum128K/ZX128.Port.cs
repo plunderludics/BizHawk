@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections;
 
 namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
@@ -23,7 +22,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
             {
                 // https://faqwiki.zxnet.co.uk/wiki/ZX_Spectrum_128
                 // HAL bugs
-                // Reads from port 0x7ffd cause a crash, as the 128's HAL10H8 chip does not distinguish between reads and writes to this port, 
+                // Reads from port 0x7ffd cause a crash, as the 128's HAL10H8 chip does not distinguish between reads and writes to this port,
                 // resulting in a floating data bus being used to set the paging registers.
 
                 // -asni (2018-06-08) - need this to pass the final portread tests from fusetest.tap
@@ -46,14 +45,9 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
             // if this is detected just return the kempston byte
             if (lowByte == 0x1f)
             {
-                if (LocateUniqueJoystick(JoystickType.Kempston) != null)
-				{
-					InputRead = true;
-					return (byte)((KempstonJoystick)LocateUniqueJoystick(JoystickType.Kempston) as KempstonJoystick).JoyLine;
-				}
-
-				InputRead = true;
-			}
+                InputRead = true;
+                if (LocateUniqueJoystick(JoystickType.Kempston) is KempstonJoystick j) return (byte) j.JoyLine;
+            }
             else
             {
                 if (KeyboardDevice.ReadPort(port, ref result))
@@ -93,7 +87,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
             // memory paging
             // this is controlled by writes to port 0x7ffd
             // but it is only partially decoded so it actually responds to any port with bits 1 and 15 reset
-            if (portBits[1] == false && portBits[15] == false)
+            if (!portBits[1] && !portBits[15])
             {
                 Last7ffd = value;
 
@@ -161,8 +155,8 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				TapeDevice.WritePort(port, value);
 
                 // Tape
-                //TapeDevice.ProcessMicBit((value & MIC_BIT) != 0);                
-            }    
+                //TapeDevice.ProcessMicBit((value & MIC_BIT) != 0);
+            }
         }
     }
 }

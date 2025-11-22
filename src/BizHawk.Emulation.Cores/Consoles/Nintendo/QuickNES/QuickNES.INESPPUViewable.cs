@@ -1,11 +1,10 @@
-﻿using System;
 using System.Runtime.InteropServices;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Nintendo.NES;
 
 namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 {
-	public partial class QuickNES : INESPPUViewable
+	public sealed partial class QuickNES : INESPPUViewable
 	{
 		// todo: don't just call the callbacks at the end of frame; use the scanline info
 		private Action _callBack1;

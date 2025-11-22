@@ -1,7 +1,5 @@
-﻿using System;
 using System.Collections.Generic;
 
-using BizHawk.Common;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -23,7 +21,7 @@ namespace BizHawk.Client.Common
 
 		public IReadOnlyDictionary<string, object> Get(int? controller = null)
 		{
-			return _inputManager.AutofireStickyXorAdapter.ToDictionary(controller);
+			return _movieSession.MovieIn.ToDictionary(controller);
 		}
 
 		public IReadOnlyDictionary<string, object> GetWithMovie(int? controller = null)
@@ -58,18 +56,19 @@ namespace BizHawk.Client.Common
 			// ALL button names with P{controller} prefixes
 			foreach (var button in _inputManager.ActiveController.ToBoolButtonNameList(controller))
 			{
-				Set(button, buttons.TryGetValue(button, out var state) ? state : (bool?) null, controller);
+				Set(button, buttons.TryGetValue(button, out var state) ? state : null, controller);
 			}
 		}
 
 		public void Set(string button, bool? state = null, int? controller = null)
 		{
+			// Console.WriteLine($"Set {button} {state} {controller}");
 			try
 			{
 				var buttonToSet = controller == null ? button : $"P{controller} {button}";
 				if (state == null) _inputManager.ButtonOverrideAdapter.UnSet(buttonToSet);
 				else _inputManager.ButtonOverrideAdapter.SetButton(buttonToSet, state.Value);
-				
+
 				//"Overrides" is a gross line of code in that flushes overrides into the current controller.
 				//That's not really the way it was meant to work which was that it should pull all its values through the filters before ever using them.
 				//Of course the code that does that is in the main loop and the lua API wouldnt know how to do it.
@@ -83,9 +82,10 @@ namespace BizHawk.Client.Common
 				//and here's where the overrides managed by this API are pushed in
 				_inputManager.ActiveController.Overrides(_inputManager.ButtonOverrideAdapter);
 			}
-			catch
+			catch (Exception e)
 			{
 				// ignored
+				Console.WriteLine($"Error {e}");
 			}
 		}
 
@@ -98,7 +98,7 @@ namespace BizHawk.Client.Common
 		{
 			try
 			{
-				_inputManager.StickyXorAdapter.SetAxis(controller == null ? control : $"P{controller} {control}", value);
+				_inputManager.StickyHoldController.SetAxisHold(controller == null ? control : $"P{controller} {control}", value);
 			}
 			catch
 			{

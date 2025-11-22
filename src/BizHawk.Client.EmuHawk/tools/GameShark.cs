@@ -1,4 +1,4 @@
-﻿using System;
+using System.Drawing;
 
 using BizHawk.Emulation.Common;
 using BizHawk.Client.Common;
@@ -18,6 +18,9 @@ namespace BizHawk.Client.EmuHawk
 		unsupportedCores: new[] { CoreNames.Snes9X })]
 	public partial class GameShark : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Properties.Resources.SharkIcon;
+
 		[RequiredService]
 		// ReSharper disable once UnusedAutoPropertyAccessor.Local
 		private IMemoryDomains MemoryDomains { get; set; }
@@ -31,7 +34,7 @@ namespace BizHawk.Client.EmuHawk
 		public GameShark()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.SharkIcon;
+			Icon = ToolIcon;
 		}
 
 		private void Go_Click(object sender, EventArgs e)
@@ -40,7 +43,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				try
 				{
-					var code = l.ToUpper();
+					var code = l.ToUpperInvariant().Trim();
 					var decoder = new GameSharkDecoder(MemoryDomains, Emulator.SystemId);
 					var result = decoder.Decode(code);
 					var domain = decoder.CheatDomain();
@@ -59,7 +62,8 @@ namespace BizHawk.Client.EmuHawk
 				}
 				catch (Exception ex)
 				{
-					DialogController.ShowMessageBox($"An Error occured: {ex.GetType()}", "Error", EMsgBoxIcon.Error);
+					using ExceptionBox dialog = new(ex);
+					this.ShowDialogAsChild(dialog);
 				}
 			}
 

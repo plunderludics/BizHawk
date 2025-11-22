@@ -38,6 +38,7 @@ auto RSP::Recompiler::block(u12 address) -> Block* {
 
   auto size = measure(address);
   auto hashcode = hash(address, size);
+  hashcode ^= self.pipeline.hash();
 
   BlockHashPair pair;
   pair.hashcode = hashcode;
@@ -60,11 +61,11 @@ auto RSP::Recompiler::block(u12 address) -> Block* {
 auto RSP::Recompiler::emit(u12 address) -> Block* {
   if(unlikely(allocator.available() < 1_MiB)) {
     print("RSP allocator flush\n");
-    memory::jitprotect(false);
-    allocator.release(bump_allocator::zero_fill);
-    memory::jitprotect(true);
+    allocator.release();
     reset();
   }
+
+  pipeline = self.pipeline;
 
   auto block = (Block*)allocator.acquire(sizeof(Block));
   beginFunction(3);
@@ -73,7 +74,34 @@ auto RSP::Recompiler::emit(u12 address) -> Block* {
   bool hasBranched = 0;
   while(true) {
     u32 instruction = self.imem.read<Word>(address);
+    if(callInstructionPrologue) {
+      mov32(reg(1), imm(instruction));
+      call(&RSP::instructionPrologue);
+    }
+    pipeline.begin();
+    OpInfo op0 = self.decoderEXECUTE(instruction);
+    pipeline.issue(op0);
     bool branched = emitEXECUTE(instruction);
+
+    if(!pipeline.singleIssue && !branched && u12(address + 4) != start) {
+      u32 instruction = self.imem.read<Word>(address + 4);
+      OpInfo op1 = self.decoderEXECUTE(instruction);
+
+      if(RSP::canDualIssue(op0, op1)) {
+        mov32(reg(1), imm(0));
+        call(&RSP::instructionEpilogue);
+        if(callInstructionPrologue) {
+          mov32(reg(1), imm(instruction));
+          call(&RSP::instructionPrologue);
+        }
+        address += 4;
+        pipeline.issue(op1);
+        branched = emitEXECUTE(instruction);
+      }
+    }
+
+    pipeline.end();
+    mov32(reg(1), imm(pipeline.clocks));
     call(&RSP::instructionEpilogue);
     address += 4;
     if(hasBranched || address == start) break;
@@ -82,9 +110,13 @@ auto RSP::Recompiler::emit(u12 address) -> Block* {
   }
   jumpEpilog();
 
+  //reset clocks to zero every time block is executed
+  pipeline.clocks = 0;
+
   memory::jitprotect(false);
   block->code = endFunction();
   block->size = address - start;
+  block->pipeline = pipeline;
 
 //print(hex(PC, 8L), " ", instructions, " ", size(), "\n");
   return block;
@@ -188,7 +220,7 @@ auto RSP::Recompiler::emitEXECUTE(u32 instruction) -> bool {
   }
 
   //ADDIU Rt,Rs,i16
-  case 0x08 ... 0x09: {
+  case range2(0x08, 0x09): {
     add32(mem(Rt), mem(Rs), imm(i16));
     return 0;
   }
@@ -247,7 +279,7 @@ auto RSP::Recompiler::emitEXECUTE(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x13 ... 0x1f: {
+  case range13(0x13, 0x1f): {
     return 0;
   }
 
@@ -348,7 +380,7 @@ auto RSP::Recompiler::emitEXECUTE(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x2c ... 0x31: {
+  case range6(0x2c, 0x31): {
     return 0;
   }
 
@@ -358,7 +390,7 @@ auto RSP::Recompiler::emitEXECUTE(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x33 ... 0x39: {
+  case range7(0x33, 0x39): {
     return 0;
   }
 
@@ -368,7 +400,7 @@ auto RSP::Recompiler::emitEXECUTE(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x3b ... 0x3f: {
+  case range5(0x3b, 0x3f): {
     return 0;
   }
 
@@ -405,8 +437,7 @@ auto RSP::Recompiler::emitSPECIAL(u32 instruction) -> bool {
 
   //SLLV Rd,Rt,Rs
   case 0x04: {
-    and32(reg(0), mem(Rs), imm(31));
-    shl32(mem(Rd), mem(Rt), reg(0));
+    mshl32(mem(Rd), mem(Rt), mem(Rs));
     return 0;
   }
 
@@ -417,15 +448,13 @@ auto RSP::Recompiler::emitSPECIAL(u32 instruction) -> bool {
 
   //SRLV Rd,Rt,Rs
   case 0x06: {
-    and32(reg(0), mem(Rs), imm(31));
-    lshr32(mem(Rd), mem(Rt), reg(0));
+    mlshr32(mem(Rd), mem(Rt), mem(Rs));
     return 0;
   }
 
   //SRAV Rd,Rt,Rs
   case 0x07: {
-    and32(reg(0), mem(Rs), imm(31));
-    ashr32(mem(Rd), mem(Rt), reg(0));
+    mashr32(mem(Rd), mem(Rt), mem(Rs));
     return 0;
   }
 
@@ -445,7 +474,7 @@ auto RSP::Recompiler::emitSPECIAL(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x0a ... 0x0c: {
+  case range3(0x0a, 0x0c): {
     return 0;
   }
 
@@ -456,18 +485,18 @@ auto RSP::Recompiler::emitSPECIAL(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x0e ... 0x1f: {
+  case range18(0x0e, 0x1f): {
     return 0;
   }
 
   //ADDU Rd,Rs,Rt
-  case 0x20 ... 0x21: {
+  case range2(0x20, 0x21): {
     add32(mem(Rd), mem(Rs), mem(Rt));
     return 0;
   }
 
   //SUBU Rd,Rs,Rt
-  case 0x22 ... 0x23: {
+  case range2(0x22, 0x23): {
     sub32(mem(Rd), mem(Rs), mem(Rt));
     return 0;
   }
@@ -493,13 +522,13 @@ auto RSP::Recompiler::emitSPECIAL(u32 instruction) -> bool {
   //NOR Rd,Rs,Rt
   case 0x27: {
     or32(reg(0), mem(Rs), mem(Rt));
-    not32(reg(0), reg(0));
+    xor32(reg(0), reg(0), imm(-1));
     mov32(mem(Rd), reg(0));
     return 0;
   }
 
   //INVALID
-  case 0x28 ... 0x29: {
+  case range2(0x28, 0x29): {
     return 0;
   }
 
@@ -518,7 +547,7 @@ auto RSP::Recompiler::emitSPECIAL(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x2c ... 0x3f: {
+  case range20(0x2c, 0x3f): {
     return 0;
   }
 
@@ -547,7 +576,7 @@ auto RSP::Recompiler::emitREGIMM(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x02 ... 0x0f: {
+  case range14(0x02, 0x0f): {
     return 0;
   }
 
@@ -568,7 +597,7 @@ auto RSP::Recompiler::emitREGIMM(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x12 ... 0x1f: {
+  case range14(0x12, 0x1f): {
     return 0;
   }
 
@@ -589,7 +618,7 @@ auto RSP::Recompiler::emitSCC(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x01 ... 0x03: {
+  case range3(0x01, 0x03): {
     return 0;
   }
 
@@ -602,7 +631,7 @@ auto RSP::Recompiler::emitSCC(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x05 ... 0x1f: {
+  case range27(0x05, 0x1f): {
     return 0;
   }
 
@@ -663,7 +692,7 @@ auto RSP::Recompiler::emitVU(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x07 ... 0x0f: {
+  case range9(0x07, 0x0f): {
     return 0;
   }
 
@@ -871,7 +900,7 @@ auto RSP::Recompiler::emitVU(u32 instruction) -> bool {
   }
 
   //Broken opcodes: VADDB, VSUBB, VACCB, VSUCB, VSAD, VSAC, VSUM
-  case 0x16 ... 0x1c: {
+  case range7(0x16, 0x1c): {
     lea(reg(1), Vd);
     lea(reg(2), Vs);
     lea(reg(3), Vt);
@@ -888,7 +917,7 @@ auto RSP::Recompiler::emitVU(u32 instruction) -> bool {
   }
 
   //Invalid opcodes
-  case 0x1e ... 0x1f: {
+  case range2(0x1e, 0x1f): {
     lea(reg(1), Vd);
     lea(reg(2), Vs);
     lea(reg(3), Vt);
@@ -1023,7 +1052,7 @@ auto RSP::Recompiler::emitVU(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x2e ... 0x2f: {
+  case range2(0x2e, 0x2f): {
     lea(reg(1), Vd);
     lea(reg(2), Vs);
     lea(reg(3), Vt);
@@ -1101,7 +1130,7 @@ auto RSP::Recompiler::emitVU(u32 instruction) -> bool {
   }
 
   //Broken opcodes: VEXTT, VEXTQ, VEXTN
-  case 0x38 ... 0x3a: {
+  case range3(0x38, 0x3a): {
     lea(reg(1), Vd);
     lea(reg(2), Vs);
     lea(reg(3), Vt);
@@ -1119,7 +1148,7 @@ auto RSP::Recompiler::emitVU(u32 instruction) -> bool {
   }
 
   //Broken opcodes: VINST, VINSQ, VINSN
-  case 0x3c ... 0x3e: {
+  case range3(0x3c, 0x3e): {
     lea(reg(1), Vd);
     lea(reg(2), Vs);
     lea(reg(3), Vt);
@@ -1250,7 +1279,7 @@ auto RSP::Recompiler::emitLWC2(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x0c ... 0x1f: {
+  case range20(0x0c, 0x1f): {
     return 0;
   }
 
@@ -1375,7 +1404,7 @@ auto RSP::Recompiler::emitSWC2(u32 instruction) -> bool {
   }
 
   //INVALID
-  case 0x0c ... 0x1f: {
+  case range20(0x0c, 0x1f): {
     return 0;
   }
 

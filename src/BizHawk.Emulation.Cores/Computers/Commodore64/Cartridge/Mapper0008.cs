@@ -5,7 +5,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 {
 	internal sealed class Mapper0008 : CartridgeDevice
 	{
-		private readonly int[,] _banks = new int[4, 0x4000]; 
+		private readonly int[,] _banks = new int[4, 0x4000];
 
 		private int _bankMask;
 		private int _bankNumber;
@@ -41,6 +41,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			ser.Sync("BankNumber", ref _bankNumber);
 			ser.Sync("Disabled", ref _disabled);
 			ser.Sync("Latchedvalue", ref _latchedval);
+
+			if (ser.IsReader)
+			{
+				BankSet(_bankNumber);
+			}
 		}
 
 		private void BankSet(int index)
@@ -94,15 +99,6 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		public override int ReadDF00(int addr)
 		{
 			return _latchedval;
-		}
-
-		public override void SyncState(Serializer ser)
-		{
-			base.SyncState(ser);
-			if (ser.IsReader)
-			{
-				BankSet(_bankNumber);
-			}
 		}
 	}
 }

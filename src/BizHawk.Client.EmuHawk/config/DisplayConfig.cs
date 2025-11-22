@@ -1,8 +1,8 @@
-﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
 
-using BizHawk.Bizware.BizwareGL;
+using BizHawk.Bizware.Graphics;
 using BizHawk.Client.Common;
 using BizHawk.Client.Common.Filters;
 using BizHawk.Common;
@@ -11,10 +11,9 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class DisplayConfig : Form, IDialogParent
 	{
-		private static readonly FilesystemFilterSet CgShaderPresetsFSFilterSet = new(new FilesystemFilter(".CGP Files", new[] { "cgp" }))
-		{
-			AppendAllFilesEntry = false,
-		};
+		private static readonly FilesystemFilterSet CgShaderPresetsFSFilterSet = new(
+			appendAllFilesEntry: false,
+			new FilesystemFilter(".CGP Files", extensions: [ "cgp", "glslp" ]));
 
 		private readonly Config _config;
 
@@ -51,8 +50,9 @@ namespace BizHawk.Client.EmuHawk
 			checkPadInteger.Checked = _config.DispFixScaleInteger;
 			cbFullscreenHacks.Checked = _config.DispFullscreenHacks;
 			cbAutoPrescale.Checked = _config.DispAutoPrescale;
+			cbScaleOSD.Checked = _config.ScaleOSDWithSystemScale;
 
-			cbAlternateVsync.Checked = _config.DispAlternateVsync;
+			cbAllowTearing.Checked = _config.DispAllowTearing;
 
 			if (_config.DispSpeedupFeatures == 2) rbDisplayFull.Checked = true;
 			if (_config.DispSpeedupFeatures == 1) rbDisplayMinimal.Checked = true;
@@ -62,17 +62,20 @@ namespace BizHawk.Client.EmuHawk
 
 			rbOpenGL.Checked = _config.DispMethod == EDispMethod.OpenGL;
 			rbGDIPlus.Checked = _config.DispMethod == EDispMethod.GdiPlus;
-			rbD3D9.Checked = _config.DispMethod == EDispMethod.SlimDX9;
+			rbD3D11.Checked = _config.DispMethod == EDispMethod.D3D11;
 
 			cbStatusBarWindowed.Checked = _config.DispChromeStatusBarWindowed;
 			cbCaptionWindowed.Checked = _config.DispChromeCaptionWindowed;
 			cbMenuWindowed.Checked = _config.DispChromeMenuWindowed;
 			cbMainFormSaveWindowPosition.Checked = _config.SaveWindowPosition;
 			cbMainFormStayOnTop.Checked = _config.MainFormStayOnTop;
+			cbMainFormMouseCaptureForcesTopmost.Checked = _config.MainFormMouseCaptureForcesTopmost;
 			if (OSTailoredCode.IsUnixHost)
 			{
 				cbMainFormStayOnTop.Enabled = false;
 				cbMainFormStayOnTop.Visible = false;
+				cbMainFormMouseCaptureForcesTopmost.Enabled = false;
+				cbMainFormMouseCaptureForcesTopmost.Visible = false;
 			}
 			cbStatusBarFullscreen.Checked = _config.DispChromeStatusBarFullscreen;
 			cbMenuFullscreen.Checked = _config.DispChromeMenuFullscreen;
@@ -98,9 +101,9 @@ namespace BizHawk.Client.EmuHawk
 			if (_config.DispCustomUserARHeight != -1)
 				txtCustomARHeight.Text = _config.DispCustomUserARHeight.ToString();
 			if (_config.DispCustomUserArx != -1)
-				txtCustomARX.Text = _config.DispCustomUserArx.ToString();
+				txtCustomARX.Text = _config.DispCustomUserArx.ToString(NumberFormatInfo.InvariantInfo);
 			if (_config.DispCustomUserAry != -1)
-				txtCustomARY.Text = _config.DispCustomUserAry.ToString();
+				txtCustomARY.Text = _config.DispCustomUserAry.ToString(NumberFormatInfo.InvariantInfo);
 
 			txtCropLeft.Text = _config.DispCropLeft.ToString();
 			txtCropTop.Text = _config.DispCropTop.ToString();
@@ -109,11 +112,11 @@ namespace BizHawk.Client.EmuHawk
 
 			RefreshAspectRatioOptions();
 
-			if (!HostCapabilityDetector.HasDirectX)
+			if (!HostCapabilityDetector.HasD3D11)
 			{
-				rbD3D9.Enabled = false;
-				rbD3D9.AutoCheck = false;
-				cbAlternateVsync.Enabled = false;
+				rbD3D11.Enabled = false;
+				rbD3D11.AutoCheck = false;
+				cbAllowTearing.Enabled = false;
 				label13.Enabled = false;
 				label8.Enabled = false;
 			}
@@ -144,8 +147,9 @@ namespace BizHawk.Client.EmuHawk
 			_config.DispFixScaleInteger = checkPadInteger.Checked;
 			_config.DispFullscreenHacks = cbFullscreenHacks.Checked;
 			_config.DispAutoPrescale = cbAutoPrescale.Checked;
-			
-			_config.DispAlternateVsync = cbAlternateVsync.Checked;
+			_config.ScaleOSDWithSystemScale = cbScaleOSD.Checked;
+
+			_config.DispAllowTearing = cbAllowTearing.Checked;
 
 			_config.DispChromeStatusBarWindowed = cbStatusBarWindowed.Checked;
 			_config.DispChromeCaptionWindowed = cbCaptionWindowed.Checked;
@@ -153,6 +157,7 @@ namespace BizHawk.Client.EmuHawk
 			_config.SaveWindowPosition = cbMainFormSaveWindowPosition.Checked;
 			_config.MainFormStayOnTop = cbMainFormStayOnTop.Checked;
 			Owner.TopMost = _config.MainFormStayOnTop;
+			_config.MainFormMouseCaptureForcesTopmost = cbMainFormMouseCaptureForcesTopmost.Checked;
 			_config.DispChromeStatusBarFullscreen = cbStatusBarFullscreen.Checked;
 			_config.DispChromeMenuFullscreen = cbMenuFullscreen.Checked;
 			_config.DispChromeFrameWindowed = trackbarFrameSizeWindowed.Value;
@@ -227,8 +232,8 @@ namespace BizHawk.Client.EmuHawk
 				_config.DispMethod = EDispMethod.OpenGL;
 			if(rbGDIPlus.Checked)
 				_config.DispMethod = EDispMethod.GdiPlus;
-			if(rbD3D9.Checked)
-				_config.DispMethod = EDispMethod.SlimDX9;
+			if(rbD3D11.Checked)
+				_config.DispMethod = EDispMethod.D3D11;
 
 			if (int.TryParse(txtCropLeft.Text, out int dispCropLeft))
 			{
@@ -271,13 +276,14 @@ namespace BizHawk.Client.EmuHawk
 			var result = this.ShowFileOpenDialog(
 				filter: CgShaderPresetsFSFilterSet,
 				initDir: string.IsNullOrWhiteSpace(_pathSelection)
-				? string.Empty : Path.GetDirectoryName(_pathSelection)!,
+					? _config.PathEntries.GlobalBaseAbsolutePath()
+					: Path.GetDirectoryName(_pathSelection)!,
 				initFileName: _pathSelection);
 			if (result is null) return;
 
 			rbUser.Checked = true;
 			var choice = Path.GetFullPath(result);
-				
+
 			//test the preset
 			using (var stream = File.OpenRead(choice))
 			{
@@ -362,13 +368,11 @@ namespace BizHawk.Client.EmuHawk
 
 		private void LinkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
 		{
-			System.Diagnostics.Process.Start("https://tasvideos.org/Bizhawk/DisplayConfig");
+			Util.OpenUrlExternal("https://tasvideos.org/Bizhawk/DisplayConfig");
 		}
 
 		private void Label13_Click(object sender, EventArgs e)
-		{
-			cbAlternateVsync.Checked ^= true;
-		}
+			=> cbAllowTearing.Checked = !cbAllowTearing.Checked;
 
 		private void BtnDefaults_Click(object sender, EventArgs e)
 		{

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -33,7 +32,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			0x00ffffff, 0x00aaaaaa, 0x00555555, 0x00000000,
 			0x00ffffff, 0x00aaaaaa, 0x00555555, 0x00000000,
-			0x00ffffff, 0x00aaaaaa, 0x00555555, 0x00000000
+			0x00ffffff, 0x00aaaaaa, 0x00555555, 0x00000000,
 		};
 
 		// bsnes's default dmg colors with slight tweaking
@@ -41,7 +40,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			10798341, 8956165, 1922333, 337157,
 			10798341, 8956165, 1922333, 337157,
-			10798341, 8956165, 1922333, 337157
+			10798341, 8956165, 1922333, 337157,
 		};
 
 		private void RefreshAllBackdrops()
@@ -132,7 +131,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				AllowFullOpen = true,
 				AnyColor = true,
-				Color = _colors[i]
+				Color = _colors[i],
 			};
 
 			// custom colors are ints, not Color structs?
@@ -170,7 +169,7 @@ namespace BizHawk.Client.EmuHawk
 			"Sprite%2020",
 			"Sprite%2021",
 			"Sprite%2022",
-			"Sprite%2023"
+			"Sprite%2023",
 		};
 
 		/// <summary>
@@ -192,7 +191,9 @@ namespace BizHawk.Client.EmuHawk
 
 				try
 				{
-					lines.Add(line.Substring(0, i), int.Parse(line.Substring(i + 1)));
+					lines.Add(
+						line.Substring(startIndex: 0, length: i),
+						int.Parse(line.Substring(startIndex: i + 1)));
 				}
 				catch (FormatException)
 				{
@@ -302,7 +303,7 @@ namespace BizHawk.Client.EmuHawk
 			var result = this.ShowFileOpenDialog(
 				discardCWDChange: true,
 				filter: FilesystemFilterSet.Palettes,
-				initDir: _config.PathEntries.ScreenshotAbsolutePathFor(VSystemID.Raw.GB));
+				initDir: _config.PathEntries.PalettesAbsolutePathFor(VSystemID.Raw.GB));
 			if (result is not null) LoadColorFile(result, alert: true);
 		}
 

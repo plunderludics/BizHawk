@@ -1,5 +1,6 @@
-﻿using System;
 using System.Windows.Forms;
+
+using BizHawk.Common;
 
 namespace BizHawk.Client.DiscoHawk
 {
@@ -13,7 +14,7 @@ namespace BizHawk.Client.DiscoHawk
 
 		private void richTextBox1_LinkClicked(object sender, LinkClickedEventArgs e)
 		{
-			System.Diagnostics.Process.Start(e.LinkText);
+			Util.OpenUrlExternal(e.LinkText);
 		}
 
 		private void button1_Click(object sender, EventArgs e)

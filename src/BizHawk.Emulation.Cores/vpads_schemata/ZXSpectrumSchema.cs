@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 
@@ -136,8 +135,8 @@ namespace BizHawk.Emulation.Cores
 				}
 
 				int txtLength = b.DisName.Length;
-				int btnSize = System.Convert.ToInt32((double)stdButtonWidth * b.WidthFactor);
-				
+				int btnSize = System.Convert.ToInt32(stdButtonWidth * b.WidthFactor);
+
 
 				string disp = b.DisName;
 				if (txtLength == 1)

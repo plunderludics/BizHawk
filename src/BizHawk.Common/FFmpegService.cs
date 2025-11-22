@@ -1,4 +1,3 @@
-﻿using System;
 using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,6 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Threading.Tasks;
+using BizHawk.Common.PathExtensions;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Common
 {
@@ -16,9 +17,16 @@ namespace BizHawk.Common
 
 		private const string BIN_HOST_URI_WIN_X64 = "https://github.com/TASEmulators/ffmpeg-binaries/raw/master/ffmpeg-4.4.1-static-windows-x64.7z";
 
+		private const string BIN_SHA256_LINUX_X64 = "3EA58083710F63BF920B16C7D5D24AE081E7D731F57A656FED11AF0410D4EB48";
+
+		private const string BIN_SHA256_WIN_X64 = "8436760AF8F81C95EFF92D854A7684E6D3CEDB872888420359FC45C8EB2664AC";
+
 		private const string VERSION = "ffmpeg version 4.4.1";
 
-		public static string FFmpegPath = string.Empty; // always updated in DiscoHawk.Program/EmuHawk.Program
+		public static string DownloadSHA256Checksum
+			=> OSTailoredCode.IsUnixHost ? BIN_SHA256_LINUX_X64 : BIN_SHA256_WIN_X64;
+
+		public static string FFmpegPath => Path.Combine(PathUtils.DataDirectoryPath, "dll", OSTailoredCode.IsUnixHost ? "ffmpeg" : "ffmpeg.exe");
 
 		public static readonly string Url = OSTailoredCode.IsUnixHost ? BIN_HOST_URI_LINUX_X64 : BIN_HOST_URI_WIN_X64;
 
@@ -28,9 +36,7 @@ namespace BizHawk.Common
 		}
 
 		private static string[] Escape(IEnumerable<string> args)
-		{
-			return args.Select(s => s.Contains(" ") ? $"\"{s}\"" : s).ToArray();
-		}
+			=> args.Select(static s => s.ContainsOrdinal(' ') ? $"\"{s}\"" : s).ToArray();
 
 		//note: accepts . or : in the stream stream/substream separator in the stream ID format, since that changed at some point in FFMPEG history
 		//if someone has a better idea how to make the determination of whether an audio stream is available, I'm all ears
@@ -79,7 +85,7 @@ namespace BizHawk.Common
 				UseShellExecute = false,
 				CreateNoWindow = true,
 				RedirectStandardOutput = true,
-				RedirectStandardError = true
+				RedirectStandardError = true,
 			};
 
 			Process proc = new Process();
@@ -130,7 +136,7 @@ namespace BizHawk.Common
 			return new RunResults
 			{
 				ExitCode = proc.ExitCode,
-				Text = resultText
+				Text = resultText,
 			};
 		}
 
@@ -154,5 +160,4 @@ namespace BizHawk.Common
 			}
 		}
 	}
-
 }

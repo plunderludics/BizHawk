@@ -143,7 +143,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 
 			if (NES._isVS)
 			{
-				addr = addr - 0x2000;
+				addr -= 0x2000;
 				if (addr < 0x800)
 				{
 					return NES.CIRAM[addr];
@@ -165,11 +165,11 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			}
 			else if (NES._isVS)
 			{
-				// The game VS Castlevania apparently scans for more CIRAM then actually exists, so we have to mask out nonsensical values 
+				// The game VS Castlevania apparently scans for more CIRAM then actually exists, so we have to mask out nonsensical values
 				addr &= 0x2FFF;
 
 
-				addr = addr - 0x2000;
+				addr -= 0x2000;
 				if (addr < 0x800)
 				{
 					NES.CIRAM[addr] = value;
@@ -291,6 +291,5 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			if (!NES._isVS)
 				SetMirrorType(EMirrorType.Vertical);
 		}
-
 	}
 }

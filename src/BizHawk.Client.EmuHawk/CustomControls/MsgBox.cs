@@ -1,8 +1,5 @@
-﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-
-using BizHawk.Common;
 
 // http://www.codeproject.com/Articles/154680/A-customizable-NET-WinForms-Message-Box
 namespace BizHawk.Client.EmuHawk.CustomControls
@@ -12,6 +9,13 @@ namespace BizHawk.Client.EmuHawk.CustomControls
 	/// </summary>
 	internal partial class MsgBox : Form
 	{
+		// [UnityHawk: hack to allow suppressing all popup dialogs]
+		public static bool SuppressAll = false;
+		public new void ShowDialog() { // Nasty hack to 'override' non-virtual method in Form clas
+			if (!SuppressAll) base.ShowDialog();
+		}
+		// [end UnityHawk]
+
 		private readonly Icon _msgIcon;
 		private static readonly int FormYMargin = UIHelper.ScaleY(10);
 		private static readonly int FormXMargin = UIHelper.ScaleX(16);
@@ -29,6 +33,8 @@ namespace BizHawk.Client.EmuHawk.CustomControls
 		/// <param name="boxIcon">Standard system MessageBox icon.</param>
 		public MsgBox(string message, string title, MessageBoxIcon boxIcon)
 		{
+			Console.WriteLine($"MsgBox: {title}: {message}"); // [UnityHawk]
+
 			var icon = GetMessageBoxIcon(boxIcon);
 			InitializeComponent();
 			Icon = Properties.Resources.MsgBoxIcon;
@@ -86,7 +92,6 @@ namespace BizHawk.Client.EmuHawk.CustomControls
 			{
 				_minButtonRowWidth += SetButtonParams(btn3, names[2], def == 3 ? 1 : 4, results[2]) + ButtonSpace;
 			}
-
 		}
 
 		/// <summary>
@@ -111,7 +116,7 @@ namespace BizHawk.Client.EmuHawk.CustomControls
 				MessageBoxIcon.Error => SystemIcons.Error,
 				MessageBoxIcon.Exclamation => SystemIcons.Exclamation,
 				MessageBoxIcon.Question => SystemIcons.Question,
-				_ => null
+				_ => null,
 			};
 		}
 
@@ -146,16 +151,12 @@ namespace BizHawk.Client.EmuHawk.CustomControls
 			int requiredHeight = messageLbl.Location.Y + messageLbl.Size.Height - btn2.Location.Y + ClientSize.Height + TextYMargin;
 
 			int minSetWidth = ClientSize.Width;
-			int minSetHeight = ClientSize.Height;
-
 			ClientSize = new Size
 			{
 				Width = requiredWidth > minSetWidth
 					? requiredWidth
 					: minSetWidth,
-				Height = requiredHeight > minSetHeight
-					? requiredHeight
-					: minSetHeight
+				Height = Math.Max(ClientSize.Height, requiredHeight),
 			};
 		}
 
@@ -185,6 +186,6 @@ namespace BizHawk.Client.EmuHawk.CustomControls
 	{
 		Button1,
 		Button2,
-		Button3
+		Button3,
 	}
 }

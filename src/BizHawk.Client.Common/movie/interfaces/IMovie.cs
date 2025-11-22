@@ -1,6 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
+
+using BizHawk.Bizware.Graphics;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -25,12 +26,12 @@ namespace BizHawk.Client.Common
 		/// <summary>
 		/// The movie has played past the end, but is still loaded in memory
 		/// </summary>
-		Finished
+		Finished,
 	}
 
 	// TODO: message callback / event handler
 	// TODO: consider other event handlers, switching modes?
-	public interface IMovie
+	public interface IMovie : IBasicMovieInfo
 	{
 		/// <summary>
 		/// Gets the current movie mode
@@ -41,28 +42,11 @@ namespace BizHawk.Client.Common
 
 		bool Changes { get; }
 
-		string Name { get; }
-
-		/// <summary>
-		/// Gets the total number of frames that count towards the completion time of the movie
-		/// </summary>
-		int FrameCount { get; }
-
 		/// <summary>
 		/// Gets the actual length of the input log, should only be used by code that needs the input log length
 		/// specifically, not the frame count
 		/// </summary>
 		int InputLogLength { get; }
-
-		/// <summary>
-		/// Gets the actual length of time a movie lasts for. For subframe cores, this will be different then the above two options
-		/// </summary>
-		TimeSpan TimeLength { get; }
-
-		/// <summary>
-		/// Gets the frame rate in frames per second for the movie's system.
-		/// </summary>
-		double FrameRate { get; }
 
 		/// <summary>
 		/// Gets the file extension for the current <see cref="IMovie"/> implementation
@@ -74,44 +58,18 @@ namespace BizHawk.Client.Common
 		/// </summary>
 		string SyncSettingsJson { get; set; }
 
-		SubtitleList Subtitles { get; }
-		IList<string> Comments { get; }
-
 		// savestate anchor.
 		string TextSavestate { get; set; }
 		byte[] BinarySavestate { get; set; }
-		int[] SavestateFramebuffer { get; set; }
+		BitmapBuffer SavestateFramebuffer { get; set; }
 
 		// saveram anchor
 		byte[] SaveRam { get; set; }
 
-		ulong Rerecords { get; set; }
 		bool StartsFromSavestate { get; set; }
 		bool StartsFromSaveRam { get; set; }
-		string GameName { get; set; }
-		string SystemID { get; set; }
 
-		/// <value>either CRC32, MD5, or SHA1, hex-encoded, unprefixed</value>
-		string Hash { get; set; }
-
-		string Author { get; set; }
-		string Core { get; set; }
-		string EmulatorVersion { get; set; }
-		string OriginalEmulatorVersion { get; set; }
-		string FirmwareHash { get; set; }
-		string BoardName { get; set; }
 		string LogKey { get; set; }
-
-		/// <summary>
-		/// Loads from the HawkFile the minimal amount of information needed to determine Header info and Movie length.
-		/// This method is intended to be more performant than a full load
-		/// </summary>
-		bool PreLoadHeaderAndLength();
-		
-		/// <summary>
-		/// Gets the header key value pairs stored in the movie file
-		/// </summary>
-		IDictionary<string, string> HeaderEntries { get; }
 
 		/// <summary>
 		/// Forces the creation of a backup file of the current movie state
@@ -119,23 +77,12 @@ namespace BizHawk.Client.Common
 		void SaveBackup();
 
 		/// <summary>
-		/// Creates a log generator using the given input source
-		/// </summary>
-		ILogEntryGenerator LogGeneratorInstance(IController source);
-
-		// Filename of the movie, settable by the client
-		string Filename { get; set; }
-
-		/// <summary>
-		/// Tells the movie to load the contents of Filename
-		/// </summary>
-		/// <returns>Return whether or not the file was successfully loaded</returns>
-		bool Load(bool preload);
-
-		/// <summary>
 		/// Instructs the movie to save the current contents to Filename
 		/// </summary>
 		void Save();
+
+		/// <summary>updates the <see cref="HeaderKeys.CycleCount"/> and <see cref="HeaderKeys.ClockRate"/> headers from the currently loaded core</summary>
+		void SetCycleValues();
 
 		/// <summary>
 		/// Writes the input log directly to the stream, bypassing the need to load it all into ram as a string
@@ -156,7 +103,7 @@ namespace BizHawk.Client.Common
 		/// <param name="errorMessage">Returns an error message, if any</param>
 		/// <returns>Returns whether or not the input log in reader is in the same timeline as the movie</returns>
 		bool CheckTimeLines(TextReader reader, out string errorMessage);
-		
+
 		/// <summary>
 		/// Takes reader and extracts the input log, then replaces the movies input log with it
 		/// </summary>
@@ -176,11 +123,8 @@ namespace BizHawk.Client.Common
 
 		/// <summary>
 		/// Sets the movie to inactive (note that it will still be in memory)
-		/// The saveChanges flag will tell the movie to save its contents to disk
 		/// </summary>
-		/// <param name="saveChanges">if true, will save to disk</param>
-		/// <returns>Whether or not the movie was saved</returns>
-		bool Stop(bool saveChanges = true);
+		void Stop();
 
 		/// <summary>
 		/// Switches to record mode
@@ -263,8 +207,13 @@ namespace BizHawk.Client.Common
 		public static bool IsPlaying(this IMovie movie) => movie?.Mode == MovieMode.Play;
 		public static bool IsRecording(this IMovie movie) => movie?.Mode == MovieMode.Record;
 		public static bool IsFinished(this IMovie movie) => movie?.Mode == MovieMode.Finished;
-		public static bool IsPlayingOrFinished(this IMovie movie) => movie?.Mode == MovieMode.Play || movie?.Mode == MovieMode.Finished;
-		public static bool IsPlayingOrRecording(this IMovie movie) => movie?.Mode == MovieMode.Play || movie?.Mode == MovieMode.Record;
+
+		public static bool IsPlayingOrFinished(this IMovie movie)
+			=> movie?.Mode is MovieMode.Play or MovieMode.Finished;
+
+		public static bool IsPlayingOrRecording(this IMovie movie)
+			=> movie?.Mode is MovieMode.Play or MovieMode.Record;
+
 		/// <summary>
 		/// Emulation is currently right after the movie's last input frame,
 		/// but no further frames have been emulated.
@@ -292,7 +241,7 @@ namespace BizHawk.Client.Common
 
 				if (movie.SavestateFramebuffer != null && emulator.HasVideoProvider())
 				{
-					emulator.AsVideoProvider().PopulateFromBuffer(movie.SavestateFramebuffer);
+					emulator.AsVideoProvider().PopulateFromBuffer(movie.SavestateFramebuffer.Pixels);
 				}
 
 				emulator.ResetCounters();

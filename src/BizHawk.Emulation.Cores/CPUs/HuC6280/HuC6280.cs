@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
@@ -236,7 +235,7 @@ namespace BizHawk.Emulation.Cores.Components.H6280
 
 		public void WriteTimerEnable(byte value)
 		{
-			if (TimerEnabled == false && (value & 1) == 1)
+			if (!TimerEnabled && (value & 1) == 1)
 			{
 				TimerValue = TimerReloadValue; // timer value is reset when toggled from off to on
 				TimerTickCounter = 0;
@@ -248,7 +247,7 @@ namespace BizHawk.Emulation.Cores.Components.H6280
 		{
 			if (TimerTickCounter + 5 > 1024)
 			{
-				// There exists a slight delay between when the timer counter is decremented and when 
+				// There exists a slight delay between when the timer counter is decremented and when
 				// the interrupt fires; games can detect it, so we hack it this way.
 				return (byte)((TimerValue - 1) & 0x7F);
 			}
@@ -337,7 +336,7 @@ namespace BizHawk.Emulation.Cores.Components.H6280
 				uint flags = (uint)(MemoryCallbackFlags.AccessRead);
 				MemoryCallbacks.CallMemoryCallbacks(address, result, flags, "System Bus");
 			}
-			
+
 			return result;
 		}
 
@@ -400,8 +399,8 @@ namespace BizHawk.Emulation.Cores.Components.H6280
 						FlagZ ? "Z" : "z",
 						FlagC ? "C" : "c")));
 
-		private static readonly byte[] TableNZ = 
-		{ 
+		private static readonly byte[] TableNZ =
+		{
 			0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

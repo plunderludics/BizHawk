@@ -1,11 +1,10 @@
-using System;
 using System.Runtime.InteropServices;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.DiscSystem;
 
 namespace BizHawk.Emulation.Cores.Waterbox
 {
-	abstract partial class NymaCore : IDriveLight
+	public abstract partial class NymaCore : IDriveLight
 	{
 		// this code was mostly copied from Saturnus, which it will replace soon(R)
 		private static readonly DiscSectorReaderPolicy _diskPolicy = new DiscSectorReaderPolicy
@@ -22,7 +21,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			// everything that's not commented, we're sure about
 			t.FirstTrack = tin.FirstRecordedTrackNumber;
 			t.LastTrack = tin.LastRecordedTrackNumber;
-			t.DiskType = (int)tin.Session1Format;
+			t.DiskType = (int)tin.SessionFormat;
 			for (int i = 0; i < 101; i++)
 			{
 				t.Tracks[i].Adr = tin.TOCItems[i].Exists ? 1 : 0; // ????
@@ -48,5 +47,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 
 		public bool DriveLightEnabled => _disks?.Length > 0;
 		public bool DriveLightOn { get; private set; }
+
+		public string DriveLightIconDescription => "CD Drive Activity";
 	}
 }

@@ -1,5 +1,5 @@
-﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -15,10 +15,13 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class LogWindow : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Properties.Resources.CommandWindow;
+
 		// TODO: only show add to game db when this is a Rom details dialog
 		// Let user decide what type (instead of always adding it as a good dump)
 		private readonly List<string> _lines = new List<string>();
-		private LogStream _logStream;
+		private LogWriter _logWriter;
 
 		[RequiredService]
 		private IEmulator Emulator { get; set; }
@@ -32,39 +35,37 @@ namespace BizHawk.Client.EmuHawk
 		public LogWindow()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.CommandWindow;
+			Icon = ToolIcon;
 			AddToGameDbBtn.Image = Properties.Resources.Add;
 			Closing += (o, e) =>
 			{
 				Detach();
 			};
-			ListView_ClientSizeChanged(null, null);
+			ListView_ClientSizeChanged(null, EventArgs.Empty);
 			Attach();
 		}
 
 		private void Attach()
 		{
-			_logStream = new LogStream();
-			Log.HACK_LOG_STREAM = _logStream;
-			Console.SetOut(new StreamWriter(_logStream) { AutoFlush = true });
-			_logStream.Emit = appendInvoked;
+			_logWriter = new LogWriter();
+			Console.SetOut(_logWriter);
+			_logWriter.Emit = appendInvoked;
 		}
 
 		private void Detach()
 		{
 			Console.SetOut(new StreamWriter(Console.OpenStandardOutput())
 			{
-				AutoFlush = true
+				AutoFlush = true,
 			});
-			_logStream.Close();
-			_logStream = null;
-			Log.HACK_LOG_STREAM = null;
+			_logWriter.Close();
+			_logWriter = null;
 		}
 
 		public void ShowReport(string title, string report)
 		{
 			var ss = report.Split('\n');
-			
+
 			lock (_lines)
 				foreach (var s in ss)
 				{
@@ -90,7 +91,7 @@ namespace BizHawk.Client.EmuHawk
 						if (invoked)
 						{
 							//basically an easy way to post an update message which should hopefully happen before anything else happens (redraw or user interaction)
-							BeginInvoke((Action)doUpdateListSize);
+							BeginInvoke(doUpdateListSize);
 						}
 						else
 							doUpdateListSize();
@@ -144,7 +145,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (e.IsCtrl(Keys.C))
 			{
-				ButtonCopy_Click(null, null);
+				ButtonCopy_Click(null, EventArgs.Empty);
 			}
 		}
 
@@ -187,7 +188,7 @@ namespace BizHawk.Client.EmuHawk
 		private void HideShowGameDbButton()
 		{
 			AddToGameDbBtn.Visible = Emulator.CanGenerateGameDBEntries()
-				&& (Game.Status == RomStatus.Unknown || Game.Status == RomStatus.NotInDatabase);
+				&& Game.Status is RomStatus.Unknown or RomStatus.NotInDatabase;
 		}
 
 		private void AddToGameDbBtn_Click(object sender, EventArgs e)
@@ -204,47 +205,14 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		private class LogStream : Stream
+		private class LogWriter : TextWriter
 		{
-			public override bool CanRead => false;
-			public override bool CanSeek => false;
-			public override bool CanWrite => true;
-
-			public override void Flush()
+			public override void Write(char[] buffer, int offset, int count)
 			{
-				//TODO - maybe this will help with decoding
+				Emit(new string(buffer, offset, count));
 			}
 
-			public override long Length => throw new NotImplementedException();
-
-			public override long Position
-			{
-				get => throw new NotImplementedException();
-				set => throw new NotImplementedException();
-			}
-
-			public override int Read(byte[] buffer, int offset, int count)
-			{
-				throw new NotImplementedException();
-			}
-
-			public override long Seek(long offset, SeekOrigin origin)
-			{
-				throw new NotImplementedException();
-			}
-
-			public override void SetLength(long value)
-			{
-				throw new NotImplementedException();
-			}
-
-			public override void Write(byte[] buffer, int offset, int count)
-			{
-				// TODO - buffer undecoded characters (this may be important)
-				//(use decoder = System.Text.Encoding.Unicode.GetDecoder())
-				string str = Encoding.ASCII.GetString(buffer, offset, count);
-				Emit(str);
-			}
+			public override Encoding Encoding => Encoding.Unicode;
 
 			public Action<string> Emit;
 		}

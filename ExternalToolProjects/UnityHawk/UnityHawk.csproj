@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="$(ProjectDir)../NET48ExternalToolForm.targets" />
+	<Import Project="$(ProjectDir)../ExtToolCommon.props" />
+	
+	<ItemGroup>
+		<Reference Include="Plunderludics.UnityHawk.Shared" 
+			HintPath="$(MSBuildProjectDirectory)/../../output/dll/Plunderludics.UnityHawk.Shared.dll"
+			Private="true" />
+		<Reference Include="Plunderludics.UnityHawk.SharedBuffers" 
+			HintPath="$(MSBuildProjectDirectory)/../../output/dll/Plunderludics.UnityHawk.SharedBuffers.dll"
+			Private="true" />
+	</ItemGroup>
+	
+	<PropertyGroup>
+		<Nullable>disable</Nullable>
+	</PropertyGroup>
+</Project>

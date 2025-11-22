@@ -1,8 +1,10 @@
 ﻿#nullable disable
 
-using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+
+using BizHawk.Common.CollectionExtensions;
+
 using Newtonsoft.Json;
 
 namespace BizHawk.Emulation.Common
@@ -88,14 +90,7 @@ namespace BizHawk.Emulation.Common
 		{
 			// works for either save or load, but as a consequence cannot report intelligent
 			// errors about section name mismatches
-			Current.Objects.TryGetValue(name, out var next);
-			if (next == null)
-			{
-				next = new Node();
-				Current.Objects.Add(name, next);
-			}
-
-			Nodes.Push(next);
+			Nodes.Push(Current.Objects.GetValueOrPutNew(name));
 		}
 
 		/// <exception cref="InvalidOperationException"><paramref name="name"/> doesn't match the section being closed</exception>
@@ -118,7 +113,7 @@ namespace BizHawk.Emulation.Common
 				Save = Save,
 				Load = null,
 				EnterSection = EnterSectionSave,
-				ExitSection = ExitSection
+				ExitSection = ExitSection,
 			};
 		}
 
@@ -129,7 +124,7 @@ namespace BizHawk.Emulation.Common
 				Save = null,
 				Load = Load,
 				EnterSection = EnterSectionLoad,
-				ExitSection = ExitSection
+				ExitSection = ExitSection,
 			};
 		}
 	}

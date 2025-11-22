@@ -1,8 +1,6 @@
 ﻿#nullable disable
 
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -18,6 +16,7 @@ namespace BizHawk.Emulation.Common
 		/// <remarks>need to think about e.g. Genesis / Mega Drive using one sysID but having a different display name depending on the BIOS region --yoshi</remarks>
 		public static readonly IReadOnlyDictionary<string, string> SystemIDDisplayNames = new Dictionary<string, string>
 		{
+			[VSystemID.Raw.Amiga] = "Amiga",
 			[VSystemID.Raw.A26] = "Atari 2600",
 			[VSystemID.Raw.A78] = "Atari 7800",
 			[VSystemID.Raw.AmstradCPC] = "Amstrad CPC",
@@ -27,6 +26,8 @@ namespace BizHawk.Emulation.Common
 			[VSystemID.Raw.ChannelF] = "Channel F",
 			[VSystemID.Raw.Coleco] = "ColecoVision",
 			// DEBUG
+			[VSystemID.Raw.Doom] = "Doom",
+			[VSystemID.Raw.DOS] = "DOS",
 			[VSystemID.Raw.GBL] = "Game Boy Link",
 			[VSystemID.Raw.GB] = "GB",
 			[VSystemID.Raw.SGB] = "SGB",
@@ -40,18 +41,21 @@ namespace BizHawk.Emulation.Common
 			[VSystemID.Raw.Libretro] = "Libretro",
 			[VSystemID.Raw.Lynx] = "Lynx",
 			[VSystemID.Raw.MSX] = "MSX",
+			[VSystemID.Raw.N3DS] = "3DS",
 			[VSystemID.Raw.N64] = "Nintendo 64",
 			[VSystemID.Raw.NDS] = "NDS",
 			[VSystemID.Raw.NES] = "NES",
 			[VSystemID.Raw.NGP] = "Neo-Geo Pocket",
 			// NULL
 			[VSystemID.Raw.O2] = "Odyssey2",
+			[VSystemID.Raw.Panasonic3DO] = "3DO",
 			[VSystemID.Raw.PCE] = "TurboGrafx-16",
 			[VSystemID.Raw.PCECD] = "TurboGrafx - 16(CD)",
 			[VSystemID.Raw.PCFX] = "PCFX",
 			[VSystemID.Raw.PS2] = "PlayStation 2",
 			[VSystemID.Raw.PSX] = "PlayStation",
 			[VSystemID.Raw.SAT] = "Saturn",
+			[VSystemID.Raw.Satellaview] = "Satellaview",
 			[VSystemID.Raw.Sega32X] = "Genesis 32X",
 			[VSystemID.Raw.SG] = "SG-1000",
 			[VSystemID.Raw.SGX] = "SuperGrafx",
@@ -329,9 +333,9 @@ namespace BizHawk.Emulation.Common
 
 		public static int VsyncNumerator(this IEmulator core)
 		{
-			if (core != null && core.HasVideoProvider())
+			if (core?.AsVideoProvider() is { } videoCore)
 			{
-				return core.AsVideoProvider().VsyncNumerator;
+				return videoCore.VsyncNumerator;
 			}
 
 			return 60;
@@ -339,9 +343,9 @@ namespace BizHawk.Emulation.Common
 
 		public static int VsyncDenominator(this IEmulator core)
 		{
-			if (core != null && core.HasVideoProvider())
+			if (core?.AsVideoProvider() is { } videoCore)
 			{
-				return core.AsVideoProvider().VsyncDenominator;
+				return videoCore.VsyncDenominator;
 			}
 
 			return 1;
@@ -352,6 +356,12 @@ namespace BizHawk.Emulation.Common
 			return core.VsyncNumerator() / (double)core.VsyncDenominator();
 		}
 
+		public static bool HasCycleTiming(this IEmulator core)
+			=> core != null && core.ServiceProvider.HasService<ICycleTiming>();
+
+		public static ICycleTiming AsCycleTiming(this IEmulator core)
+			=> core.ServiceProvider.GetService<ICycleTiming>();
+
 		public static bool IsImplemented(this MethodInfo info)
 		{
 			return !info.GetCustomAttributes(false).Any(a => a is FeatureNotImplementedAttribute);
@@ -361,20 +371,19 @@ namespace BizHawk.Emulation.Common
 		/// Gets a list of boolean button names. If a controller number is specified, only returns button names
 		/// (without the "P" prefix) that match that controller number. If a controller number is NOT specified,
 		/// then all button names are returned.
-		///
-		/// For example, consider example "P1 A", "P1 B", "P2 A", "P2 B". See below for sample outputs:
-		///   - ToBoolButtonNameList(controller, 1) -> [A, B]
-		///   - ToBoolButtonNameList(controller, 2) -> [A, B]
-		///   - ToBoolButtonNameList(controller, null) -> [P1 A, P1 B, P2 A, P2 B]
+		/// <br/>For example, consider <c>controller.Definition is { BoolButtons = [ "P1 A", "P1 B", "P2 B", "P2 C" ] }</c>.
+		/// Then:<list type="bullet">
+		/// <item><description><c>controller.ToBoolButtonNameList(1)</c> --> <c>[ "A", "B" ]</c></description></item>
+		/// <item><description><c>controller.ToBoolButtonNameList(2)</c> --> <c>[ "B", "C" ]</c></description></item>
+		/// <item><description><c>controller.ToBoolButtonNameList(null)</c> --> <c>[ "P1 A", "P1 B", "P2 B", "P2 C" ]</c></description></item>
+		/// </list>
 		/// </summary>
 		public static List<string> ToBoolButtonNameList(this IController controller, int? controllerNum = null)
 		{
 			return ToControlNameList(controller.Definition.BoolButtons, controllerNum);
 		}
 
-		/// <summary>
-		/// See ToBoolButtonNameList(). Works the same except with axes
-		/// </summary>
+		/// <summary>as <see cref="ToBoolButtonNameList"/>, but with axis names</summary>
 		public static List<string> ToAxisControlNameList(this IController controller, int? controllerNum = null)
 		{
 			return ToControlNameList(controller.Definition.Axes.Keys, controllerNum);
@@ -382,20 +391,15 @@ namespace BizHawk.Emulation.Common
 
 		private static List<string> ToControlNameList(IEnumerable<string> buttonList, int? controllerNum = null)
 		{
-			var buttons = new List<string>();
-			foreach (var button in buttonList)
+			var buttons = buttonList;
+			if (controllerNum is int n)
 			{
-				if (controllerNum != null && button.Length > 2 && button.Substring(0, 2) == $"P{controllerNum}")
-				{
-					var sub = button.Substring(3);
-					buttons.Add(sub);
-				}
-				else if (controllerNum == null)
-				{
-					buttons.Add(button);
-				}
+				var pfx = $"P{n} ";
+				buttons = buttons.Select(buttonName => (ButtonName: buttonName, Tail: buttonName.RemovePrefix(pfx)))
+					.Where(static tuple => !object.ReferenceEquals(tuple.Tail, tuple.ButtonName))
+					.Select(static tuple => tuple.Tail);
 			}
-			return buttons;
+			return buttons.ToList();
 		}
 
 		public static IReadOnlyDictionary<string, object> ToDictionary(this IController controller, int? controllerNum = null)
@@ -479,7 +483,9 @@ namespace BizHawk.Emulation.Common
 
 		public static AxisSpec With(this in AxisSpec spec, Range<int> range, int neutral) => new AxisSpec(range, neutral, spec.IsReversed, spec.Constraint);
 
+#pragma warning disable RCS1224 // don't want extension on nonspecific `string`
 		public static string SystemIDToDisplayName(string sysID)
+#pragma warning restore RCS1224
 			=> SystemIDDisplayNames.TryGetValue(sysID, out var dispName) ? dispName : string.Empty;
 
 		public static bool IsEnabled(this ITraceable core) => core.Sink is not null;

@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
 
@@ -165,7 +163,7 @@ namespace BizHawk.Emulation.Cores.Components
 		}
 
 		private readonly Pulse[] pulse = new Pulse[2];
-		
+
 		/// <param name="addr">0x5000..0x5015</param>
 		public void WriteExp(int addr, byte val)
 		{

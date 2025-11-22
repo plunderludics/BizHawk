@@ -26,9 +26,10 @@ struct Program : Emulator::Platform
 	auto notify(string text) -> void override;
 	auto getBackdropColor() -> uint16 override;
 	auto cpuTrace(vector<string>) -> void override;
-	auto readHook(uint address) -> void override;
-	auto writeHook(uint address, uint8 value) -> void override;
+	auto readHook(uint address, uint8& value) -> void override;
+	auto writeHook(uint address, uint8& value) -> void override;
 	auto execHook(uint address) -> void override;
+	auto time() -> int64 override;
 
 	auto load() -> void;
 	auto loadSuperFamicom() -> bool;
@@ -333,6 +334,8 @@ auto Program::load() -> void {
 }
 
 auto Program::load(uint id, string name, string type, vector<string> options) -> Emulator::Platform::Load {
+	// This needs to occur here rather than snes_init, as callbacks aren't set yet then
+	emulator->synchronize(time());
 
 	if (id == 1)
 	{
@@ -479,12 +482,12 @@ auto Program::cpuTrace(vector<string> parts) -> void
 	snesCallbacks.snes_trace(parts[0], parts[1]);
 }
 
-auto Program::readHook(uint address) -> void
+auto Program::readHook(uint address, uint8& value) -> void
 {
-	snesCallbacks.snes_read_hook(address);
+	snesCallbacks.snes_read_hook(address, value);
 }
 
-auto Program::writeHook(uint address, uint8 value) -> void
+auto Program::writeHook(uint address, uint8& value) -> void
 {
 	snesCallbacks.snes_write_hook(address, value);
 }
@@ -492,6 +495,11 @@ auto Program::writeHook(uint address, uint8 value) -> void
 auto Program::execHook(uint address) -> void
 {
 	snesCallbacks.snes_exec_hook(address);
+}
+
+auto Program::time() -> int64
+{
+	return snesCallbacks.snes_time();
 }
 
 auto Program::getBackdropColor() -> uint16

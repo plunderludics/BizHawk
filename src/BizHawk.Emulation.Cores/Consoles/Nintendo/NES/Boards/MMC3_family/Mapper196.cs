@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
@@ -79,6 +78,5 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				return base.ReadPrg(addr);
 			}
 		}
-
 	}
 }

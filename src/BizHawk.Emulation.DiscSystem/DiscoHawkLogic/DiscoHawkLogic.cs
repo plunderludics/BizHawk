@@ -1,14 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BizHawk.Client.DiscoHawk;
 using BizHawk.Common.PathExtensions;
 
 namespace BizHawk.Emulation.DiscSystem
 {
+#pragma warning disable RCS1226 // bad formatting
 	/// <remarks>
 	/// cue format preferences notes
 	///
@@ -18,6 +17,7 @@ namespace BizHawk.Emulation.DiscSystem
 	/// it seems not to be able to handle binpertrack, or maybe i am doing something wrong (still haven't ruled it out)
 	/// </remarks>
 	public static class DiscoHawkLogic
+#pragma warning restore RCS1226
 	{
 		private static bool CompareFile(string infile, DiscInterface loadDiscInterface, DiscInterface cmpif, bool verbose, CancellationTokenSource cancelToken, StringWriter sw)
 		{
@@ -246,19 +246,45 @@ namespace BizHawk.Emulation.DiscSystem
 			return ret;
 		}
 
-		public static bool HawkAndWriteFile(string inputPath, Action<string> errorCallback, DiscInterface discInterface = DiscInterface.BizHawk)
+		/// <summary>
+		/// Formats supported with HawkAndWriteFile
+		/// </summary>
+		public enum HawkedFormats
+		{
+			CCD,
+			CHD,
+		}
+
+		public static bool HawkAndWriteFile(string inputPath, Action<string> errorCallback, DiscInterface discInterface = DiscInterface.BizHawk, HawkedFormats hawkedFormat = HawkedFormats.CCD)
 		{
 			DiscMountJob job = new(inputPath, discInterface);
 			job.Run();
-			var disc = job.OUT_Disc;
 			if (job.OUT_ErrorLevel)
 			{
 				errorCallback(job.OUT_Log);
 				return false;
 			}
+			using var disc = job.OUT_Disc;
 			var (dir, baseName, _) = inputPath.SplitPathToDirFileAndExt();
-			var outfile = Path.Combine(dir!, $"{baseName}_hawked.ccd");
-			CCD_Format.Dump(disc, outfile);
+			var ext = hawkedFormat switch
+			{
+				HawkedFormats.CCD => ".ccd",
+				HawkedFormats.CHD => ".chd",
+				_ => throw new InvalidOperationException(),
+			};
+			var outfile = Path.Combine(dir!, $"{baseName}_hawked{ext}");
+			switch (hawkedFormat)
+			{
+				case HawkedFormats.CCD:
+					CCD_Format.Dump(disc, outfile);
+					break;
+				case HawkedFormats.CHD:
+					CHD_Format.Dump(disc, outfile);
+					break;
+				default:
+					throw new InvalidOperationException();
+			}
+
 			return true;
 		}
 
@@ -268,6 +294,7 @@ namespace BizHawk.Emulation.DiscSystem
 			string dirArg = null;
 			string infile = null;
 			var loadDiscInterface = DiscInterface.BizHawk;
+			var outputFormat = HawkedFormats.CCD;
 			var compareDiscInterfaces = new List<DiscInterface>();
 			bool hawk = false;
 			bool music = false;
@@ -296,6 +323,10 @@ namespace BizHawk.Emulation.DiscSystem
 				{
 					overwrite = true;
 				}
+				else if (au is "OUTPUT")
+				{
+					outputFormat = (HawkedFormats)Enum.Parse(typeof(HawkedFormats), args[idx++], true);
+				}
 				else infile = a;
 			}
 
@@ -305,7 +336,8 @@ namespace BizHawk.Emulation.DiscSystem
 				HawkAndWriteFile(
 					inputPath: infile,
 					errorCallback: err => Console.WriteLine($"failed to convert {infile}:\n{err}"),
-					discInterface: loadDiscInterface);
+					discInterface: loadDiscInterface,
+					hawkedFormat: outputFormat);
 			}
 
 			if (music)

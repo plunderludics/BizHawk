@@ -1,10 +1,11 @@
-﻿using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
 using System.Threading;
 using BizHawk.Common;
+using BizHawk.Common.CollectionExtensions;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
 {
@@ -17,7 +18,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 
 		private readonly bool validate = true;
 
-		private readonly Bag<string, CartInfo> _sha1Table = new Bag<string, CartInfo>();
+		private readonly Dictionary<string, List<CartInfo>> _sha1Table = new();
 
 		private static BootGodDb instance;
 
@@ -40,7 +41,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 		private int ParseSize(string str)
 		{
 			int temp = 0;
-			if(validate) if (!str.EndsWith("k")) throw new Exception();
+			if(validate) if (!str.EndsWithOrdinal("k")) throw new Exception();
 			int len = str.Length - 1;
 			for (int i = 0; i < len; i++)
 			{
@@ -56,6 +57,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			// we aren't tracking the individual hashes yet.
 
 			using HawkFile nesCartFile = new(Path.Combine(basePath, "NesCarts.xml"));
+			if (!nesCartFile.Exists) return;
 
 			var stream = nesCartFile.GetStream();
 
@@ -115,7 +117,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 										currCart.WramBattery = true;
 									break;
 							}
-						} else 
+						} else
 						if (xmlReader.NodeType == XmlNodeType.EndElement && xmlReader.Name == "board")
 						{
 							state = 4;
@@ -124,7 +126,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 					case 4:
 						if (xmlReader.NodeType == XmlNodeType.EndElement && xmlReader.Name == "cartridge")
 						{
-							_sha1Table[currCart.Sha1].Add(currCart);
+							_sha1Table.GetValueOrPutNew(currCart.Sha1).Add(currCart);
 							currCart = null;
 							state = 5;
 						}
@@ -135,7 +137,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 						{
 							currCart = new CartInfo();
 							currCart.System = xmlReader.GetAttribute("system");
-							currCart.Sha1 = $"SHA1:{xmlReader.GetAttribute("sha1")}";
+							currCart.Sha1 = $"{SHA1Checksum.PREFIX}:{xmlReader.GetAttribute("sha1")}";
 							currCart.Name = currName;
 							state = 2;
 						}
@@ -149,11 +151,16 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			} //end xmlreader loop
 		}
 
-		public static List<CartInfo> Identify(string sha1)
+		public static IReadOnlyList<CartInfo> Identify(string sha1)
 		{
+#if BIZHAWKBUILD_GAMEDB_ALWAYS_MISS
+			_ = sha1;
+			return Array.Empty<CartInfo>();
+#else
 			if (acquire == null) throw new InvalidOperationException("Bootgod DB not initialized. It's a client responsibility because only a client knows where the database is located.");
 			acquire.WaitOne();
-			return instance._sha1Table[sha1];
+			return instance._sha1Table.TryGetValue(sha1, out var l) ? l : Array.Empty<CartInfo>();
+#endif
 		}
 	}
 }

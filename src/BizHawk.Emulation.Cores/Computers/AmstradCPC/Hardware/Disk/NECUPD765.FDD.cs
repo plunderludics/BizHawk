@@ -1,6 +1,5 @@
 ﻿using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
-using System;
 
 namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 {
@@ -84,14 +83,15 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 			// or the index hole being passed twice
 			while (iHole <= 2)
 			{
+				var next = trk.Sectors[index];
 				// does the requested sector match the current sector
-				if (trk.Sectors[index].SectorIDInfo.C == ActiveCommandParams.Cylinder &&
-					trk.Sectors[index].SectorIDInfo.H == ActiveCommandParams.Head &&
-					trk.Sectors[index].SectorIDInfo.R == ActiveCommandParams.Sector &&
-					trk.Sectors[index].SectorIDInfo.N == ActiveCommandParams.SectorSize)
+				if (next.SectorIDInfo.C == ActiveCommandParams.Cylinder
+					&& next.SectorIDInfo.H == ActiveCommandParams.Head
+					&& next.SectorIDInfo.R == ActiveCommandParams.Sector
+					&& next.SectorIDInfo.N == ActiveCommandParams.SectorSize)
 				{
 					// sector has been found
-					sector = trk.Sectors[index];
+					sector = next;
 
 					UnSetBit(SR2_BC, ref Status2);
 					UnSetBit(SR2_WC, ref Status2);
@@ -99,12 +99,12 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 				}
 
 				// check for bad cylinder
-				if (trk.Sectors[index].SectorIDInfo.C == 255)
+				if (next.SectorIDInfo.C is 255)
 				{
 					SetBit(SR2_BC, ref Status2);
 				}
 				// check for no cylinder
-				else if (trk.Sectors[index].SectorIDInfo.C != ActiveCommandParams.Cylinder)
+				else if (next.SectorIDInfo.C != ActiveCommandParams.Cylinder)
 				{
 					SetBit(SR2_WC, ref Status2);
 				}
@@ -157,7 +157,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 
 		/// <summary>
 		/// Signs whether the current active drive has a disk inserted
-		/// </summary>        
+		/// </summary>
 		public bool FDD_IsDiskLoaded => DriveStates[DiskDriveIndex].FDD_IsDiskLoaded;
 
 		/// <summary>
@@ -404,7 +404,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
                 else
                     return null;
             }
-      
+
 
             /// <summary>
             /// Populates a result buffer
@@ -500,8 +500,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
             /// </summary>
             public void DoSeek()
             {
-                if (CurrentState != DriveMainState.Recalibrate &&
-                    CurrentState != DriveMainState.Seek)
+                if (CurrentState is not (DriveMainState.Recalibrate or DriveMainState.Seek))
                 {
                     // no seek/recalibrate has been asked for
                     return;
@@ -547,8 +546,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
                             if (CurrentTrack == SeekingTrack)
                             {
                                 // we are already at the required track
-                                if (CurrentState == DriveMainState.Recalibrate &&
-                                    !FLAG_TRACK0)
+                                if (CurrentState is DriveMainState.Recalibrate && !FLAG_TRACK0)
                                 {
                                     // recalibration fail
                                     SeekIntState = SeekIntStatus.Abnormal;
@@ -566,8 +564,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
                                     break;
                                 }
 
-                                if (CurrentState == DriveMainState.Recalibrate &&
-                                    FLAG_TRACK0)
+                                if (CurrentState is DriveMainState.Recalibrate && FLAG_TRACK0)
                                 {
                                     // recalibration success
                                     SeekIntState = SeekIntStatus.Normal;
@@ -650,7 +647,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 
                         // seek emulation processed immediately
                         case SeekSubState.MoveImmediate:
-                            
+
                             if (CurrentTrack < SeekingTrack)
                             {
                                 // we are seeking forward
@@ -704,10 +701,10 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
                     {
                         SetBit(SR0_EC, ref IntStatus);
                     }
-                }                    
+                }
 
                 // set seek end
-                SetBit(SR0_SE, ref IntStatus);                
+                SetBit(SR0_SE, ref IntStatus);
                 /*
                 // head address
                 if (CurrentSide > 0)
@@ -790,7 +787,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 
 			/// <summary>
 			/// Signs whether the current active drive has a disk inserted
-			/// </summary>        
+			/// </summary>
 			public bool FDD_IsDiskLoaded
 			{
 				get

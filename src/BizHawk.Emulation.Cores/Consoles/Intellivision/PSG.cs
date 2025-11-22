@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Common.NumberExtensions;
 using BizHawk.Emulation.Common;
@@ -9,7 +7,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 	public sealed class PSG : ISoundProvider
 	{
 		private readonly BlipBuffer _blip = new BlipBuffer(4096);
-		private short[] _sampleBuffer = new short[0];
+		private short[] _sampleBuffer = [ ];
 
 
 		public PSG()
@@ -146,7 +144,7 @@ namespace BizHawk.Emulation.Cores.Intellivision
 		{
 			if (addr >= 0x01F0 && addr <= 0x01FF)
 			{
-				return (ushort)(Register[addr - 0x01F0]);
+				return Register[addr - 0x01F0];
 			}
 
 			return null;
@@ -371,7 +369,6 @@ namespace BizHawk.Emulation.Cores.Intellivision
 					if (env_vol_B == 0)
 					{
 						v += (short)(sound_out_B ? VolumeTable[vol_B] : 0);
-
 					}
 					else
 					{

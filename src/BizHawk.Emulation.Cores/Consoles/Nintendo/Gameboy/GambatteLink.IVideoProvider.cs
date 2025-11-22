@@ -1,6 +1,4 @@
-﻿using System;
-
-using BizHawk.Emulation.Common;
+﻿using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 {
@@ -22,7 +20,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 		public int[] GetVideoBuffer() => VideoBuffer;
 
 		private readonly int[] VideoBuffer;
-		
+
 		private int[] CreateVideoBuffer()
 		{
 			var b = new int[BufferWidth * BufferHeight];
@@ -32,6 +30,5 @@ namespace BizHawk.Emulation.Cores.Nintendo.Gameboy
 			}
 			return b;
 		}
-
 	}
 }

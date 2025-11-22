@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,15 +8,15 @@ using BizHawk.Common.IOExtensions;
 using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Arcades.MAME;
+using BizHawk.Emulation.DiscSystem;
 
 namespace BizHawk.Client.Common
 {
 	public class XmlGame
 	{
 		public XmlDocument Xml { get; set; }
-		public GameInfo GI { get; } = new GameInfo();
-		public IList<KeyValuePair<string, byte[]>> Assets { get; } = new List<KeyValuePair<string, byte[]>>();
-		public IList<string> AssetFullPaths { get; } = new List<string>(); // TODO: Hack work around, to avoid having to refactor Assets into a object array, should be refactored!
+		public GameInfo GI { get; } = new();
+		public IList<(string Path, string Filename, byte[] FileData)> Assets { get; } = [ ];
 
 		/// <exception cref="InvalidOperationException">internal error</exception>
 		public static XmlGame Create(HawkFile f)
@@ -36,13 +35,13 @@ namespace BizHawk.Client.Common
 				{
 					GI =
 					{
-						System = y.Attributes["System"].Value,
+						System = y.Attributes!["System"].Value,
 						Name = y.Attributes["Name"].Value,
-						Status = RomStatus.Unknown
+						Status = RomStatus.Unknown,
 					},
-					Xml = x
+					Xml = x,
 				};
-				string fullPath = "";
+				var fullPath = "";
 
 				var n = y.SelectSingleNode("./LoadAssets");
 				if (n != null)
@@ -52,7 +51,7 @@ namespace BizHawk.Client.Common
 
 					foreach (XmlNode a in n.ChildNodes)
 					{
-						string filename = a.Attributes["FileName"].Value;
+						var filename = a.Attributes!["FileName"].Value;
 						byte[] data;
 						if (filename[0] == '|')
 						{
@@ -80,16 +79,26 @@ namespace BizHawk.Client.Common
 								using var hf = new HawkFile(fullPath, allowArchives: !MAMEMachineDB.IsMAMEMachine(fullPath));
 								if (hf.IsArchive)
 								{
-									var archiveItem = hf.ArchiveItems.First(ai => ai.Name == filename.Split('|').Skip(1).First());
+									var archiveItem = hf.ArchiveItems.First(ai => ai.Name == filename.SubstringAfter('|'));
 									hf.Unbind();
 									hf.BindArchiveMember(archiveItem);
 									data = hf.GetStream().ReadAllBytes();
 
-									filename = filename.Split('|').Skip(1).First();
+									filename = filename.SubstringAfter('|');
+									fullPath += $"|{filename}";
 								}
 								else
 								{
-									data = File.ReadAllBytes(fullPath.SubstringBefore('|'));
+									var ext = Path.GetExtension(fullPath).ToUpperInvariant();
+									var isArcadeChd = ret.GI.System == VSystemID.Raw.Arcade && ext == ".CHD";
+									if (RomGame.Is3DSRom(ext) || (Disc.IsValidExtension(ext) && !isArcadeChd))
+									{
+										data = [ ];
+									}
+									else
+									{
+										data = File.ReadAllBytes(fullPath);
+									}
 								}
 							}
 							catch (Exception e)
@@ -98,8 +107,7 @@ namespace BizHawk.Client.Common
 							}
 						}
 
-						ret.Assets.Add(new KeyValuePair<string, byte[]>(filename, data));
-						ret.AssetFullPaths.Add(fullPath);
+						ret.Assets.Add((fullPath, filename, data));
 						var sha1 = SHA1Checksum.Compute(data);
 						hashStream.Write(sha1, 0, sha1.Length);
 					}

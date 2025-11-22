@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Calculators.Emu83
@@ -43,6 +41,7 @@ namespace BizHawk.Emulation.Cores.Calculators.Emu83
 
 		public void Dispose()
 		{
+			_memoryCallbacks.ActiveChanged -= SetMemoryCallbacks;
 			if (Context != IntPtr.Zero)
 			{
 				LibEmu83.TI83_DestroyContext(Context);

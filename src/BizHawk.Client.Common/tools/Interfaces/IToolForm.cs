@@ -17,7 +17,10 @@
 		/// Called after a frame emulates
 		/// </summary>
 		PostFrame,
-		FastPostFrame
+		FastPostFrame,
+
+		/// [Added for UnityHawk] Called in loop while emulator is paused
+		Paused
 	}
 
 	public interface IToolForm

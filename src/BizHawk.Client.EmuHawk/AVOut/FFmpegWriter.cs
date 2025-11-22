@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -78,7 +77,7 @@ namespace BizHawk.Client.EmuHawk
 			_segment = 0;
 			OpenFileSegment();
 		}
-		
+
 		/// <summary>
 		/// starts an ffmpeg process and sets up associated sockets
 		/// </summary>
@@ -87,7 +86,7 @@ namespace BizHawk.Client.EmuHawk
 			try
 			{
 				_ffmpeg = OSTailoredCode.ConstructSubshell(
-					OSTailoredCode.IsUnixHost ? "ffmpeg" : Path.Combine(PathUtils.DllDirectoryPath, "ffmpeg.exe"),
+					FFmpegService.FFmpegPath,
 					$"-y -f nut -i - {_token.Commandline} \"{_baseName}{(_segment == 0 ? string.Empty : $"_{_segment}")}{_ext}\"",
 					checkStdout: false,
 					checkStderr: true // ffmpeg sends informative display to stderr, and nothing to stdout
@@ -196,7 +195,7 @@ namespace BizHawk.Client.EmuHawk
 			var video = source.GetVideoBuffer();
 			try
 			{
-				_muxer.WriteVideoFrame(video);
+				_muxer.WriteVideoFrame(video.AsSpan(0, _width * _height));
 			}
 			catch
 			{

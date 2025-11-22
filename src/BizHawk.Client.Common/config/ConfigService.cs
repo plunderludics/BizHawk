@@ -1,4 +1,3 @@
-﻿using System;
 using System.IO;
 using System.Reflection;
 
@@ -14,7 +13,7 @@ namespace BizHawk.Client.Common
 {
 	public static class ConfigService
 	{
-		internal static readonly JsonSerializer Serializer;
+		internal static JsonSerializer Serializer { get; private set; }
 
 		static ConfigService()
 		{
@@ -26,10 +25,10 @@ namespace BizHawk.Client.Common
 
 				// because of the peculiar setup of Binding.cs and PathEntry.cs
 				ObjectCreationHandling = ObjectCreationHandling.Replace,
-				
+
 				ContractResolver = new DefaultContractResolver
 				{
-					DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic
+					DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic,
 				},
 			};
 		}
@@ -41,7 +40,7 @@ namespace BizHawk.Client.Common
 			const string MSGFMT_PRE_2_3_3 = "Your config file ({0}) is corrupted, or is from an older version of EmuHawk, predating 2.3.3 (this is {1}). It may fail to load.";
 			const string MSGFMT_PRE_2_5 = "Your config file ({0}) is corrupted, or is from an older version of EmuHawk, predating 2.5 (this is {1}). It may fail to load.";
 
-			if (!new FileInfo(filepath).Exists)
+			if (!File.Exists(filepath))
 			{
 				msg = null;
 				return true;
@@ -80,6 +79,11 @@ namespace BizHawk.Client.Common
 			}
 			msg = string.Format(fmt, Path.GetFileName(filepath), VersionInfo.MainVersion, cfgVersionStr);
 			return false;
+		}
+
+		public static void SetSerializer(JsonSerializer serializer)
+		{
+			Serializer = serializer;
 		}
 
 		/// <exception cref="InvalidOperationException">internal error</exception>

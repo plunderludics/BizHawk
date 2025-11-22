@@ -1,6 +1,4 @@
-﻿using System;
 using System.Runtime.InteropServices;
-using System.Text;
 
 using BizHawk.BizInvoke;
 
@@ -17,12 +15,13 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 		}
 
 		// constants
-		public const int ROMENTRYTYPE_SYSTEM_BIOS = 9;
-		public const int ROMENTRYTYPE_DEFAULT_BIOS = 10;
+		public const int ROMENTRYTYPE_SYSTEM_BIOS = 8;
+		public const int ROMENTRYTYPE_DEFAULT_BIOS = 9;
 		public const int ROMENTRY_TYPEMASK = 15;
 		public const int BIOS_INDEX = 24;
 		public const int BIOS_FIRST = 1;
 		public const string BIOS_LUA_CODE = "bios";
+		public const string VIEW_LUA_CODE = "manager.machine.video.snapshot_target.view_names[]";
 
 		// main launcher
 		[BizImport(cc, Compatibility = true)]
@@ -60,6 +59,13 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 
 		[BizImport(cc)]
 		public abstract void mame_nvram_load();
+
+		// info
+		[UnmanagedFunctionPointer(cc)]
+		public delegate void InfoCallbackDelegate(string info);
+
+		[BizImport(cc)]
+		public abstract void mame_info_get_warnings_string(InfoCallbackDelegate cb);
 
 		// log
 		[UnmanagedFunctionPointer(cc)]

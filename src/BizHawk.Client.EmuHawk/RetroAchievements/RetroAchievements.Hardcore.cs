@@ -1,10 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
 using BizHawk.Client.Common;
+using BizHawk.Emulation.Cores.Arcades.MAME;
 using BizHawk.Emulation.Cores.Atari.Atari2600;
 using BizHawk.Emulation.Cores.Computers.MSX;
+using BizHawk.Emulation.Cores.Consoles.Nintendo.NDS;
 using BizHawk.Emulation.Cores.Consoles.O2Hawk;
 using BizHawk.Emulation.Cores.Consoles.Sega.gpgx;
 using BizHawk.Emulation.Cores.Nintendo.BSNES;
@@ -41,21 +42,22 @@ namespace BizHawk.Client.EmuHawk
 			typeof(TAStudio),
 		};
 
+		/// <remarks>(select) cores A-Z by value of <see cref="Emulation.Common.CoreAttribute.CoreName"/></remarks>
 		private static readonly Dictionary<Type, string[]> CoreGraphicsLayers = new()
 		{
-			[typeof(MSX)] = new[] { "DispBG", "DispOBJ" },
 			[typeof(Atari2600)] = new[] { "ShowBG", "ShowPlayer1", "ShowPlayer2", "ShowMissle1", "ShowMissle2", "ShowBall", "ShowPlayfield" },
-			[typeof(O2Hawk)] = new[] { "Show_Chars", "Show_Quads", "Show_Sprites", "Show_G7400_Sprites", "Show_G7400_BG" },
-			[typeof(BsnesCore)] = new[] { "ShowBG1_0", "ShowBG2_0", "ShowBG3_0", "ShowBG4_0", "ShowBG1_1", "ShowBG2_1", "ShowBG3_1", "ShowBG4_1", "ShowOBJ_0", "ShowOBJ_1", "ShowOBJ_2", "ShowOBJ_3" },
-			[typeof(MGBAHawk)] = new[] { "DisplayBG0", "DisplayBG1", "DisplayBG2", "DisplayBG3", "DisplayOBJ" },
-			[typeof(NES)] = new[] { "DispBackground", "DispSprites" },
-			[typeof(Sameboy)] = new[] { "EnableBGWIN", "EnableOBJ" },
 			[typeof(LibsnesCore)] = new[] { "ShowBG1_0", "ShowBG2_0", "ShowBG3_0", "ShowBG4_0", "ShowBG1_1", "ShowBG2_1", "ShowBG3_1", "ShowBG4_1", "ShowOBJ_0", "ShowOBJ_1", "ShowOBJ_2", "ShowOBJ_3" },
-			[typeof(Snes9x)] = new[] { "ShowBg0", "ShowBg1", "ShowBg2", "ShowBg3", "ShowSprites0", "ShowSprites1", "ShowSprites2", "ShowSprites3", "ShowWindow", "ShowTransparency" },
-			[typeof(PCEngine)] = new[] { "ShowBG1", "ShowOBJ1", "ShowBG2", "ShowOBJ2", },
-			[typeof(GPGX)] = new[] { "DrawBGA", "DrawBGB", "DrawBGW", "DrawObj", },
-			[typeof(SMS)] = new[] { "DispBG", "DispOBJ," },
+			[typeof(BsnesCore)] = new[] { "ShowBG1_0", "ShowBG2_0", "ShowBG3_0", "ShowBG4_0", "ShowBG1_1", "ShowBG2_1", "ShowBG3_1", "ShowBG4_1", "ShowOBJ_0", "ShowOBJ_1", "ShowOBJ_2", "ShowOBJ_3" },
 			[typeof(WonderSwan)] = new[] { "EnableBG", "EnableFG", "EnableSprites", },
+			[typeof(GPGX)] = new[] { "DrawBGA", "DrawBGB", "DrawBGW", "DrawObj", },
+			[typeof(MGBAHawk)] = new[] { "DisplayBG0", "DisplayBG1", "DisplayBG2", "DisplayBG3", "DisplayOBJ" },
+			[typeof(MSX)] = new[] { "DispBG", "DispOBJ" },
+			[typeof(NES)] = new[] { "DispBackground", "DispSprites" },
+			[typeof(O2Hawk)] = new[] { "Show_Chars", "Show_Quads", "Show_Sprites", "Show_G7400_Sprites", "Show_G7400_BG" },
+			[typeof(PCEngine)] = new[] { "ShowBG1", "ShowOBJ1", "ShowBG2", "ShowOBJ2", },
+			[typeof(Sameboy)] = new[] { "EnableBGWIN", "EnableOBJ" },
+			[typeof(SMS)] = new[] { "DispBG", "DispOBJ" },
+			[typeof(Snes9x)] = new[] { "ShowBg0", "ShowBg1", "ShowBg2", "ShowBg3", "ShowSprites0", "ShowSprites1", "ShowSprites2", "ShowSprites3", "ShowWindow", "ShowTransparency" },
 		};
 
 		private readonly OverrideAdapter _hardcoreHotkeyOverrides = new();
@@ -73,6 +75,12 @@ namespace BizHawk.Client.EmuHawk
 			if (MovieSession.Movie.IsPlaying())
 			{
 				HandleHardcoreModeDisable("Playing a movie while in hardcore mode is not allowed.");
+				return;
+			}
+
+			if (CheatList.AnyActive)
+			{
+				HandleHardcoreModeDisable("Using cheat codes while in hardcore mode is not allowed.");
 				return;
 			}
 
@@ -109,10 +117,14 @@ namespace BizHawk.Client.EmuHawk
 			{
 				case SubNESHawk or SubBsnesCore or SubGBHawk:
 					// this is mostly due to wonkiness with subframes which can be used as pseudo slowdown
-					HandleHardcoreModeDisable($"Using subframes in hardcore mode is not allowed.");
+					HandleHardcoreModeDisable("Using subframes in hardcore mode is not allowed.");
+					break;
+				case MAME:
+					// this is a very complicated case that needs special handling the future
+					HandleHardcoreModeDisable("Using MAME in hardcore mode is not allowed.");
 					break;
 				case NymaCore nyma:
-					if (nyma.GetSettings().DisabledLayers.Any())
+					if (nyma.GetSettings().DisabledLayers.Count is not 0)
 					{
 						HandleHardcoreModeDisable($"Disabling {Emu.GetType().Name}'s graphics layers in hardcore mode is not allowed.");
 					}
@@ -120,7 +132,7 @@ namespace BizHawk.Client.EmuHawk
 				case GambatteLink gl:
 					if (gl.GetSyncSettings()._linkedSyncSettings.Any(ss => !ss.DisplayBG || !ss.DisplayOBJ || !ss.DisplayWindow))
 					{
-						HandleHardcoreModeDisable($"Disabling GambatteLink's graphics layers in hardcore mode is not allowed.");
+						HandleHardcoreModeDisable("Disabling GambatteLink's graphics layers in hardcore mode is not allowed.");
 					}
 					break;
 				case Gameboy gb:
@@ -128,11 +140,24 @@ namespace BizHawk.Client.EmuHawk
 					var ss = gb.GetSyncSettings();
 					if (!ss.DisplayBG || !ss.DisplayOBJ || !ss.DisplayWindow)
 					{
-						HandleHardcoreModeDisable($"Disabling Gambatte's graphics layers in hardcore mode is not allowed.");
+						HandleHardcoreModeDisable("Disabling Gambatte's graphics layers in hardcore mode is not allowed.");
 					}
 					else if (ss.FrameLength is Gameboy.GambatteSyncSettings.FrameLengthType.UserDefinedFrames)
 					{
-						HandleHardcoreModeDisable($"Using subframes in hardcore mode is not allowed.");
+						HandleHardcoreModeDisable("Using subframes in hardcore mode is not allowed.");
+					}
+					break;
+				}
+				case NDS { IsDSi: true } nds:
+				{
+					var ss = nds.GetSyncSettings();
+					if (!ss.ClearNAND)
+					{
+						HandleHardcoreModeDisable("Disabling DSi NAND clear in hardcore mode is not allowed.");
+					}
+					else if (!ss.SkipFirmware)
+					{
+						HandleHardcoreModeDisable("Disabling Skip Firmware in DSi mode in hardcore mode is not allowed.");
 					}
 					break;
 				}

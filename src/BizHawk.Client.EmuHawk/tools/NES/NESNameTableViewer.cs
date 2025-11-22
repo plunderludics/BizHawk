@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
@@ -13,10 +12,21 @@ namespace BizHawk.Client.EmuHawk
 	{
 		// TODO:
 		// Show Scroll Lines + UI Toggle
+
+		public static Icon ToolIcon
+			=> Properties.Resources.NesControllerIcon;
+
 		[RequiredService]
-		private INESPPUViewable _ppu { get; set; }
+		public INESPPUViewable _nesCore { get; set; }
+
+		private INESPPUViewable _ppu
+			=> _nesCore!;
+
 		[RequiredService]
-		private IEmulator _emu { get; set; }
+		public IEmulator _core { get; set; }
+
+		private IEmulator _emu
+			=> _core!;
 
 		[ConfigPersist]
 		private int RefreshRateConfig
@@ -32,7 +42,7 @@ namespace BizHawk.Client.EmuHawk
 		public NESNameTableViewer()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.NesControllerIcon;
+			Icon = ToolIcon;
 		}
 
 		private void NESNameTableViewer_Load(object sender, EventArgs e)
@@ -152,7 +162,7 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			if (now == false && _emu.Frame % RefreshRate.Value != 0)
+			if (!now && _emu.Frame % RefreshRate.Value != 0)
 			{
 				return;
 			}
@@ -217,9 +227,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private void NESNameTableViewer_FormClosed(object sender, FormClosedEventArgs e)
-		{
-			_ppu?.RemoveCallback1();
-		}
+			=> _ppu.RemoveCallback1();
 
 		private void ScanlineTextBox_TextChanged(object sender, EventArgs e)
 		{
@@ -274,7 +282,7 @@ namespace BizHawk.Client.EmuHawk
 					NameTableViewer.WhichNametable.NT_2400 => 1,
 					NameTableViewer.WhichNametable.NT_2800 => 2,
 					NameTableViewer.WhichNametable.NT_2C00 => 3,
-					_ => 0
+					_ => 0,
 				};
 
 				tileX = e.X / 16;

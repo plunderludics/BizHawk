@@ -1,6 +1,6 @@
 //Peripheral Interface
 
-struct PI : Memory::IO<PI> {
+struct PI : Memory::RCP<PI> {
   Node::Object node;
 
   struct Debugger {
@@ -22,16 +22,17 @@ struct PI : Memory::IO<PI> {
   auto dmaRead() -> void;
   auto dmaWrite() -> void;
   auto dmaFinished() -> void;
+  auto dmaDuration(bool read) -> u32;
 
   //io.cpp
   auto ioRead(u32 address) -> u32;
   auto ioWrite(u32 address, u32 data) -> void;
 
   //bus.hpp
-  auto readWord(u32 address) -> u32;
-  auto writeWord(u32 address, u32 data) -> void;
+  auto readWord(u32 address, Thread& thread) -> u32;
+  auto writeWord(u32 address, u32 data, Thread& thread) -> void;
   auto writeFinished() -> void;
-  auto writeForceFinish() -> void;
+  auto writeForceFinish() -> u32;
   template <u32 Size>
   auto busRead(u32 address) -> u32;
   template <u32 Size>
@@ -50,13 +51,14 @@ struct PI : Memory::IO<PI> {
     n32 readLength;
     n32 writeLength;
     n32 busLatch;
+    u64 originPc;
   } io;
 
   struct BSD {
     n8 latency;
     n8 pulseWidth;
-    n8 pageSize;
-    n8 releaseDuration;
+    n4 pageSize;
+    n2 releaseDuration;
   } bsd1, bsd2;
 };
 

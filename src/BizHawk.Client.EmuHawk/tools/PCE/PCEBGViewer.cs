@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
@@ -12,6 +11,9 @@ namespace BizHawk.Client.EmuHawk
 	[SpecializedTool("BG Viewer")]
 	public partial class PceBgViewer : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Properties.Resources.PceIcon;
+
 		[RequiredService]
 		public IPceGpuView Viewer { get; private set; }
 		[RequiredService]
@@ -32,7 +34,7 @@ namespace BizHawk.Client.EmuHawk
 		public PceBgViewer()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.PceIcon;
+			Icon = ToolIcon;
 			Activated += (o, e) => Generate();
 		}
 
@@ -50,9 +52,9 @@ namespace BizHawk.Client.EmuHawk
 				var buf = canvas.Bat.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, canvas.Bat.PixelFormat);
 				var pitch = buf.Stride / 4;
 				var begin = (int*)buf.Scan0.ToPointer();
-				var vram = (ushort*)view.Vram;
-				var patternBuffer = (byte*)view.BackgroundCache;
-				var palette = (int*)view.PaletteCache;
+				var vram = view.Vram;
+				var patternBuffer = view.BackgroundCache;
+				var palette = view.PaletteCache;
 
 				int* p = begin;
 				for (int y = 0; y < height; ++y)
@@ -115,7 +117,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			Viewer.GetGpuData(_vdcType, view =>
 			{
-				var vram = (ushort*)view.Vram;
+				var vram = view.Vram;
 				int xTile = e.X / 8;
 				int yTile = e.Y / 8;
 				int tileNo = vram[(ushort)((yTile * view.BatWidth) + xTile)] & 0x07FF;

@@ -57,7 +57,6 @@ namespace BizHawk.Client.EmuHawk
 			this.toolStripSeparator21 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.AutoloadLastSlotMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SaveSlotSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.SelectSlot0MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SelectSlot1MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SelectSlot2MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SelectSlot3MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
@@ -67,6 +66,7 @@ namespace BizHawk.Client.EmuHawk
 			this.SelectSlot7MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SelectSlot8MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SelectSlot9MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.SelectSlot0MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.PreviousSlotMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.NextSlotMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.toolStripSeparator5 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
@@ -84,10 +84,11 @@ namespace BizHawk.Client.EmuHawk
 			this.PlayMovieMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.StopMovieMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.PlayFromBeginningMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.ImportMoviesMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SaveMovieMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SaveMovieAsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.StopMovieWithoutSavingMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.toolStripSeparator25 = new System.Windows.Forms.ToolStripSeparator();
+			this.ImportMoviesMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.toolStripSeparator14 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.AutomaticallyBackupMoviesMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.FullMovieLoadstatesMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
@@ -96,10 +97,12 @@ namespace BizHawk.Client.EmuHawk
 			this.MovieEndRecordMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.MovieEndStopMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.MovieEndPauseMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.toolStripSeparator32 = new System.Windows.Forms.ToolStripSeparator();
+			this.MovieEndPlaySoundMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.AVSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.RecordAVMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.ConfigAndRecordAVMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.StopAVIMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.StopAVMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.toolStripSeparator19 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.CaptureOSDMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.CaptureLuaMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -123,12 +126,8 @@ namespace BizHawk.Client.EmuHawk
 			this.LoadedCoreNameMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.ViewSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.WindowSizeSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.x1MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.x2MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.x3MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.x4MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.x5MenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.mzMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.toolStripSeparator26 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
+			this.DisableResizeWithFramebufferMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SwitchToFullscreenMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.toolStripSeparator2 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.DisplayFPSMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
@@ -140,6 +139,7 @@ namespace BizHawk.Client.EmuHawk
 			this.toolStripMenuItem4 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.DisplayStatusBarMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.DisplayMessagesMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.toolStripSeparator8 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.DisplayLogWindowMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.ConfigSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.ControllersMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
@@ -147,7 +147,7 @@ namespace BizHawk.Client.EmuHawk
 			this.DisplayConfigMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.SoundMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.PathsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.FirmwaresMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.FirmwareMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.MessagesMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.AutofireMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.RewindOptionsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
@@ -211,9 +211,9 @@ namespace BizHawk.Client.EmuHawk
 			this.GameSharkConverterMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.toolStripSeparator29 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.MultiDiskBundlerFileMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.BatchRunnerMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.ExternalToolMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.dummyExternalTool = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.BatchRunnerMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.RetroAchievementsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.StartRetroAchievementsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.NESSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
@@ -265,13 +265,14 @@ namespace BizHawk.Client.EmuHawk
 			this.ColecoUseSGMMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.N64SubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.N64PluginSettingsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.Ares64SubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
-			this.Ares64SettingsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.N64ControllerSettingsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.toolStripSeparator23 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.N64CircularAnalogRangeMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.MupenStyleLagMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.N64ExpansionSlotMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.Ares64SubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.Ares64SettingsMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
+			this.Ares64CircularAnalogRangeMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.GBLSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.GBLsettingsToolStripMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.AppleSubMenu = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
@@ -317,7 +318,7 @@ namespace BizHawk.Client.EmuHawk
 			this.PlayRecordStatusButton = new System.Windows.Forms.ToolStripDropDownButton();
 			this.PauseStatusButton = new System.Windows.Forms.ToolStripDropDownButton();
 			this.RebootStatusBarIcon = new BizHawk.WinForms.Controls.StatusLabelEx();
-			this.AVIStatusLabel = new BizHawk.WinForms.Controls.StatusLabelEx();
+			this.AVStatusLabel = new BizHawk.WinForms.Controls.StatusLabelEx();
 			this.LedLightStatusLabel = new BizHawk.WinForms.Controls.StatusLabelEx();
 			this.SaveSlotsStatusLabel = new BizHawk.WinForms.Controls.StatusLabelEx();
 			this.Slot1StatusButton = new BizHawk.WinForms.Controls.StatusLabelEx();
@@ -377,7 +378,6 @@ namespace BizHawk.Client.EmuHawk
 			this.ShowMenuContextMenuSeparator = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.ShowMenuContextMenuItem = new BizHawk.WinForms.Controls.ToolStripMenuItemEx();
 			this.timerMouseIdle = new System.Windows.Forms.Timer(this.components);
-			this.toolStripSeparator8 = new BizHawk.WinForms.Controls.ToolStripSeparatorEx();
 			this.MainformMenu.SuspendLayout();
 			this.MainStatusBar.SuspendLayout();
 			this.MainFormContextMenu.SuspendLayout();
@@ -386,28 +386,28 @@ namespace BizHawk.Client.EmuHawk
 			// MainformMenu
 			// 
 			this.MainformMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.FileSubMenu,
-			this.EmulationSubMenu,
-			this.ViewSubMenu,
-			this.ConfigSubMenu,
-			this.ToolsSubMenu,
-			this.NESSubMenu,
-			this.TI83SubMenu,
-			this.A7800SubMenu,
-			this.GBSubMenu,
-			this.PSXSubMenu,
-			this.SNESSubMenu,
-			this.ColecoSubMenu,
-			this.N64SubMenu,
-			this.Ares64SubMenu,
-			this.GBLSubMenu,
-			this.AppleSubMenu,
-			this.C64SubMenu,
-			this.IntvSubMenu,
-			this.zXSpectrumToolStripMenuItem,
-			this.GenericCoreSubMenu,
-			this.amstradCPCToolStripMenuItem,
-			this.HelpSubMenu});
+            this.FileSubMenu,
+            this.EmulationSubMenu,
+            this.ViewSubMenu,
+            this.ConfigSubMenu,
+            this.ToolsSubMenu,
+            this.NESSubMenu,
+            this.TI83SubMenu,
+            this.A7800SubMenu,
+            this.GBSubMenu,
+            this.PSXSubMenu,
+            this.SNESSubMenu,
+            this.ColecoSubMenu,
+            this.N64SubMenu,
+            this.Ares64SubMenu,
+            this.GBLSubMenu,
+            this.AppleSubMenu,
+            this.C64SubMenu,
+            this.IntvSubMenu,
+            this.zXSpectrumToolStripMenuItem,
+            this.GenericCoreSubMenu,
+            this.amstradCPCToolStripMenuItem,
+            this.HelpSubMenu});
 			this.MainformMenu.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.Flow;
 			this.MainformMenu.TabIndex = 0;
 			this.MainformMenu.MenuActivate += new System.EventHandler(this.MainformMenu_MenuActivate);
@@ -416,21 +416,21 @@ namespace BizHawk.Client.EmuHawk
 			// FileSubMenu
 			// 
 			this.FileSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.OpenRomMenuItem,
-			this.RecentRomSubMenu,
-			this.OpenAdvancedMenuItem,
-			this.CloseRomMenuItem,
-			this.toolStripMenuItem1,
-			this.SaveStateSubMenu,
-			this.LoadStateSubMenu,
-			this.SaveSlotSubMenu,
-			this.SaveRAMSubMenu,
-			this.toolStripMenuItem2,
-			this.MovieSubMenu,
-			this.AVSubMenu,
-			this.ScreenshotSubMenu,
-			this.toolStripSeparator4,
-			this.ExitMenuItem});
+            this.OpenRomMenuItem,
+            this.RecentRomSubMenu,
+            this.OpenAdvancedMenuItem,
+            this.CloseRomMenuItem,
+            this.toolStripMenuItem1,
+            this.SaveStateSubMenu,
+            this.LoadStateSubMenu,
+            this.SaveSlotSubMenu,
+            this.SaveRAMSubMenu,
+            this.toolStripMenuItem2,
+            this.MovieSubMenu,
+            this.AVSubMenu,
+            this.ScreenshotSubMenu,
+            this.toolStripSeparator4,
+            this.ExitMenuItem});
 			this.FileSubMenu.Text = "&File";
 			this.FileSubMenu.DropDownOpened += new System.EventHandler(this.FileSubMenu_DropDownOpened);
 			// 
@@ -442,7 +442,7 @@ namespace BizHawk.Client.EmuHawk
 			// RecentRomSubMenu
 			// 
 			this.RecentRomSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.toolStripSeparator3});
+            this.toolStripSeparator3});
 			this.RecentRomSubMenu.Text = "&Recent ROM";
 			this.RecentRomSubMenu.DropDownOpened += new System.EventHandler(this.RecentRomMenuItem_DropDownOpened);
 			// 
@@ -459,20 +459,20 @@ namespace BizHawk.Client.EmuHawk
 			// SaveStateSubMenu
 			// 
 			this.SaveStateSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.SaveState1MenuItem,
-			this.SaveState2MenuItem,
-			this.SaveState3MenuItem,
-			this.SaveState4MenuItem,
-			this.SaveState5MenuItem,
-			this.SaveState6MenuItem,
-			this.SaveState7MenuItem,
-			this.SaveState8MenuItem,
-			this.SaveState9MenuItem,
-			this.SaveState0MenuItem,
-			this.toolStripSeparator6,
-			this.SaveNamedStateMenuItem,
-			this.toolStripSeparator24,
-			this.AutosaveLastSlotMenuItem});
+            this.SaveState1MenuItem,
+            this.SaveState2MenuItem,
+            this.SaveState3MenuItem,
+            this.SaveState4MenuItem,
+            this.SaveState5MenuItem,
+            this.SaveState6MenuItem,
+            this.SaveState7MenuItem,
+            this.SaveState8MenuItem,
+            this.SaveState9MenuItem,
+            this.SaveState0MenuItem,
+            this.toolStripSeparator6,
+            this.SaveNamedStateMenuItem,
+            this.toolStripSeparator24,
+            this.AutosaveLastSlotMenuItem});
 			this.SaveStateSubMenu.Text = "&Save State";
 			this.SaveStateSubMenu.DropDownOpened += new System.EventHandler(this.SaveStateSubMenu_DropDownOpened);
 			// 
@@ -533,27 +533,26 @@ namespace BizHawk.Client.EmuHawk
 			// 
 			// AutosaveLastSlotMenuItem
 			// 
-			this.AutosaveLastSlotMenuItem.Name = "AutosaveLastSlotMenuItem";
 			this.AutosaveLastSlotMenuItem.Text = "Autosave Last Slot";
 			this.AutosaveLastSlotMenuItem.Click += new System.EventHandler(this.AutosaveLastSlotMenuItem_Click);
 			// 
 			// LoadStateSubMenu
 			// 
 			this.LoadStateSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.LoadState1MenuItem,
-			this.LoadState2MenuItem,
-			this.LoadState3MenuItem,
-			this.LoadState4MenuItem,
-			this.LoadState5MenuItem,
-			this.LoadState6MenuItem,
-			this.LoadState7MenuItem,
-			this.LoadState8MenuItem,
-			this.LoadState9MenuItem,
-			this.LoadState0MenuItem,
-			this.toolStripSeparator7,
-			this.LoadNamedStateMenuItem,
-			this.toolStripSeparator21,
-			this.AutoloadLastSlotMenuItem});
+            this.LoadState1MenuItem,
+            this.LoadState2MenuItem,
+            this.LoadState3MenuItem,
+            this.LoadState4MenuItem,
+            this.LoadState5MenuItem,
+            this.LoadState6MenuItem,
+            this.LoadState7MenuItem,
+            this.LoadState8MenuItem,
+            this.LoadState9MenuItem,
+            this.LoadState0MenuItem,
+            this.toolStripSeparator7,
+            this.LoadNamedStateMenuItem,
+            this.toolStripSeparator21,
+            this.AutoloadLastSlotMenuItem});
 			this.LoadStateSubMenu.Text = "&Load State";
 			this.LoadStateSubMenu.DropDownOpened += new System.EventHandler(this.LoadStateSubMenu_DropDownOpened);
 			// 
@@ -620,28 +619,23 @@ namespace BizHawk.Client.EmuHawk
 			// SaveSlotSubMenu
 			// 
 			this.SaveSlotSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.SelectSlot1MenuItem,
-			this.SelectSlot2MenuItem,
-			this.SelectSlot3MenuItem,
-			this.SelectSlot4MenuItem,
-			this.SelectSlot5MenuItem,
-			this.SelectSlot6MenuItem,
-			this.SelectSlot7MenuItem,
-			this.SelectSlot8MenuItem,
-			this.SelectSlot9MenuItem,
-			this.SelectSlot0MenuItem,
-			this.PreviousSlotMenuItem,
-			this.NextSlotMenuItem,
-			this.toolStripSeparator5,
-			this.SaveToCurrentSlotMenuItem,
-			this.LoadCurrentSlotMenuItem});
+            this.SelectSlot1MenuItem,
+            this.SelectSlot2MenuItem,
+            this.SelectSlot3MenuItem,
+            this.SelectSlot4MenuItem,
+            this.SelectSlot5MenuItem,
+            this.SelectSlot6MenuItem,
+            this.SelectSlot7MenuItem,
+            this.SelectSlot8MenuItem,
+            this.SelectSlot9MenuItem,
+            this.SelectSlot0MenuItem,
+            this.PreviousSlotMenuItem,
+            this.NextSlotMenuItem,
+            this.toolStripSeparator5,
+            this.SaveToCurrentSlotMenuItem,
+            this.LoadCurrentSlotMenuItem});
 			this.SaveSlotSubMenu.Text = "Save S&lot";
 			this.SaveSlotSubMenu.DropDownOpened += new System.EventHandler(this.SaveSlotSubMenu_DropDownOpened);
-			// 
-			// SelectSlot0MenuItem
-			// 
-			this.SelectSlot0MenuItem.Text = "Select Slot 10";
-			this.SelectSlot0MenuItem.Click += new System.EventHandler(this.SelectSlotMenuItems_Click);
 			// 
 			// SelectSlot1MenuItem
 			// 
@@ -688,6 +682,11 @@ namespace BizHawk.Client.EmuHawk
 			this.SelectSlot9MenuItem.Text = "Select Slot 9";
 			this.SelectSlot9MenuItem.Click += new System.EventHandler(this.SelectSlotMenuItems_Click);
 			// 
+			// SelectSlot0MenuItem
+			// 
+			this.SelectSlot0MenuItem.Text = "Select Slot 10";
+			this.SelectSlot0MenuItem.Click += new System.EventHandler(this.SelectSlotMenuItems_Click);
+			// 
 			// PreviousSlotMenuItem
 			// 
 			this.PreviousSlotMenuItem.Text = "Previous Slot";
@@ -711,7 +710,7 @@ namespace BizHawk.Client.EmuHawk
 			// SaveRAMSubMenu
 			// 
 			this.SaveRAMSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.FlushSaveRAMMenuItem});
+            this.FlushSaveRAMMenuItem});
 			this.SaveRAMSubMenu.Text = "Save &RAM";
 			this.SaveRAMSubMenu.DropDownOpened += new System.EventHandler(this.SaveRamSubMenu_DropDownOpened);
 			// 
@@ -723,21 +722,22 @@ namespace BizHawk.Client.EmuHawk
 			// MovieSubMenu
 			// 
 			this.MovieSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.ReadonlyMenuItem,
-			this.toolStripSeparator15,
-			this.RecentMovieSubMenu,
-			this.RecordMovieMenuItem,
-			this.PlayMovieMenuItem,
-			this.StopMovieMenuItem,
-			this.PlayFromBeginningMenuItem,
-			this.ImportMoviesMenuItem,
-			this.SaveMovieMenuItem,
-			this.SaveMovieAsMenuItem,
-			this.StopMovieWithoutSavingMenuItem,
-			this.toolStripSeparator14,
-			this.AutomaticallyBackupMoviesMenuItem,
-			this.FullMovieLoadstatesMenuItem,
-			this.MovieEndSubMenu});
+            this.ReadonlyMenuItem,
+            this.toolStripSeparator15,
+            this.RecentMovieSubMenu,
+            this.RecordMovieMenuItem,
+            this.PlayMovieMenuItem,
+            this.StopMovieMenuItem,
+            this.PlayFromBeginningMenuItem,
+            this.SaveMovieMenuItem,
+            this.SaveMovieAsMenuItem,
+            this.StopMovieWithoutSavingMenuItem,
+            this.toolStripSeparator25,
+            this.ImportMoviesMenuItem,
+            this.toolStripSeparator14,
+            this.AutomaticallyBackupMoviesMenuItem,
+            this.FullMovieLoadstatesMenuItem,
+            this.MovieEndSubMenu});
 			this.MovieSubMenu.Text = "&Movie";
 			this.MovieSubMenu.DropDownOpened += new System.EventHandler(this.MovieSubMenu_DropDownOpened);
 			// 
@@ -749,7 +749,7 @@ namespace BizHawk.Client.EmuHawk
 			// RecentMovieSubMenu
 			// 
 			this.RecentMovieSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.toolStripSeparator16});
+            this.toolStripSeparator16});
 			this.RecentMovieSubMenu.Text = "Recent";
 			this.RecentMovieSubMenu.DropDownOpened += new System.EventHandler(this.RecentMovieSubMenu_DropDownOpened);
 			// 
@@ -773,11 +773,6 @@ namespace BizHawk.Client.EmuHawk
 			this.PlayFromBeginningMenuItem.Text = "Play from Beginning";
 			this.PlayFromBeginningMenuItem.Click += new System.EventHandler(this.PlayFromBeginningMenuItem_Click);
 			// 
-			// ImportMoviesMenuItem
-			// 
-			this.ImportMoviesMenuItem.Text = "Import Movies...";
-			this.ImportMoviesMenuItem.Click += new System.EventHandler(this.ImportMovieMenuItem_Click);
-			// 
 			// SaveMovieMenuItem
 			// 
 			this.SaveMovieMenuItem.Text = "&Save Movie";
@@ -793,6 +788,16 @@ namespace BizHawk.Client.EmuHawk
 			this.StopMovieWithoutSavingMenuItem.Text = "Stop Movie without Saving";
 			this.StopMovieWithoutSavingMenuItem.Click += new System.EventHandler(this.StopMovieWithoutSavingMenuItem_Click);
 			// 
+			// toolStripSeparator25
+			// 
+			this.toolStripSeparator25.Name = "toolStripSeparator25";
+			this.toolStripSeparator25.Size = new System.Drawing.Size(228, 6);
+			// 
+			// ImportMoviesMenuItem
+			// 
+			this.ImportMoviesMenuItem.Text = "Import Movies...";
+			this.ImportMoviesMenuItem.Click += new System.EventHandler(this.ImportMovieMenuItem_Click);
+			// 
 			// AutomaticallyBackupMoviesMenuItem
 			// 
 			this.AutomaticallyBackupMoviesMenuItem.Text = "Automatically Backup Movies";
@@ -806,10 +811,12 @@ namespace BizHawk.Client.EmuHawk
 			// MovieEndSubMenu
 			// 
 			this.MovieEndSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.MovieEndFinishMenuItem,
-			this.MovieEndRecordMenuItem,
-			this.MovieEndStopMenuItem,
-			this.MovieEndPauseMenuItem});
+            this.MovieEndFinishMenuItem,
+            this.MovieEndRecordMenuItem,
+            this.MovieEndStopMenuItem,
+            this.MovieEndPauseMenuItem,
+            this.toolStripSeparator32,
+            this.MovieEndPlaySoundMenuItem});
 			this.MovieEndSubMenu.Text = "On Movie End";
 			this.MovieEndSubMenu.DropDownOpened += new System.EventHandler(this.MovieEndSubMenu_DropDownOpened);
 			// 
@@ -820,7 +827,7 @@ namespace BizHawk.Client.EmuHawk
 			// 
 			// MovieEndRecordMenuItem
 			// 
-			this.MovieEndRecordMenuItem.Text = "Switch To Record";
+			this.MovieEndRecordMenuItem.Text = "Switch to Record";
 			this.MovieEndRecordMenuItem.Click += new System.EventHandler(this.MovieEndRecordMenuItem_Click);
 			// 
 			// MovieEndStopMenuItem
@@ -833,33 +840,45 @@ namespace BizHawk.Client.EmuHawk
 			this.MovieEndPauseMenuItem.Text = "Pause";
 			this.MovieEndPauseMenuItem.Click += new System.EventHandler(this.MovieEndPauseMenuItem_Click);
 			// 
+			// toolStripSeparator32
+			// 
+			this.toolStripSeparator32.Name = "toolStripSeparator32";
+			this.toolStripSeparator32.Size = new System.Drawing.Size(177, 6);
+			// 
+			// MovieEndPlaySoundMenuItem
+			// 
+			this.MovieEndPlaySoundMenuItem.Name = "MovieEndPlaySoundMenuItem";
+			this.MovieEndPlaySoundMenuItem.Size = new System.Drawing.Size(180, 22);
+			this.MovieEndPlaySoundMenuItem.Text = "Play Sound";
+			this.MovieEndPlaySoundMenuItem.Click += new System.EventHandler(this.MovieEndPlaySoundMenuItem_Click);
+			// 
 			// AVSubMenu
 			// 
 			this.AVSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.RecordAVMenuItem,
-			this.ConfigAndRecordAVMenuItem,
-			this.StopAVIMenuItem,
-			this.toolStripSeparator19,
-			this.CaptureOSDMenuItem,
-			this.CaptureLuaMenuItem,
-			this.SynclessRecordingMenuItem});
-			this.AVSubMenu.Text = "&AVI/WAV";
+            this.RecordAVMenuItem,
+            this.ConfigAndRecordAVMenuItem,
+            this.StopAVMenuItem,
+            this.toolStripSeparator19,
+            this.CaptureOSDMenuItem,
+            this.CaptureLuaMenuItem,
+            this.SynclessRecordingMenuItem});
+			this.AVSubMenu.Text = "&A/V Writer";
 			this.AVSubMenu.DropDownOpened += new System.EventHandler(this.AVSubMenu_DropDownOpened);
 			// 
 			// RecordAVMenuItem
 			// 
-			this.RecordAVMenuItem.Text = "&Record AVI/WAV";
+			this.RecordAVMenuItem.Text = "&Record A/V";
 			this.RecordAVMenuItem.Click += new System.EventHandler(this.RecordAVMenuItem_Click);
 			// 
 			// ConfigAndRecordAVMenuItem
 			// 
-			this.ConfigAndRecordAVMenuItem.Text = "Config and Record AVI/WAV...";
+			this.ConfigAndRecordAVMenuItem.Text = "Config and Record A/V...";
 			this.ConfigAndRecordAVMenuItem.Click += new System.EventHandler(this.ConfigAndRecordAVMenuItem_Click);
 			// 
-			// StopAVIMenuItem
+			// StopAVMenuItem
 			// 
-			this.StopAVIMenuItem.Text = "&Stop AVI/WAV";
-			this.StopAVIMenuItem.Click += new System.EventHandler(this.StopAVMenuItem_Click);
+			this.StopAVMenuItem.Text = "&Stop A/V Writer";
+			this.StopAVMenuItem.Click += new System.EventHandler(this.StopAVMenuItem_Click);
 			// 
 			// CaptureOSDMenuItem
 			// 
@@ -871,7 +890,7 @@ namespace BizHawk.Client.EmuHawk
 			// 
 			this.CaptureLuaMenuItem.CheckOnClick = true;
 			this.CaptureLuaMenuItem.Name = "CaptureLuaMenuItem";
-			this.CaptureLuaMenuItem.Size = new System.Drawing.Size(225, 22);
+			this.CaptureLuaMenuItem.Size = new System.Drawing.Size(205, 22);
 			this.CaptureLuaMenuItem.Text = "Capture Lua";
 			this.CaptureLuaMenuItem.Click += new System.EventHandler(this.CaptureLuaMenuItem_Click);
 			// 
@@ -882,12 +901,12 @@ namespace BizHawk.Client.EmuHawk
 			// ScreenshotSubMenu
 			// 
 			this.ScreenshotSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.ScreenshotMenuItem,
-			this.ScreenshotAsMenuItem,
-			this.ScreenshotClipboardMenuItem,
-			this.ScreenshotClientClipboardMenuItem,
-			this.toolStripSeparator20,
-			this.ScreenshotCaptureOSDMenuItem1});
+            this.ScreenshotMenuItem,
+            this.ScreenshotAsMenuItem,
+            this.ScreenshotClipboardMenuItem,
+            this.ScreenshotClientClipboardMenuItem,
+            this.toolStripSeparator20,
+            this.ScreenshotCaptureOSDMenuItem1});
 			this.ScreenshotSubMenu.Text = "Scree&nshot";
 			this.ScreenshotSubMenu.DropDownOpening += new System.EventHandler(this.ScreenshotSubMenu_DropDownOpening);
 			// 
@@ -925,13 +944,13 @@ namespace BizHawk.Client.EmuHawk
 			// EmulationSubMenu
 			// 
 			this.EmulationSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.PauseMenuItem,
-			this.RebootCoreMenuItem,
-			this.toolStripSeparator1,
-			this.SoftResetMenuItem,
-			this.HardResetMenuItem,
-			this.EmulatorMenuSeparator2,
-			this.LoadedCoreNameMenuItem});
+            this.PauseMenuItem,
+            this.RebootCoreMenuItem,
+            this.toolStripSeparator1,
+            this.SoftResetMenuItem,
+            this.HardResetMenuItem,
+            this.EmulatorMenuSeparator2,
+            this.LoadedCoreNameMenuItem});
 			this.EmulationSubMenu.Text = "&Emulation";
 			this.EmulationSubMenu.DropDownOpened += new System.EventHandler(this.EmulationMenuItem_DropDownOpened);
 			// 
@@ -963,64 +982,36 @@ namespace BizHawk.Client.EmuHawk
 			// ViewSubMenu
 			// 
 			this.ViewSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.WindowSizeSubMenu,
-			this.SwitchToFullscreenMenuItem,
-			this.toolStripSeparator2,
-			this.DisplayFPSMenuItem,
-			this.DisplayFrameCounterMenuItem,
-			this.DisplayLagCounterMenuItem,
-			this.DisplayInputMenuItem,
-			this.DisplayRerecordCountMenuItem,
-			this.DisplaySubtitlesMenuItem,
-			this.toolStripMenuItem4,
-			this.DisplayStatusBarMenuItem,
-			this.DisplayMessagesMenuItem,
-			this.toolStripSeparator8,
-			this.DisplayLogWindowMenuItem});
+            this.WindowSizeSubMenu,
+            this.SwitchToFullscreenMenuItem,
+            this.toolStripSeparator2,
+            this.DisplayFPSMenuItem,
+            this.DisplayFrameCounterMenuItem,
+            this.DisplayLagCounterMenuItem,
+            this.DisplayInputMenuItem,
+            this.DisplayRerecordCountMenuItem,
+            this.DisplaySubtitlesMenuItem,
+            this.toolStripMenuItem4,
+            this.DisplayStatusBarMenuItem,
+            this.DisplayMessagesMenuItem,
+            this.toolStripSeparator8,
+            this.DisplayLogWindowMenuItem});
 			this.ViewSubMenu.Text = "&View";
 			this.ViewSubMenu.DropDownOpened += new System.EventHandler(this.ViewSubMenu_DropDownOpened);
 			// 
 			// WindowSizeSubMenu
 			// 
 			this.WindowSizeSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.x1MenuItem,
-			this.x2MenuItem,
-			this.x3MenuItem,
-			this.x4MenuItem,
-			this.x5MenuItem,
-			this.mzMenuItem});
+            this.toolStripSeparator26,
+            this.DisableResizeWithFramebufferMenuItem});
 			this.WindowSizeSubMenu.Text = "&Window Size";
 			this.WindowSizeSubMenu.DropDownOpened += new System.EventHandler(this.WindowSizeSubMenu_DropDownOpened);
 			// 
-			// x1MenuItem
+			// DisableResizeWithFramebufferMenuItem
 			// 
-			this.x1MenuItem.Text = "&1x";
-			this.x1MenuItem.Click += new System.EventHandler(this.WindowSize_Click);
-			// 
-			// x2MenuItem
-			// 
-			this.x2MenuItem.Text = "&2x";
-			this.x2MenuItem.Click += new System.EventHandler(this.WindowSize_Click);
-			// 
-			// x3MenuItem
-			// 
-			this.x3MenuItem.Text = "&3x";
-			this.x3MenuItem.Click += new System.EventHandler(this.WindowSize_Click);
-			// 
-			// x4MenuItem
-			// 
-			this.x4MenuItem.Text = "&4x";
-			this.x4MenuItem.Click += new System.EventHandler(this.WindowSize_Click);
-			// 
-			// x5MenuItem
-			// 
-			this.x5MenuItem.Text = "&5x";
-			this.x5MenuItem.Click += new System.EventHandler(this.WindowSize_Click);
-			// 
-			// mzMenuItem
-			// 
-			this.mzMenuItem.Text = "&Max";
-			this.mzMenuItem.Click += new System.EventHandler(this.WindowSize_Click);
+			this.DisableResizeWithFramebufferMenuItem.CheckOnClick = true;
+			this.DisableResizeWithFramebufferMenuItem.Text = "&Static Size";
+			this.DisableResizeWithFramebufferMenuItem.Click += new System.EventHandler(this.DisableResizeWithFramebufferMenuItem_Click);
 			// 
 			// SwitchToFullscreenMenuItem
 			// 
@@ -1075,27 +1066,27 @@ namespace BizHawk.Client.EmuHawk
 			// ConfigSubMenu
 			// 
 			this.ConfigSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.ControllersMenuItem,
-			this.HotkeysMenuItem,
-			this.DisplayConfigMenuItem,
-			this.SoundMenuItem,
-			this.PathsMenuItem,
-			this.FirmwaresMenuItem,
-			this.MessagesMenuItem,
-			this.AutofireMenuItem,
-			this.RewindOptionsMenuItem,
-			this.extensionsToolStripMenuItem,
-			this.ClientOptionsMenuItem,
-			this.ProfilesMenuItem,
-			this.toolStripSeparator9,
-			this.SpeedSkipSubMenu,
-			this.KeyPrioritySubMenu,
-			this.CoresSubMenu,
-			this.toolStripSeparator10,
-			this.SaveConfigMenuItem,
-			this.SaveConfigAsMenuItem,
-			this.LoadConfigMenuItem,
-			this.LoadConfigFromMenuItem});
+            this.ControllersMenuItem,
+            this.HotkeysMenuItem,
+            this.DisplayConfigMenuItem,
+            this.SoundMenuItem,
+            this.PathsMenuItem,
+            this.FirmwareMenuItem,
+            this.MessagesMenuItem,
+            this.AutofireMenuItem,
+            this.RewindOptionsMenuItem,
+            this.extensionsToolStripMenuItem,
+            this.ClientOptionsMenuItem,
+            this.ProfilesMenuItem,
+            this.toolStripSeparator9,
+            this.SpeedSkipSubMenu,
+            this.KeyPrioritySubMenu,
+            this.CoresSubMenu,
+            this.toolStripSeparator10,
+            this.SaveConfigMenuItem,
+            this.SaveConfigAsMenuItem,
+            this.LoadConfigMenuItem,
+            this.LoadConfigFromMenuItem});
 			this.ConfigSubMenu.Text = "&Config";
 			this.ConfigSubMenu.DropDownOpened += new System.EventHandler(this.ConfigSubMenu_DropDownOpened);
 			// 
@@ -1124,10 +1115,10 @@ namespace BizHawk.Client.EmuHawk
 			this.PathsMenuItem.Text = "Paths...";
 			this.PathsMenuItem.Click += new System.EventHandler(this.PathsMenuItem_Click);
 			// 
-			// FirmwaresMenuItem
+			// FirmwareMenuItem
 			// 
-			this.FirmwaresMenuItem.Text = "&Firmwares...";
-			this.FirmwaresMenuItem.Click += new System.EventHandler(this.FirmwaresMenuItem_Click);
+			this.FirmwareMenuItem.Text = "&Firmware...";
+			this.FirmwareMenuItem.Click += new System.EventHandler(this.FirmwareMenuItem_Click);
 			// 
 			// MessagesMenuItem
 			// 
@@ -1162,23 +1153,23 @@ namespace BizHawk.Client.EmuHawk
 			// SpeedSkipSubMenu
 			// 
 			this.SpeedSkipSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.ClockThrottleMenuItem,
-			this.AudioThrottleMenuItem,
-			this.VsyncThrottleMenuItem,
-			this.toolStripSeparator27,
-			this.VsyncEnabledMenuItem,
-			this.toolStripMenuItem3,
-			this.miUnthrottled,
-			this.MinimizeSkippingMenuItem,
-			this.NeverSkipMenuItem,
-			this.toolStripMenuItem17,
-			this.toolStripMenuItem5,
-			this.Speed50MenuItem,
-			this.Speed75MenuItem,
-			this.Speed100MenuItem,
-			this.Speed150MenuItem,
-			this.Speed200MenuItem,
-			this.Speed400MenuItem});
+            this.ClockThrottleMenuItem,
+            this.AudioThrottleMenuItem,
+            this.VsyncThrottleMenuItem,
+            this.toolStripSeparator27,
+            this.VsyncEnabledMenuItem,
+            this.toolStripMenuItem3,
+            this.miUnthrottled,
+            this.MinimizeSkippingMenuItem,
+            this.NeverSkipMenuItem,
+            this.toolStripMenuItem17,
+            this.toolStripMenuItem5,
+            this.Speed50MenuItem,
+            this.Speed75MenuItem,
+            this.Speed100MenuItem,
+            this.Speed150MenuItem,
+            this.Speed200MenuItem,
+            this.Speed400MenuItem});
 			this.SpeedSkipSubMenu.Text = "Speed/Skip";
 			this.SpeedSkipSubMenu.DropDownOpened += new System.EventHandler(this.FrameSkipMenuItem_DropDownOpened);
 			// 
@@ -1220,15 +1211,15 @@ namespace BizHawk.Client.EmuHawk
 			// toolStripMenuItem17
 			// 
 			this.toolStripMenuItem17.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.Frameskip1MenuItem,
-			this.Frameskip2MenuItem,
-			this.Frameskip3MenuItem,
-			this.Frameskip4MenuItem,
-			this.Frameskip5MenuItem,
-			this.Frameskip6MenuItem,
-			this.Frameskip7MenuItem,
-			this.Frameskip8MenuItem,
-			this.Frameskip9MenuItem});
+            this.Frameskip1MenuItem,
+            this.Frameskip2MenuItem,
+            this.Frameskip3MenuItem,
+            this.Frameskip4MenuItem,
+            this.Frameskip5MenuItem,
+            this.Frameskip6MenuItem,
+            this.Frameskip7MenuItem,
+            this.Frameskip8MenuItem,
+            this.Frameskip9MenuItem});
 			this.toolStripMenuItem17.Text = "Skip 1..9";
 			// 
 			// Frameskip1MenuItem
@@ -1309,9 +1300,9 @@ namespace BizHawk.Client.EmuHawk
 			// KeyPrioritySubMenu
 			// 
 			this.KeyPrioritySubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.BothHkAndControllerMenuItem,
-			this.InputOverHkMenuItem,
-			this.HkOverInputMenuItem});
+            this.BothHkAndControllerMenuItem,
+            this.InputOverHkMenuItem,
+            this.HkOverInputMenuItem});
 			this.KeyPrioritySubMenu.Text = "Key Priority";
 			this.KeyPrioritySubMenu.DropDownOpened += new System.EventHandler(this.KeyPriorityMenuItem_DropDownOpened);
 			// 
@@ -1357,27 +1348,27 @@ namespace BizHawk.Client.EmuHawk
 			// ToolsSubMenu
 			// 
 			this.ToolsSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.ToolBoxMenuItem,
-			this.toolStripSeparator12,
-			this.RamWatchMenuItem,
-			this.RamSearchMenuItem,
-			this.LuaConsoleMenuItem,
-			this.TAStudioMenuItem,
-			this.HexEditorMenuItem,
-			this.TraceLoggerMenuItem,
-			this.DebuggerMenuItem,
-			this.CodeDataLoggerMenuItem,
-			this.MacroToolMenuItem,
-			this.VirtualPadMenuItem,
-			this.BasicBotMenuItem,
-			this.toolStripSeparator11,
-			this.CheatsMenuItem,
-			this.GameSharkConverterMenuItem,
-			this.toolStripSeparator29,
-			this.MultiDiskBundlerFileMenuItem,
-			this.BatchRunnerMenuItem,
-			this.ExternalToolMenuItem,
-			this.RetroAchievementsMenuItem});
+            this.ToolBoxMenuItem,
+            this.toolStripSeparator12,
+            this.RamWatchMenuItem,
+            this.RamSearchMenuItem,
+            this.LuaConsoleMenuItem,
+            this.TAStudioMenuItem,
+            this.HexEditorMenuItem,
+            this.TraceLoggerMenuItem,
+            this.DebuggerMenuItem,
+            this.CodeDataLoggerMenuItem,
+            this.MacroToolMenuItem,
+            this.VirtualPadMenuItem,
+            this.BasicBotMenuItem,
+            this.toolStripSeparator11,
+            this.CheatsMenuItem,
+            this.GameSharkConverterMenuItem,
+            this.toolStripSeparator29,
+            this.MultiDiskBundlerFileMenuItem,
+            this.BatchRunnerMenuItem,
+            this.ExternalToolMenuItem,
+            this.RetroAchievementsMenuItem});
 			this.ToolsSubMenu.Text = "&Tools";
 			this.ToolsSubMenu.DropDownOpened += new System.EventHandler(this.ToolsSubMenu_DropDownOpened);
 			// 
@@ -1441,17 +1432,6 @@ namespace BizHawk.Client.EmuHawk
 			this.BasicBotMenuItem.Text = "Basic Bot";
 			this.BasicBotMenuItem.Click += new System.EventHandler(this.BasicBotMenuItem_Click);
 			// 
-			// RetroAchievementsMenuItem
-			// 
-			this.RetroAchievementsMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			StartRetroAchievementsMenuItem});
-			this.RetroAchievementsMenuItem.Text = "&RetroAchievements";
-			// 
-			// StartRetroAchievementsMenuItem
-			// 
-			this.StartRetroAchievementsMenuItem.Text = "&Start RetroAchievements";
-			this.StartRetroAchievementsMenuItem.Click += new System.EventHandler(this.StartRetroAchievementsMenuItem_Click);
-			// 
 			// CheatsMenuItem
 			// 
 			this.CheatsMenuItem.Text = "Cheats";
@@ -1467,10 +1447,16 @@ namespace BizHawk.Client.EmuHawk
 			this.MultiDiskBundlerFileMenuItem.Text = "Multi-disk Bundler";
 			this.MultiDiskBundlerFileMenuItem.Click += new System.EventHandler(this.MultidiskBundlerMenuItem_Click);
 			// 
+			// BatchRunnerMenuItem
+			// 
+			this.BatchRunnerMenuItem.Text = "Batch Runner...";
+			this.BatchRunnerMenuItem.Visible = false;
+			this.BatchRunnerMenuItem.Click += new System.EventHandler(this.BatchRunnerMenuItem_Click);
+			// 
 			// ExternalToolMenuItem
 			// 
 			this.ExternalToolMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.dummyExternalTool});
+            this.dummyExternalTool});
 			this.ExternalToolMenuItem.Text = "External Tool";
 			this.ExternalToolMenuItem.DropDownOpening += new System.EventHandler(this.ExternalToolMenuItem_DropDownOpening);
 			// 
@@ -1478,28 +1464,33 @@ namespace BizHawk.Client.EmuHawk
 			// 
 			this.dummyExternalTool.Text = "None";
 			// 
-			// BatchRunnerMenuItem
+			// RetroAchievementsMenuItem
 			// 
-			this.BatchRunnerMenuItem.Text = "Batch Runner...";
-			this.BatchRunnerMenuItem.Visible = false;
-			this.BatchRunnerMenuItem.Click += new System.EventHandler(this.BatchRunnerMenuItem_Click);
+			this.RetroAchievementsMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.StartRetroAchievementsMenuItem});
+			this.RetroAchievementsMenuItem.Text = "&RetroAchievements";
+			// 
+			// StartRetroAchievementsMenuItem
+			// 
+			this.StartRetroAchievementsMenuItem.Text = "&Start RetroAchievements";
+			this.StartRetroAchievementsMenuItem.Click += new System.EventHandler(this.StartRetroAchievementsMenuItem_Click);
 			// 
 			// NESSubMenu
 			// 
 			this.NESSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.NESPPUViewerMenuItem,
-			this.NESNametableViewerMenuItem,
-			this.MusicRipperMenuItem,
-			this.toolStripSeparator17,
-			this.NesControllerSettingsMenuItem,
-			this.NESGraphicSettingsMenuItem,
-			this.NESSoundChannelsMenuItem,
-			this.VSSettingsMenuItem,
-			this.MovieSettingsMenuItem,
-			this.toolStripSeparator22,
-			this.FDSControlsMenuItem,
-			this.VSControlsMenuItem,
-			this.BarcodeReaderMenuItem});
+            this.NESPPUViewerMenuItem,
+            this.NESNametableViewerMenuItem,
+            this.MusicRipperMenuItem,
+            this.toolStripSeparator17,
+            this.NesControllerSettingsMenuItem,
+            this.NESGraphicSettingsMenuItem,
+            this.NESSoundChannelsMenuItem,
+            this.VSSettingsMenuItem,
+            this.MovieSettingsMenuItem,
+            this.toolStripSeparator22,
+            this.FDSControlsMenuItem,
+            this.VSControlsMenuItem,
+            this.BarcodeReaderMenuItem});
 			this.NESSubMenu.Text = "&NES";
 			this.NESSubMenu.DropDownOpened += new System.EventHandler(this.NesSubMenu_DropDownOpened);
 			// 
@@ -1546,7 +1537,7 @@ namespace BizHawk.Client.EmuHawk
 			// FDSControlsMenuItem
 			// 
 			this.FDSControlsMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.FdsEjectDiskMenuItem});
+            this.FdsEjectDiskMenuItem});
 			this.FDSControlsMenuItem.Text = "FDS Controls";
 			this.FDSControlsMenuItem.DropDownOpened += new System.EventHandler(this.FdsControlsMenuItem_DropDownOpened);
 			// 
@@ -1558,9 +1549,9 @@ namespace BizHawk.Client.EmuHawk
 			// VSControlsMenuItem
 			// 
 			this.VSControlsMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.VSInsertCoinP1MenuItem,
-			this.VSInsertCoinP2MenuItem,
-			this.VSServiceSwitchMenuItem});
+            this.VSInsertCoinP1MenuItem,
+            this.VSInsertCoinP2MenuItem,
+            this.VSServiceSwitchMenuItem});
 			this.VSControlsMenuItem.Text = "VS Controls";
 			// 
 			// VSInsertCoinP1MenuItem
@@ -1586,10 +1577,10 @@ namespace BizHawk.Client.EmuHawk
 			// TI83SubMenu
 			// 
 			this.TI83SubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.KeypadMenuItem,
-			this.LoadTIFileMenuItem,
-			this.toolStripSeparator13,
-			this.paletteToolStripMenuItem});
+            this.KeypadMenuItem,
+            this.LoadTIFileMenuItem,
+            this.toolStripSeparator13,
+            this.paletteToolStripMenuItem});
 			this.TI83SubMenu.Text = "TI83";
 			// 
 			// KeypadMenuItem
@@ -1610,8 +1601,8 @@ namespace BizHawk.Client.EmuHawk
 			// A7800SubMenu
 			// 
 			this.A7800SubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.A7800ControllerSettingsMenuItem,
-			this.A7800FilterSettingsMenuItem});
+            this.A7800ControllerSettingsMenuItem,
+            this.A7800FilterSettingsMenuItem});
 			this.A7800SubMenu.Text = "&A7800";
 			this.A7800SubMenu.DropDownOpened += new System.EventHandler(this.A7800SubMenu_DropDownOpened);
 			// 
@@ -1628,11 +1619,11 @@ namespace BizHawk.Client.EmuHawk
 			// GBSubMenu
 			// 
 			this.GBSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.GBcoreSettingsToolStripMenuItem,
-			this.SameBoyColorChooserMenuItem,
-			this.toolStripSeparator28,
-			this.GBGPUViewerMenuItem,
-			this.GBPrinterViewerMenuItem});
+            this.GBcoreSettingsToolStripMenuItem,
+            this.SameBoyColorChooserMenuItem,
+            this.toolStripSeparator28,
+            this.GBGPUViewerMenuItem,
+            this.GBPrinterViewerMenuItem});
 			this.GBSubMenu.Text = "&GB";
 			// 
 			// GBcoreSettingsToolStripMenuItem
@@ -1658,10 +1649,10 @@ namespace BizHawk.Client.EmuHawk
 			// PSXSubMenu
 			// 
 			this.PSXSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.PSXControllerSettingsMenuItem,
-			this.PSXOptionsMenuItem,
-			this.PSXDiscControlsMenuItem,
-			this.PSXHashDiscsToolStripMenuItem});
+            this.PSXControllerSettingsMenuItem,
+            this.PSXOptionsMenuItem,
+            this.PSXDiscControlsMenuItem,
+            this.PSXHashDiscsToolStripMenuItem});
 			this.PSXSubMenu.Text = "PSX";
 			this.PSXSubMenu.DropDownOpened += new System.EventHandler(this.PsxSubMenu_DropDownOpened);
 			// 
@@ -1688,10 +1679,10 @@ namespace BizHawk.Client.EmuHawk
 			// SNESSubMenu
 			// 
 			this.SNESSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.SNESControllerConfigurationMenuItem,
-			this.toolStripSeparator18,
-			this.SnesGfxDebuggerMenuItem,
-			this.SnesOptionsMenuItem});
+            this.SNESControllerConfigurationMenuItem,
+            this.toolStripSeparator18,
+            this.SnesGfxDebuggerMenuItem,
+            this.SnesOptionsMenuItem});
 			this.SNESSubMenu.Text = "&SNES";
 			this.SNESSubMenu.DropDownOpened += new System.EventHandler(this.SnesSubMenu_DropDownOpened);
 			// 
@@ -1713,10 +1704,10 @@ namespace BizHawk.Client.EmuHawk
 			// ColecoSubMenu
 			// 
 			this.ColecoSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.ColecoControllerSettingsMenuItem,
-			this.toolStripSeparator35,
-			this.ColecoSkipBiosMenuItem,
-			this.ColecoUseSGMMenuItem});
+            this.ColecoControllerSettingsMenuItem,
+            this.toolStripSeparator35,
+            this.ColecoSkipBiosMenuItem,
+            this.ColecoUseSGMMenuItem});
 			this.ColecoSubMenu.Text = "&Coleco";
 			this.ColecoSubMenu.DropDownOpened += new System.EventHandler(this.ColecoSubMenu_DropDownOpened);
 			// 
@@ -1738,12 +1729,12 @@ namespace BizHawk.Client.EmuHawk
 			// N64SubMenu
 			// 
 			this.N64SubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.N64PluginSettingsMenuItem,
-			this.N64ControllerSettingsMenuItem,
-			this.toolStripSeparator23,
-			this.N64CircularAnalogRangeMenuItem,
-			this.MupenStyleLagMenuItem,
-			this.N64ExpansionSlotMenuItem});
+            this.N64PluginSettingsMenuItem,
+            this.N64ControllerSettingsMenuItem,
+            this.toolStripSeparator23,
+            this.N64CircularAnalogRangeMenuItem,
+            this.MupenStyleLagMenuItem,
+            this.N64ExpansionSlotMenuItem});
 			this.N64SubMenu.Text = "N64";
 			this.N64SubMenu.DropDownOpened += new System.EventHandler(this.N64SubMenu_DropDownOpened);
 			// 
@@ -1764,7 +1755,7 @@ namespace BizHawk.Client.EmuHawk
 			// 
 			// MupenStyleLagMenuItem
 			// 
-			this.MupenStyleLagMenuItem.Text = "&Non-VI Lag Frames";
+			this.MupenStyleLagMenuItem.Text = "&Mupen Style Lag Frames";
 			this.MupenStyleLagMenuItem.Click += new System.EventHandler(this.MupenStyleLagMenuItem_Click);
 			// 
 			// N64ExpansionSlotMenuItem
@@ -1775,8 +1766,8 @@ namespace BizHawk.Client.EmuHawk
 			// Ares64SubMenu
 			// 
 			this.Ares64SubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.Ares64SettingsMenuItem,
-			this.N64CircularAnalogRangeMenuItem});
+            this.Ares64SettingsMenuItem,
+            this.Ares64CircularAnalogRangeMenuItem});
 			this.Ares64SubMenu.Text = "N64";
 			this.Ares64SubMenu.DropDownOpened += new System.EventHandler(this.Ares64SubMenu_DropDownOpened);
 			// 
@@ -1785,10 +1776,15 @@ namespace BizHawk.Client.EmuHawk
 			this.Ares64SettingsMenuItem.Text = "Settings...";
 			this.Ares64SettingsMenuItem.Click += new System.EventHandler(this.Ares64SettingsMenuItem_Click);
 			// 
+			// Ares64CircularAnalogRangeMenuItem
+			// 
+			this.Ares64CircularAnalogRangeMenuItem.Text = "Circular Analog Range";
+			this.Ares64CircularAnalogRangeMenuItem.Click += new System.EventHandler(this.N64CircularAnalogRangeMenuItem_Click);
+			// 
 			// GBLSubMenu
 			// 
 			this.GBLSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.GBLsettingsToolStripMenuItem});
+            this.GBLsettingsToolStripMenuItem});
 			this.GBLSubMenu.Text = "&GB Link";
 			// 
 			// GBLsettingsToolStripMenuItem
@@ -1799,15 +1795,15 @@ namespace BizHawk.Client.EmuHawk
 			// AppleSubMenu
 			// 
 			this.AppleSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.AppleDisksSubMenu,
-			this.settingsToolStripMenuItem1});
+            this.AppleDisksSubMenu,
+            this.settingsToolStripMenuItem1});
 			this.AppleSubMenu.Text = "Apple";
 			this.AppleSubMenu.DropDownOpened += new System.EventHandler(this.AppleSubMenu_DropDownOpened);
 			// 
 			// AppleDisksSubMenu
 			// 
 			this.AppleDisksSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.toolStripSeparator31});
+            this.toolStripSeparator31});
 			this.AppleDisksSubMenu.Text = "Disks";
 			this.AppleDisksSubMenu.DropDownOpened += new System.EventHandler(this.AppleDisksSubMenu_DropDownOpened);
 			// 
@@ -1819,15 +1815,15 @@ namespace BizHawk.Client.EmuHawk
 			// C64SubMenu
 			// 
 			this.C64SubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.C64DisksSubMenu,
-			this.C64SettingsMenuItem});
+            this.C64DisksSubMenu,
+            this.C64SettingsMenuItem});
 			this.C64SubMenu.Text = "&C64";
 			this.C64SubMenu.DropDownOpened += new System.EventHandler(this.C64SubMenu_DropDownOpened);
 			// 
 			// C64DisksSubMenu
 			// 
 			this.C64DisksSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.toolStripSeparator36});
+            this.toolStripSeparator36});
 			this.C64DisksSubMenu.Text = "Disks";
 			this.C64DisksSubMenu.DropDownOpened += new System.EventHandler(this.C64DisksSubMenu_DropDownOpened);
 			// 
@@ -1839,7 +1835,7 @@ namespace BizHawk.Client.EmuHawk
 			// IntvSubMenu
 			// 
 			this.IntvSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.IntVControllerSettingsMenuItem});
+            this.IntVControllerSettingsMenuItem});
 			this.IntvSubMenu.Text = "&Intv";
 			this.IntvSubMenu.DropDownOpened += new System.EventHandler(this.IntVSubMenu_DropDownOpened);
 			// 
@@ -1851,11 +1847,11 @@ namespace BizHawk.Client.EmuHawk
 			// zXSpectrumToolStripMenuItem
 			// 
 			this.zXSpectrumToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.ZXSpectrumCoreEmulationSettingsMenuItem,
-			this.ZXSpectrumControllerConfigurationMenuItem,
-			this.ZXSpectrumAudioSettingsMenuItem,
-			this.ZXSpectrumNonSyncSettingsMenuItem,
-			this.ZXSpectrumMediaMenuItem});
+            this.ZXSpectrumCoreEmulationSettingsMenuItem,
+            this.ZXSpectrumControllerConfigurationMenuItem,
+            this.ZXSpectrumAudioSettingsMenuItem,
+            this.ZXSpectrumNonSyncSettingsMenuItem,
+            this.ZXSpectrumMediaMenuItem});
 			this.zXSpectrumToolStripMenuItem.Text = "ZX Spectrum";
 			// 
 			// ZXSpectrumCoreEmulationSettingsMenuItem
@@ -1881,16 +1877,16 @@ namespace BizHawk.Client.EmuHawk
 			// ZXSpectrumMediaMenuItem
 			// 
 			this.ZXSpectrumMediaMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.ZXSpectrumTapesSubMenu,
-			this.ZXSpectrumDisksSubMenu,
-			this.ZXSpectrumExportSnapshotMenuItemMenuItem});
+            this.ZXSpectrumTapesSubMenu,
+            this.ZXSpectrumDisksSubMenu,
+            this.ZXSpectrumExportSnapshotMenuItemMenuItem});
 			this.ZXSpectrumMediaMenuItem.Text = "Media";
 			this.ZXSpectrumMediaMenuItem.DropDownOpened += new System.EventHandler(this.ZXSpectrumMediaMenuItem_DropDownOpened);
 			// 
 			// ZXSpectrumTapesSubMenu
 			// 
 			this.ZXSpectrumTapesSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.zxt1ToolStripMenuItem});
+            this.zxt1ToolStripMenuItem});
 			this.ZXSpectrumTapesSubMenu.Text = "Tapes";
 			this.ZXSpectrumTapesSubMenu.DropDownOpened += new System.EventHandler(this.ZXSpectrumTapesSubMenu_DropDownOpened);
 			// 
@@ -1901,7 +1897,7 @@ namespace BizHawk.Client.EmuHawk
 			// ZXSpectrumDisksSubMenu
 			// 
 			this.ZXSpectrumDisksSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.zxt2ToolStripMenuItem});
+            this.zxt2ToolStripMenuItem});
 			this.ZXSpectrumDisksSubMenu.Text = "Disks";
 			this.ZXSpectrumDisksSubMenu.DropDownOpened += new System.EventHandler(this.ZXSpectrumDisksSubMenu_DropDownOpened);
 			// 
@@ -1921,10 +1917,10 @@ namespace BizHawk.Client.EmuHawk
 			// amstradCPCToolStripMenuItem
 			// 
 			this.amstradCPCToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.amstradCPCCoreEmulationSettingsToolStripMenuItem,
-			this.AmstradCPCAudioSettingsToolStripMenuItem,
-			this.AmstradCPCNonSyncSettingsToolStripMenuItem,
-			this.AmstradCPCMediaToolStripMenuItem});
+            this.amstradCPCCoreEmulationSettingsToolStripMenuItem,
+            this.AmstradCPCAudioSettingsToolStripMenuItem,
+            this.AmstradCPCNonSyncSettingsToolStripMenuItem,
+            this.AmstradCPCMediaToolStripMenuItem});
 			this.amstradCPCToolStripMenuItem.Text = "Amstrad CPC";
 			// 
 			// amstradCPCCoreEmulationSettingsToolStripMenuItem
@@ -1945,15 +1941,15 @@ namespace BizHawk.Client.EmuHawk
 			// AmstradCPCMediaToolStripMenuItem
 			// 
 			this.AmstradCPCMediaToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.AmstradCPCTapesSubMenu,
-			this.AmstradCPCDisksSubMenu});
+            this.AmstradCPCTapesSubMenu,
+            this.AmstradCPCDisksSubMenu});
 			this.AmstradCPCMediaToolStripMenuItem.Text = "Media";
 			this.AmstradCPCMediaToolStripMenuItem.DropDownOpened += new System.EventHandler(this.AmstradCpcMediaMenuItem_DropDownOpened);
 			// 
 			// AmstradCPCTapesSubMenu
 			// 
 			this.AmstradCPCTapesSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.cpct1ToolStripMenuItem});
+            this.cpct1ToolStripMenuItem});
 			this.AmstradCPCTapesSubMenu.Text = "Tapes";
 			this.AmstradCPCTapesSubMenu.DropDownOpened += new System.EventHandler(this.AmstradCpcTapesSubMenu_DropDownOpened);
 			// 
@@ -1964,7 +1960,7 @@ namespace BizHawk.Client.EmuHawk
 			// AmstradCPCDisksSubMenu
 			// 
 			this.AmstradCPCDisksSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.cpcd1ToolStripMenuItem});
+            this.cpcd1ToolStripMenuItem});
 			this.AmstradCPCDisksSubMenu.Text = "Disks";
 			this.AmstradCPCDisksSubMenu.DropDownOpened += new System.EventHandler(this.AmstradCpcDisksSubMenu_DropDownOpened);
 			// 
@@ -1975,10 +1971,10 @@ namespace BizHawk.Client.EmuHawk
 			// HelpSubMenu
 			// 
 			this.HelpSubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.OnlineHelpMenuItem,
-			this.ForumsMenuItem,
-			this.FeaturesMenuItem,
-			this.AboutMenuItem});
+            this.OnlineHelpMenuItem,
+            this.ForumsMenuItem,
+            this.FeaturesMenuItem,
+            this.AboutMenuItem});
 			this.HelpSubMenu.Text = "&Help";
 			this.HelpSubMenu.DropDownOpened += new System.EventHandler(this.HelpSubMenu_DropDownOpened);
 			// 
@@ -2009,30 +2005,30 @@ namespace BizHawk.Client.EmuHawk
 			// MainStatusBar
 			// 
 			this.MainStatusBar.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.DumpStatusButton,
-			this.EmuStatus,
-			this.PlayRecordStatusButton,
-			this.PauseStatusButton,
-			this.RebootStatusBarIcon,
-			this.AVIStatusLabel,
-			this.LedLightStatusLabel,
-			this.SaveSlotsStatusLabel,
-			this.Slot1StatusButton,
-			this.Slot2StatusButton,
-			this.Slot3StatusButton,
-			this.Slot4StatusButton,
-			this.Slot5StatusButton,
-			this.Slot6StatusButton,
-			this.Slot7StatusButton,
-			this.Slot8StatusButton,
-			this.Slot9StatusButton,
-			this.Slot0StatusButton,
-			this.CheatStatusButton,
-			this.KeyPriorityStatusLabel,
-			this.CoreNameStatusBarButton,
-			this.ProfileFirstBootLabel,
-			this.LinkConnectStatusBarButton,
-			this.UpdateNotification});
+            this.DumpStatusButton,
+            this.EmuStatus,
+            this.PlayRecordStatusButton,
+            this.PauseStatusButton,
+            this.RebootStatusBarIcon,
+            this.AVStatusLabel,
+            this.LedLightStatusLabel,
+            this.SaveSlotsStatusLabel,
+            this.Slot1StatusButton,
+            this.Slot2StatusButton,
+            this.Slot3StatusButton,
+            this.Slot4StatusButton,
+            this.Slot5StatusButton,
+            this.Slot6StatusButton,
+            this.Slot7StatusButton,
+            this.Slot8StatusButton,
+            this.Slot9StatusButton,
+            this.Slot0StatusButton,
+            this.CheatStatusButton,
+            this.KeyPriorityStatusLabel,
+            this.CoreNameStatusBarButton,
+            this.ProfileFirstBootLabel,
+            this.LinkConnectStatusBarButton,
+            this.UpdateNotification});
 			this.MainStatusBar.Location = new System.Drawing.Point(0, 386);
 			this.MainStatusBar.Name = "MainStatusBar";
 			this.MainStatusBar.ShowItemToolTips = true;
@@ -2078,10 +2074,10 @@ namespace BizHawk.Client.EmuHawk
 			this.RebootStatusBarIcon.ToolTipText = "A reboot of the core is needed for a setting change to take effect";
 			this.RebootStatusBarIcon.Click += new System.EventHandler(this.PowerMenuItem_Click);
 			// 
-			// AVIStatusLabel
+			// AVStatusLabel
 			// 
-			this.AVIStatusLabel.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.AVIStatusLabel.Text = "AVI Capture";
+			this.AVStatusLabel.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.AVStatusLabel.Text = "A/V Capture";
 			// 
 			// LedLightStatusLabel
 			// 
@@ -2172,7 +2168,7 @@ namespace BizHawk.Client.EmuHawk
 			this.ProfileFirstBootLabel.AutoToolTip = true;
 			this.ProfileFirstBootLabel.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
 			this.ProfileFirstBootLabel.Text = "ProfileFirstBootLabel";
-			this.ProfileFirstBootLabel.ToolTipText = "Set up your profile before use";
+			this.ProfileFirstBootLabel.ToolTipText = "Open the setup/onboarding wizard";
 			this.ProfileFirstBootLabel.Visible = false;
 			this.ProfileFirstBootLabel.Click += new System.EventHandler(this.ProfileFirstBootLabel_Click);
 			// 
@@ -2186,7 +2182,6 @@ namespace BizHawk.Client.EmuHawk
 			// UpdateNotification
 			// 
 			this.UpdateNotification.IsLink = true;
-			this.UpdateNotification.LinkColor = System.Drawing.Color.Red;
 			this.UpdateNotification.Spring = true;
 			this.UpdateNotification.Text = "New version available!";
 			this.UpdateNotification.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -2195,31 +2190,31 @@ namespace BizHawk.Client.EmuHawk
 			// MainFormContextMenu
 			// 
 			this.MainFormContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.OpenRomContextMenuItem,
-			this.LoadLastRomContextMenuItem,
-			this.StopAVContextMenuItem,
-			this.ContextSeparator_AfterROM,
-			this.RecordMovieContextMenuItem,
-			this.PlayMovieContextMenuItem,
-			this.RestartMovieContextMenuItem,
-			this.StopMovieContextMenuItem,
-			this.LoadLastMovieContextMenuItem,
-			this.BackupMovieContextMenuItem,
-			this.StopNoSaveContextMenuItem,
-			this.ViewSubtitlesContextMenuItem,
-			this.AddSubtitleContextMenuItem,
-			this.ViewCommentsContextMenuItem,
-			this.SaveMovieContextMenuItem,
-			this.SaveMovieAsContextMenuItem,
-			this.ContextSeparator_AfterMovie,
-			this.UndoSavestateContextMenuItem,
-			this.ContextSeparator_AfterUndo,
-			this.ConfigContextMenuItem,
-			this.ScreenshotContextMenuItem,
-			this.CloseRomContextMenuItem,
-			this.ClearSRAMContextMenuItem,
-			this.ShowMenuContextMenuSeparator,
-			this.ShowMenuContextMenuItem});
+            this.OpenRomContextMenuItem,
+            this.LoadLastRomContextMenuItem,
+            this.StopAVContextMenuItem,
+            this.ContextSeparator_AfterROM,
+            this.RecordMovieContextMenuItem,
+            this.PlayMovieContextMenuItem,
+            this.RestartMovieContextMenuItem,
+            this.StopMovieContextMenuItem,
+            this.LoadLastMovieContextMenuItem,
+            this.BackupMovieContextMenuItem,
+            this.StopNoSaveContextMenuItem,
+            this.ViewSubtitlesContextMenuItem,
+            this.AddSubtitleContextMenuItem,
+            this.ViewCommentsContextMenuItem,
+            this.SaveMovieContextMenuItem,
+            this.SaveMovieAsContextMenuItem,
+            this.ContextSeparator_AfterMovie,
+            this.UndoSavestateContextMenuItem,
+            this.ContextSeparator_AfterUndo,
+            this.ConfigContextMenuItem,
+            this.ScreenshotContextMenuItem,
+            this.CloseRomContextMenuItem,
+            this.ClearSRAMContextMenuItem,
+            this.ShowMenuContextMenuSeparator,
+            this.ShowMenuContextMenuItem});
 			this.MainFormContextMenu.Name = "contextMenuStrip1";
 			this.MainFormContextMenu.Size = new System.Drawing.Size(217, 490);
 			this.MainFormContextMenu.Closing += new System.Windows.Forms.ToolStripDropDownClosingEventHandler(this.MainFormContextMenu_Closing);
@@ -2237,7 +2232,7 @@ namespace BizHawk.Client.EmuHawk
 			// 
 			// StopAVContextMenuItem
 			// 
-			this.StopAVContextMenuItem.Text = "Stop AVI/WAV";
+			this.StopAVContextMenuItem.Text = "Stop A/V Writer";
 			this.StopAVContextMenuItem.Click += new System.EventHandler(this.StopAVMenuItem_Click);
 			// 
 			// RecordMovieContextMenuItem
@@ -2308,20 +2303,20 @@ namespace BizHawk.Client.EmuHawk
 			// ConfigContextMenuItem
 			// 
 			this.ConfigContextMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-			this.toolStripMenuItem6,
-			this.toolStripMenuItem7,
-			this.toolStripMenuItem8,
-			this.toolStripMenuItem9,
-			this.toolStripMenuItem10,
-			this.toolStripMenuItem11,
-			this.toolStripMenuItem12,
-			this.toolStripMenuItem13,
-			this.toolStripMenuItem14,
-			this.toolStripMenuItem15,
-			this.customizeToolStripMenuItem,
-			this.toolStripSeparator30,
-			this.toolStripMenuItem66,
-			this.toolStripMenuItem67});
+            this.toolStripMenuItem6,
+            this.toolStripMenuItem7,
+            this.toolStripMenuItem8,
+            this.toolStripMenuItem9,
+            this.toolStripMenuItem10,
+            this.toolStripMenuItem11,
+            this.toolStripMenuItem12,
+            this.toolStripMenuItem13,
+            this.toolStripMenuItem14,
+            this.toolStripMenuItem15,
+            this.customizeToolStripMenuItem,
+            this.toolStripSeparator30,
+            this.toolStripMenuItem66,
+            this.toolStripMenuItem67});
 			this.ConfigContextMenuItem.Text = "Config";
 			// 
 			// toolStripMenuItem6
@@ -2351,8 +2346,8 @@ namespace BizHawk.Client.EmuHawk
 			// 
 			// toolStripMenuItem11
 			// 
-			this.toolStripMenuItem11.Text = "&Firmwares...";
-			this.toolStripMenuItem11.Click += new System.EventHandler(this.FirmwaresMenuItem_Click);
+			this.toolStripMenuItem11.Text = "&Firmware...";
+			this.toolStripMenuItem11.Click += new System.EventHandler(this.FirmwareMenuItem_Click);
 			// 
 			// toolStripMenuItem12
 			// 
@@ -2518,12 +2513,6 @@ namespace BizHawk.Client.EmuHawk
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx SaveNamedStateMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripSeparatorEx toolStripSeparator7;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx LoadNamedStateMenuItem;
-		private BizHawk.WinForms.Controls.ToolStripMenuItemEx x1MenuItem;
-		private BizHawk.WinForms.Controls.ToolStripMenuItemEx x2MenuItem;
-		private BizHawk.WinForms.Controls.ToolStripMenuItemEx x3MenuItem;
-		private BizHawk.WinForms.Controls.ToolStripMenuItemEx x4MenuItem;
-		private BizHawk.WinForms.Controls.ToolStripMenuItemEx x5MenuItem;
-		private BizHawk.WinForms.Controls.ToolStripMenuItemEx mzMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx MovieSubMenu;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx RecentMovieSubMenu;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx RecordMovieMenuItem;
@@ -2612,8 +2601,8 @@ namespace BizHawk.Client.EmuHawk
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx DisplaySubtitlesMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx AVSubMenu;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx ConfigAndRecordAVMenuItem;
-		private BizHawk.WinForms.Controls.ToolStripMenuItemEx StopAVIMenuItem;
-		private BizHawk.WinForms.Controls.StatusLabelEx AVIStatusLabel;
+		private BizHawk.WinForms.Controls.ToolStripMenuItemEx StopAVMenuItem;
+		private BizHawk.WinForms.Controls.StatusLabelEx AVStatusLabel;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx RestartMovieContextMenuItem;
 		private BizHawk.WinForms.Controls.StatusLabelEx CheatStatusButton;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx AutofireMenuItem;
@@ -2669,7 +2658,7 @@ namespace BizHawk.Client.EmuHawk
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx Ares64SettingsMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx ConfigContextMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx RewindOptionsMenuItem;
-		private BizHawk.WinForms.Controls.ToolStripMenuItemEx FirmwaresMenuItem;
+		private BizHawk.WinForms.Controls.ToolStripMenuItemEx FirmwareMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx LoadTIFileMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx ClearSRAMContextMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripSeparatorEx ShowMenuContextMenuSeparator;
@@ -2708,6 +2697,7 @@ namespace BizHawk.Client.EmuHawk
 		private BizHawk.WinForms.Controls.ToolStripSeparatorEx toolStripSeparator22;
 		private BizHawk.WinForms.Controls.ToolStripSeparatorEx toolStripSeparator23;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx N64CircularAnalogRangeMenuItem;
+		private BizHawk.WinForms.Controls.ToolStripMenuItemEx Ares64CircularAnalogRangeMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx paletteToolStripMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx ProfilesMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx SynclessRecordingMenuItem;
@@ -2800,7 +2790,12 @@ namespace BizHawk.Client.EmuHawk
 		private BizHawk.WinForms.Controls.ToolStripMenuItemEx AmstradCPCNonSyncSettingsToolStripMenuItem;
 		private BizHawk.WinForms.Controls.ToolStripSeparatorEx toolStripSeparator8;
 		private System.Windows.Forms.ToolStripMenuItem CaptureLuaMenuItem;
-		private System.Windows.Forms.ToolStripMenuItem AutosaveLastSlotMenuItem;
 		private ToolStripSeparatorEx toolStripSeparator24;
+		private ToolStripMenuItemEx AutosaveLastSlotMenuItem;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator25;
+		private ToolStripMenuItemEx DisableResizeWithFramebufferMenuItem;
+		private ToolStripSeparatorEx toolStripSeparator26;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator32;
+		private System.Windows.Forms.ToolStripMenuItem MovieEndPlaySoundMenuItem;
 	}
 }

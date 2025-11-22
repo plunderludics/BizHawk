@@ -1,11 +1,8 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
 using BizHawk.Common.IOExtensions;
-
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using static BizHawk.Tests.Testroms.GB.GBHelper;
 
@@ -21,7 +18,7 @@ namespace BizHawk.Tests.Testroms.GB
 				"cgb-acid-hell" => "res.cgb_acid_hell_artifact.reference.png",
 				"cgb-acid2" => "res.cgb_acid2_artifact.reference.png",
 				"dmg-acid2" => $"res.dmg_acid2_artifact.reference-{(Setup.Variant.IsColour() ? "cgb" : "dmg")}.png",
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 			public readonly string RomEmbedPath => TestName switch
@@ -29,7 +26,7 @@ namespace BizHawk.Tests.Testroms.GB
 				"cgb-acid-hell" => "res.cgb_acid_hell_artifact.cgb-acid-hell.gbc",
 				"cgb-acid2" => "res.cgb_acid2_artifact.cgb-acid2.gbc",
 				"dmg-acid2" => "res.dmg_acid2_artifact.dmg-acid2.gb",
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 			public readonly CoreSetup Setup;
@@ -68,8 +65,8 @@ namespace BizHawk.Tests.Testroms.GB
 					.Select(static testCase => new object?[] { testCase });
 			}
 
-			public string GetDisplayName(MethodInfo methodInfo, object?[] data)
-				=> $"{methodInfo.Name}({((AcidTestCase) data[0]!).DisplayName()})";
+			public string? GetDisplayName(MethodInfo methodInfo, object?[]? data)
+				=> $"{methodInfo.Name}(\"{((AcidTestCase) data![0]!).DisplayName()}\")";
 		}
 
 		private const string SUITE_ID = "AcidTestroms";

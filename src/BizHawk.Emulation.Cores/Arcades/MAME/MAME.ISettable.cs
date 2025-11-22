@@ -1,9 +1,9 @@
-﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 
 using BizHawk.Common;
+using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Arcades.MAME
@@ -28,6 +28,7 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 			return ret ? PutSettingsDirtyBits.RebootCore : PutSettingsDirtyBits.None;
 		}
 
+		[CoreSettings]
 		public class MAMERTCSettings
 		{
 			[DisplayName("Initial Time")]
@@ -92,14 +93,13 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 					};
 
 					var DIPSwitchOptions = MameGetString(MAMELuaCommand.GetDIPSwitchOptions(tag, fieldName));
-					var options = DIPSwitchOptions.Split(new[] { '@' }, StringSplitOptions.RemoveEmptyEntries);
-
+					var options = DIPSwitchOptions.Split('\n');
+					if (options.Length is 0) continue;
 					foreach (var option in options)
 					{
-						var opt = option.Split(new[] { '~' }, StringSplitOptions.RemoveEmptyEntries);
+						var opt = option.Split('~');
 						setting.Options.Add(opt[0], opt[1]);
 					}
-
 					CurrentDriverSettings.Add(setting);
 				}
 			}
@@ -111,7 +111,7 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 			{
 				var s = CurrentDriverSettings.SingleOrDefault(s => s.LookupKey == setting.Key);
 
-				if (s != null && s.Type == SettingType.DIPSWITCH)
+				if (s?.Type is SettingType.DIPSWITCH)
 				{
 					_core.mame_lua_execute($"{ s.LuaCode }.user_value = { setting.Value }");
 				}
@@ -134,15 +134,13 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 
 			foreach (var ROM in ROMs)
 			{
-				if (ROM != string.Empty)
+				if (ROM.Length is not 0)
 				{
 					var substrings = ROM.Split('~');
 					var name = substrings[0];
 					var hashdata = substrings[1];
 					var flags = long.Parse(substrings[2]);
-
-					if ((flags & LibMAME.ROMENTRY_TYPEMASK) == LibMAME.ROMENTRYTYPE_SYSTEM_BIOS
-						|| (flags & LibMAME.ROMENTRY_TYPEMASK) == LibMAME.ROMENTRYTYPE_DEFAULT_BIOS)
+					if ((flags & LibMAME.ROMENTRY_TYPEMASK) is LibMAME.ROMENTRYTYPE_SYSTEM_BIOS or LibMAME.ROMENTRYTYPE_DEFAULT_BIOS)
 					{
 						setting.Options.Add(name, hashdata);
 
@@ -161,6 +159,12 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 					}
 					else
 					{
+						if (hashdata.EndsWithOrdinal('^'))
+						{
+							hashdata = hashdata.RemoveSuffix("^");
+							name += " (BAD DUMP)";
+						}
+
 						hashdata = hashdata.Replace("R", "CRC:").Replace("S", " SHA:");
 						_romHashes.Add(name, hashdata);
 					}
@@ -174,6 +178,35 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 					setting.DefaultValue = tempDefault;
 				}
 
+				CurrentDriverSettings.Add(setting);
+			}
+		}
+
+		private void GetViewsInfo()
+		{
+			var ViewsInfo = MameGetString(MAMELuaCommand.GetViewsInfo);
+			var Views = ViewsInfo.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+			var setting = new DriverSetting
+			{
+				Name = "View",
+				GameName = _gameShortName,
+				LuaCode = LibMAME.VIEW_LUA_CODE,
+				Type = SettingType.VIEW,
+				DefaultValue = "1"
+			};
+
+			foreach (var View in Views)
+			{
+				if (View.Length is not 0)
+				{
+					var substrings = View.Split('@');
+					setting.Options.Add(substrings[0], substrings[1]);
+				}
+			}
+
+			if (setting.Options.Count > 0)
+			{
 				CurrentDriverSettings.Add(setting);
 			}
 		}
@@ -199,7 +232,7 @@ namespace BizHawk.Emulation.Cores.Arcades.MAME
 
 		public enum SettingType
 		{
-			DIPSWITCH, BIOS
+			DIPSWITCH, BIOS, VIEW
 		}
 	}
 }

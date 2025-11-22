@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Consoles.Vectrex
@@ -14,7 +13,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 		public int skip;
 		public uint bright_int_1, bright_int_2, bright_int_3;
 
-		public static uint br = 0xFFFFFFFF;
+		public const uint br = 0xFFFFFFFF;
 
 		// lines to draw in a frame and vairables to go to new line
 		public double[] draw_lines = new double[1024 * 4 * 4];
@@ -33,15 +32,15 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 
 		public void tick()
 		{
-			//Console.WriteLine(ramp_sig + " " + zero_sig + " " + blank_sig + " " + Core.cpu.TotalExecutedCycles + " " + (x_vel - 128.0) + " " + x_pos 
+			//Console.WriteLine(ramp_sig + " " + zero_sig + " " + blank_sig + " " + Core.cpu.TotalExecutedCycles + " " + (x_vel - 128.0) + " " + x_pos
 			//+ " " + (y_vel - 128.0) + " " + y_pos + " " + Core.t1_counter + " " + vec_scale);
 
 			if (ramp_sig && !zero_sig)
 			{
 				if (skip == 0)
 				{
-					x_pos = x_pos + (x_vel - 128.0) / 256.0 * (vec_scale + 2);
-					y_pos = y_pos - (y_vel - 128.0) / 256.0 * (vec_scale + 2);
+					x_pos += (x_vel - 128.0) / 256.0 * (vec_scale + 2);
+					y_pos -= (y_vel - 128.0) / 256.0 * (vec_scale + 2);
 				}
 				else
 				{
@@ -49,7 +48,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 				}
 
 				off_screen = false;
-				
+
 				if (x_pos > 257) { off_screen = true; if (x_pos > (257 + 256)) { x_pos = (257 + 256); } }
 				if (x_pos < 2) { off_screen = true; if (x_pos < (2 - 256)) { x_pos = (2 - 256); } }
 				if (y_pos > 385) { off_screen = true; if (y_pos > (385 + 256)) { y_pos = (385 + 256); } }
@@ -63,14 +62,14 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 			/*
 			if (!blank_sig && !off_screen)
 			{
-				
+
 				Core._vidbuffer[(int)(Math.Round(x_pos) + 260 * Math.Round(y_pos))] |= (int)(br & bright_int_1);
-				
+
 				Core._vidbuffer[(int)(Math.Round(x_pos) + 1 + 260 * Math.Round(y_pos))] |= (int)(br & bright_int_2);
 				Core._vidbuffer[(int)(Math.Round(x_pos) - 1 + 260 * Math.Round(y_pos))] |= (int)(br & bright_int_2);
 				Core._vidbuffer[(int)(Math.Round(x_pos) + 260 * (Math.Round(y_pos) + 1))] |= (int)(br & bright_int_2);
 				Core._vidbuffer[(int)(Math.Round(x_pos) + 260 * (Math.Round(y_pos) - 1))] |= (int)(br & bright_int_2);
-				
+
 				Core._vidbuffer[(int)(Math.Round(x_pos) + 2 + 260 * Math.Round(y_pos))] |= (int)(br & bright_int_3);
 				Core._vidbuffer[(int)(Math.Round(x_pos) - 2 + 260 * Math.Round(y_pos))] |= (int)(br & bright_int_3);
 				Core._vidbuffer[(int)(Math.Round(x_pos) + 260 * (Math.Round(y_pos) + 2))] |= (int)(br & bright_int_3);
@@ -79,14 +78,14 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 				Core._vidbuffer[(int)(Math.Round(x_pos) + 1 + 260 * (Math.Round(y_pos) - 1))] |= (int)(br & bright_int_3);
 				Core._vidbuffer[(int)(Math.Round(x_pos) - 1 + 260 * (Math.Round(y_pos) + 1))] |= (int)(br & bright_int_3);
 				Core._vidbuffer[(int)(Math.Round(x_pos) - 1 + 260 * (Math.Round(y_pos) - 1))] |= (int)(br & bright_int_3);
-				
+
 			}
 			*/
 		}
 
 		public void draw_screen()
 		{
-			// screen is 2 times the internal size of the image 
+			// screen is 2 times the internal size of the image
 			double start_x = 0;
 			double end_x = 0;
 			double start_y = 0;
@@ -96,7 +95,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 
 			for (int i = 0; i < line_pointer; i++)
 			{
-				if (line_vis[i] == true)
+				if (line_vis[i])
 				{
 					start_x = draw_lines[i * 4];
 					start_y = draw_lines[i * 4 + 1];
@@ -132,7 +131,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 						if ((end_y <= 385) && (start_y >= 385)) { max_y = 385 - end_y; start_y = 385; }
 
 						// screen size is double internal size
-							
+
 						start_x *= 2;
 						end_x *= 2;
 						start_y *= 2;
@@ -140,7 +139,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 
 						max_x *= 2;
 						max_y *= 2;
-							
+
 						steps = Math.Max(max_x, max_y) + 1;
 
 						double x_step = (end_x - start_x) / steps;
@@ -190,7 +189,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 
 		public void draw_old_screen()
 		{
-			// screen is 2 times the internal size of the image 
+			// screen is 2 times the internal size of the image
 			double start_x = 0;
 			double end_x = 0;
 			double start_y = 0;
@@ -200,7 +199,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 
 			for (int i = 0; i < line_pointer_old_screen; i++)
 			{
-				if (line_vis_old_screen[i] == true)
+				if (line_vis_old_screen[i])
 				{
 					start_x = draw_lines_old_screen[i * 4];
 					start_y = draw_lines_old_screen[i * 4 + 1];
@@ -267,10 +266,10 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 
 		public void new_draw_line()
 		{
-			if (((ramp_sig && !zero_sig) && ((x_vel != x_vel_old) || (y_vel != y_vel_old))) ||
-				(blank_sig != blank_old) ||
-				(bright_int_1 != bright_int_1_old) ||
-				(zero_sig != zero_old))
+			if ((ramp_sig && !zero_sig && (x_vel != x_vel_old || y_vel != y_vel_old))
+				|| blank_sig != blank_old
+				|| bright_int_1 != bright_int_1_old
+				|| zero_sig != zero_old)
 			{
 				draw_lines[line_pointer * 4 + 2] = x_pos;
 				draw_lines[line_pointer * 4 + 3] = y_pos;
@@ -295,7 +294,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Vectrex
 
 			zero_old = zero_sig;
 			blank_old = blank_sig;
-			bright_int_1_old = bright_int_1;			
+			bright_int_1_old = bright_int_1;
 		}
 
 		public void Reset()

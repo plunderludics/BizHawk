@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
 
@@ -56,9 +54,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 		public void SyncState(Serializer ser)
 		{
-			// feos: this is already saved by DiskDrive.SyncState(ser);
-			//_device?.SyncState(ser);
 			ser.Sync("Connected", ref _connected);
+			_device?.SyncState(ser);
 		}
 
 		public void Connect(SerialPortDevice device)
@@ -78,5 +75,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 		public bool DriveLightEnabled => true;
 		public bool DriveLightOn => ReadDeviceLight();
 		public bool IsConnected => _connected;
+
+		public string DriveLightIconDescription => "Serial Activity";
 	}
 }

@@ -1,7 +1,5 @@
-﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 
 // ReSharper disable UnusedMember.Global
 namespace BizHawk.Client.Common
@@ -39,7 +37,7 @@ namespace BizHawk.Client.Common
 			return result switch
 			{
 				Dictionary<string, object> dict => _th.DictToTable(dict),
-				_ => result
+				_ => result,
 			};
 		}
 	}

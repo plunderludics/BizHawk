@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Components.LR35902;
@@ -50,7 +49,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 				//NOTE: in principle a mapper could mount a useful resource here, but I doubt it)
 				if ((flags & LR35902.eCDLogMemFlags.Write) != 0) return;
 			}
-			
+
 			if (ppu.DMA_bus_control)
 			{
 				// some of gekkio's tests require these to be accessible during DMA
@@ -86,9 +85,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 				{
 					SetCDL(flags, "HRAM", addr - 0xFF80);
 				}
-				
 			}
-			
+
 			if (addr < 0x900)
 			{
 				if (addr < 0x100)
@@ -173,9 +171,6 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 			{
 				return;
 			}
-
 		}
-
-	
 	}
 }

@@ -1,14 +1,11 @@
-﻿using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 using BizHawk.Common;
+using BizHawk.Common.ReflectionExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Components.LR35902;
-
 using BizHawk.Emulation.Cores.Consoles.Nintendo.Gameboy;
-using System.Runtime.InteropServices;
-using System.Collections.Generic;
-
-using BizHawk.Common.ReflectionExtensions;
 
 // TODO: mode1_disableint_gbc.gbc behaves differently between GBC and GBA, why?
 // TODO: Window Position A6 behaves differently
@@ -21,8 +18,9 @@ using BizHawk.Common.ReflectionExtensions;
 
 namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 {
-	[Core(CoreNames.GbHawk, "")]
-	[ServiceNotApplicable(new[] { typeof(IDriveLight) })]
+	[Core(
+		name: CoreNames.GbHawk,
+		author: "alyosha and BizHawk contributors")]
 	public partial class GBHawk : IEmulator, ISaveRam, IDebuggable, IInputPollable, IRegionable, IGameboyCommon,
 	ISettable<GBHawk.GBSettings, GBHawk.GBSyncSettings>
 	{
@@ -66,8 +64,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 		// memory domains
 		public byte[] RAM = new byte[0x8000]; // only 0x2000 available to GB
 		public byte[] ZP_RAM = new byte[0x80];
-		/* 
-		 * VRAM is arranged as: 
+		/*
+		 * VRAM is arranged as:
 		 * 0x1800 Tiles
 		 * 0x400 BG Map 1
 		 * 0x400 BG Map 2
@@ -122,7 +120,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 
 		public LR35902 cpu;
 		public PPU ppu;
-		public Timer timer;
+		public readonly GBTimer timer;
 		public Audio audio;
 		public SerialPort serialport;
 
@@ -146,13 +144,13 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 				GetIntRegs = GetIntRegs,
 				SetIntRegs = SetIntRegs
 			};
-			
-			timer = new Timer();
+
+			timer = new();
 			audio = new Audio();
 			serialport = new SerialPort();
 
 			_ = PutSettings(settings ?? new GBSettings());
-			_syncSettings = (GBSyncSettings)syncSettings ?? new GBSyncSettings();
+			_syncSettings = syncSettings ?? new GBSyncSettings();
 
 			is_GBC = _syncSettings.ConsoleMode switch
 			{
@@ -211,7 +209,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 			ServiceProvider = ser;
 
 			_ = PutSettings(settings ?? new GBSettings());
-			_syncSettings = (GBSyncSettings)syncSettings ?? new GBSyncSettings();
+			_syncSettings = syncSettings ?? new GBSyncSettings();
 
 			_tracer = new TraceBuffer(cpu.TraceHeader);
 			ser.Register<ITraceable>(_tracer);
@@ -368,7 +366,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 			serialport.Reset();
 			mapper.Reset();
 			cpu.Reset();
-			
+
 			vid_buffer = new uint[VirtualWidth * VirtualHeight];
 			frame_buffer = new int[VirtualWidth * VirtualHeight];
 
@@ -499,7 +497,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 			}
 		}
 
-		// TODO: move callbacks to cpu to avoid having to make a non-inlinable 
+		// TODO: move callbacks to cpu to avoid having to make a non-inlinable
 		private void ExecFetch(ushort addr)
 		{
 			if (MemoryCallbacks.HasExecutes)
@@ -574,7 +572,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 				Console.WriteLine("Using Multi-Cart Mapper");
 				mapper = new MapperMBC1Multi();
 			}
-			
+
 			// Wisdom Tree does not identify their mapper, so use hash instead
 			else if (romHashSHA1 is RomChecksums.WisdomTreeJoshua or RomChecksums.WisdomTreeSpiritualWarfare or RomChecksums.WisdomTreeExodus or RomChecksums.WisdomTreeKJVBible or RomChecksums.WisdomTreeNIVBible)
 			{
@@ -663,7 +661,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 					cart_RAM[i] = 0xFF;
 				}
 			}
-			
+
 			// Extra RTC initialization for mbc3, HuC3, and TAMA5
 			if (mppr == "MBC3")
 			{
@@ -684,13 +682,13 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 
 				mapper.RTC_Get(hours & 0xFF, 2);
 
-				remaining = remaining - (hours * 3600);
+				remaining -= (hours * 3600);
 
 				int minutes = (int)Math.Floor(remaining / 60.0);
 
 				mapper.RTC_Get(minutes & 0xFF, 1);
 
-				remaining = remaining - (minutes * 60);
+				remaining -= (minutes * 60);
 
 				mapper.RTC_Get(remaining & 0xFF, 0);
 			}
@@ -711,7 +709,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 				mapper.RTC_Get(days_upper, 20);
 				mapper.RTC_Get(days & 0xFF, 12);
 
-				remaining = remaining - (days * 86400);
+				remaining -= (days * 86400);
 
 				int minutes = (int)Math.Floor(remaining / 60.0);
 				int minutes_upper = (minutes >> 8) & 0xF;
@@ -725,7 +723,6 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawk
 				Use_MT = true;
 
 				// currently no date / time input for TAMA5
-
 			}
 
 			return mppr;

@@ -31,7 +31,7 @@ unsafe impl Sync for jit_descriptor {}
 
 #[no_mangle]
 #[inline(never)]
-extern fn __jit_debug_register_code() {}
+extern "C" fn __jit_debug_register_code() {}
 
 #[no_mangle]
 static mut __jit_debug_descriptor: jit_descriptor = jit_descriptor {
@@ -90,5 +90,5 @@ pub unsafe fn deregister(data: &[u8]) {
 	__jit_debug_descriptor.action_flag = JIT_UNREGISTER_FN;
 	__jit_debug_register_code();
 
-	Box::from_raw(entry);
+	drop(Box::from_raw(entry));
 }

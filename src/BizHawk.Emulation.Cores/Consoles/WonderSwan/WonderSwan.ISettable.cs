@@ -1,16 +1,17 @@
-﻿using System;
-using BizHawk.Emulation.Common;
 using System.ComponentModel;
-using BizHawk.Common;
 using System.Drawing;
+
+using BizHawk.Common;
+using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.WonderSwan
 {
-	partial class WonderSwan : ISettable<WonderSwan.Settings, WonderSwan.SyncSettings>
+	public partial class WonderSwan : ISettable<WonderSwan.Settings, WonderSwan.SyncSettings>
 	{
 		private Settings _settings;
 		private SyncSettings _syncSettings;
 
+		[CoreSettings]
 		public class Settings
 		{
 			[DisplayName("Background Layer")]
@@ -83,6 +84,7 @@ namespace BizHawk.Emulation.Cores.WonderSwan
 			}
 		}
 
+		[CoreSettings]
 		public class SyncSettings
 		{
 			[DisplayName("Initial Time")]
@@ -174,6 +176,5 @@ namespace BizHawk.Emulation.Cores.WonderSwan
 			_syncSettings = o;
 			return ret ? PutSettingsDirtyBits.RebootCore : PutSettingsDirtyBits.None;
 		}
-
 	}
 }

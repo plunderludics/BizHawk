@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -61,7 +60,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media
 
 			return new Disk(84) {WriteProtected = false};
 		}
-		
+
 		public static byte[] Write(IList<byte[]> trackData, IList<int> trackNumbers, IList<int> trackDensities)
 		{
 			const byte version = 0;
@@ -100,9 +99,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media
 						offsets.Add((int)trackMem.Length);
 						densities.Add(trackDensities[trackIndex]);
 
-						var data = trackData[trackIndex];
 						var buffer = Enumerable.Repeat(dataFillerValue, trackMaxLength).ToArray();
-						var dataBytes = data.Select(d => unchecked((byte)d)).ToArray();
+						var dataBytes = trackData[trackIndex];
 						Array.Copy(dataBytes, buffer, dataBytes.Length);
 						trackMemWriter.Write((ushort)dataBytes.Length);
 						trackMemWriter.Write(buffer);

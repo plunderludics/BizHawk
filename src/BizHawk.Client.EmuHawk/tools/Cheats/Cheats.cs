@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -29,6 +28,9 @@ namespace BizHawk.Client.EmuHawk
 
 		private static readonly FilesystemFilterSet CheatsFSFilterSet = new(new FilesystemFilter("Cheat Files", new[] { "cht" }));
 
+		public static Icon ToolIcon
+			=> Resources.FreezeIcon;
+
 		private string _sortedColumn;
 		private bool _sortReverse;
 
@@ -37,7 +39,7 @@ namespace BizHawk.Client.EmuHawk
 		public Cheats()
 		{
 			InitializeComponent();
-			Icon = Resources.FreezeIcon;
+			Icon = ToolIcon;
 			ToggleContextMenuItem.Image = Resources.Refresh;
 			RemoveContextMenuItem.Image = Resources.Delete;
 			DisableAllContextMenuItem.Image = Resources.Stop;
@@ -159,12 +161,6 @@ namespace BizHawk.Client.EmuHawk
 
 		private void Cheats_Load(object sender, EventArgs e)
 		{
-			// Hack for previous config settings
-			if (Settings.Columns.Any(c => string.IsNullOrWhiteSpace(c.Text)))
-			{
-				Settings = new CheatsSettings();
-			}
-
 			CheatEditor.MemoryDomains = Core;
 			LoadConfigSettings();
 			CheatsMenu.Items.Add(CheatListView.ToColumnsMenu(ColumnToggleCallback));
@@ -266,7 +262,7 @@ namespace BizHawk.Client.EmuHawk
 							Cheat.CompareType.LessThan => "<",
 							Cheat.CompareType.LessThanOrEqual => "<=",
 							Cheat.CompareType.NotEqual => "!=",
-							_ => ""
+							_ => string.Empty,
 						};
 
 					break;
@@ -404,7 +400,7 @@ namespace BizHawk.Client.EmuHawk
 		private void RemoveCheatMenuItem_Click(object sender, EventArgs e)
 		{
 			var items = SelectedItems.ToList();
-			if (items.Any())
+			if (items.Count is not 0)
 			{
 				foreach (var item in items)
 				{
@@ -492,7 +488,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private void DisableAllCheatsMenuItem_Click(object sender, EventArgs e)
-		{	
+		{
 			MainForm.CheatList.DisableAll();
 		}
 
@@ -509,19 +505,13 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private void AlwaysLoadCheatsMenuItem_Click(object sender, EventArgs e)
-		{
-			Config.Cheats.LoadFileByGame ^= true;
-		}
+			=> Config.Cheats.LoadFileByGame = !Config.Cheats.LoadFileByGame;
 
 		private void AutoSaveCheatsMenuItem_Click(object sender, EventArgs e)
-		{
-			Config.Cheats.AutoSaveOnClose ^= true;
-		}
+			=> Config.Cheats.AutoSaveOnClose = !Config.Cheats.AutoSaveOnClose;
 
 		private void CheatsOnOffLoadMenuItem_Click(object sender, EventArgs e)
-		{
-			Config.Cheats.DisableOnLoad ^= true;
-		}
+			=> Config.Cheats.DisableOnLoad = !Config.Cheats.DisableOnLoad;
 
 		[RestoreDefaults]
 		private void RestoreDefaults()
@@ -556,7 +546,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 			else if (e.IsCtrl(Keys.A))
 			{
-				SelectAllMenuItem_Click(null, null);
+				SelectAllMenuItem_Click(null, EventArgs.Empty);
 			}
 
 			DoSelectedIndexChange();
@@ -569,7 +559,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void CheatListView_ColumnClick(object sender, InputRoll.ColumnClickEventArgs e)
 		{
-			var column = e.Column;
+			var column = e.Column!;
 			if (column.Name != _sortedColumn)
 			{
 				_sortReverse = false;
@@ -578,7 +568,7 @@ namespace BizHawk.Client.EmuHawk
 			MainForm.CheatList.Sort(column.Name, _sortReverse);
 
 			_sortedColumn = column.Name;
-			_sortReverse ^= true;
+			_sortReverse = !_sortReverse;
 			GeneralUpdate();
 		}
 
@@ -610,7 +600,7 @@ namespace BizHawk.Client.EmuHawk
 		private void ViewInHexEditorContextMenuItem_Click(object sender, EventArgs e)
 		{
 			var selected = SelectedCheats.ToList();
-			if (selected.Any())
+			if (selected.Count is not 0)
 			{
 				Tools.Load<HexEditor>();
 
@@ -629,15 +619,15 @@ namespace BizHawk.Client.EmuHawk
 			{
 				Columns = new List<RollColumn>
 				{
-					new RollColumn { Text = "Names", Name = NameColumn, Visible = true, UnscaledWidth = 128, Type = ColumnType.Text },
-					new RollColumn { Text = "Address", Name = AddressColumn, Visible = true, UnscaledWidth = 60, Type = ColumnType.Text },
-					new RollColumn { Text = "Value", Name = ValueColumn, Visible = true, UnscaledWidth = 59, Type = ColumnType.Text },
-					new RollColumn { Text = "Compare", Name = CompareColumn, Visible = true, UnscaledWidth = 63, Type = ColumnType.Text },
-					new RollColumn { Text = "Compare Type", Name = ComparisonTypeColumn, Visible = true, UnscaledWidth = 98, Type = ColumnType.Text },
-					new RollColumn { Text = "On", Name = OnColumn, Visible = false, UnscaledWidth = 28, Type = ColumnType.Text },
-					new RollColumn { Text = "Size", Name = SizeColumn, Visible = true, UnscaledWidth = 55, Type = ColumnType.Text },
-					new RollColumn { Text = "Endian", Name = EndianColumn, Visible = false, UnscaledWidth = 55, Type = ColumnType.Text },
-					new RollColumn { Text = "Display Type", Name = TypeColumn, Visible = false, UnscaledWidth = 88, Type = ColumnType.Text }
+					new(name: NameColumn, widthUnscaled: 128, text: "Names"),
+					new(name: AddressColumn, widthUnscaled: 60, text: "Address"),
+					new(name: ValueColumn, widthUnscaled: 59, text: "Value"),
+					new(name: CompareColumn, widthUnscaled: 63, text: "Compare"),
+					new(name: ComparisonTypeColumn, widthUnscaled: 98, text: "Compare Type"),
+					new(name: OnColumn, widthUnscaled: 28, text: "On") { Visible = false },
+					new(name: SizeColumn, widthUnscaled: 55, text: "Size"),
+					new(name: EndianColumn, widthUnscaled: 55, text: "Endian") { Visible = false },
+					new(name: TypeColumn, widthUnscaled: 88, text: "Display Type") { Visible = false },
 				};
 			}
 

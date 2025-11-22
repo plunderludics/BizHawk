@@ -1,6 +1,5 @@
 #nullable enable
 
-using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace BizHawk.Client.Common
@@ -15,7 +14,7 @@ namespace BizHawk.Client.Common
 	public static class DisplaySurfaceIDParser
 	{
 #pragma warning disable BHI1005 // switching on string, possibly from user input, ArgumentException is correct here
-		[return: NotNullIfNotNull("str")]
+		[return: NotNullIfNotNull(nameof(str))]
 		public static DisplaySurfaceID? Parse(string? str) => str?.ToLowerInvariant() switch
 		{
 			null => null, // this makes it easy to cascade the "remembered" value
@@ -23,7 +22,7 @@ namespace BizHawk.Client.Common
 			"emu" => DisplaySurfaceID.EmuCore,
 			"emucore" => DisplaySurfaceID.EmuCore,
 			"native" => DisplaySurfaceID.Client,
-			_ => throw new ArgumentException(message: $"{str} is not the name of a display surface", paramName: nameof(str))
+			_ => throw new ArgumentException(paramName: nameof(str), message: $"{str} is not the name of a display surface"),
 		};
 #pragma warning restore BHI1005
 
@@ -31,7 +30,7 @@ namespace BizHawk.Client.Common
 		{
 			DisplaySurfaceID.EmuCore => "emucore",
 			DisplaySurfaceID.Client => "client",
-			_ => throw new InvalidOperationException()
+			_ => throw new InvalidOperationException(),
 		};
 	}
 }

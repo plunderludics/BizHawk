@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using BizHawk.Emulation.Common;
@@ -57,6 +56,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 
 		private void SyncByteArrayDomain(string name, byte[] data)
 		{
+#pragma warning disable MEN014 // see ZXHawk copy
 			if (_memoryDomainsInit || _byteArrayDomains.ContainsKey(name))
 			{
 				var m = _byteArrayDomains[name];
@@ -67,6 +67,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 				var m = new MemoryDomainByteArray(name, MemoryDomain.Endian.Little, data, true, 1);
 				_byteArrayDomains.Add(name, m);
 			}
+#pragma warning restore MEN014
 		}
 	}
 }

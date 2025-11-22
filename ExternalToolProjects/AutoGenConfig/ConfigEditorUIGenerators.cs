@@ -55,7 +55,7 @@ namespace BizHawk.Experiment.AutoGenConfig
 					ForeColor = GetUnchangedComparisonColor(nestedName, in baseline, tag),
 					Name = nestedName,
 					Tag = tag,
-					Text = GetPropertyNameDesc(pi)
+					Text = GetPropertyNameDesc(pi),
 				}.Also(it => it.CheckedChanged += ControlEventHandler);
 			}
 
@@ -158,7 +158,7 @@ namespace BizHawk.Experiment.AutoGenConfig
 			private static readonly IReadOnlyDictionary<Type, IConfigPropEditorUIGen> DefaultFallbackGeneratorSet = new Dictionary<Type, IConfigPropEditorUIGen> {
 				[typeof(bool)] = new CheckBoxForBoolEditorUIGen(),
 				[typeof(int)] = new NumericUpDownForInt32EditorUIGen(),
-				[typeof(string)] = new TextBoxForStringEditorUIGen()
+				[typeof(string)] = new TextBoxForStringEditorUIGen(),
 			};
 		}
 
@@ -171,6 +171,7 @@ namespace BizHawk.Experiment.AutoGenConfig
 
 			public readonly ComparisonColors ComparisonColors;
 
+			/// <param name="cache">global cache</param>
 			/// <param name="colors">default of <see langword="null"/> uses <see cref="ConfigEditorUIGenerators.ComparisonColors.Defaults"/></param>
 			public ConfigEditorMetadata(ConfigEditorCache cache, ComparisonColors? colors = null)
 			{
@@ -209,7 +210,7 @@ namespace BizHawk.Experiment.AutoGenConfig
 
 			/// <remarks>
 			/// Default implementation didn't play nice with <see langword="null"/>, so multiple behaviours are available for custom generators:
-			/// inherit from <see cref="ConfigPropEditorUIGenRefT"/> or <see cref="ConfigPropEditorUIGenValT"/> instead.
+			/// inherit from <see cref="ConfigPropEditorUIGenRefT{T,T}"/> or <see cref="ConfigPropEditorUIGenValT{T,T}"/> instead.
 			/// </remarks>
 			protected abstract bool MatchesBaseline(TListed c, ConfigEditorMetadata metadata);
 
@@ -217,16 +218,20 @@ namespace BizHawk.Experiment.AutoGenConfig
 
 			protected virtual string SerializeTValue(TValue v) => v?.ToString() ?? NULL_SERIALIZATION;
 
+#pragma warning disable CS8600
 #pragma warning disable CS8604
 			string IConfigPropEditorUIGen.SerializeTValue(object? v) => SerializeTValue((TValue) v);
 #pragma warning restore CS8604
+#pragma warning restore CS8600
 
 			/// <inheritdoc cref="IConfigPropEditorUIGen.TValueEquality"/>
 			protected abstract bool TValueEquality(TValue a, TValue b);
 
+#pragma warning disable CS8600
 #pragma warning disable CS8604
 			bool IConfigPropEditorUIGen.TValueEquality(object? a, object? b) => TValueEquality((TValue) a, (TValue) b);
 #pragma warning restore CS8604
+#pragma warning restore CS8600
 
 			protected const string NULL_SERIALIZATION = "(null)";
 
@@ -269,12 +274,12 @@ namespace BizHawk.Experiment.AutoGenConfig
 			where TValue : class
 		{
 			/// <remarks>
-			/// Checked in <see cref="MatchesBaseline"/> in the case where the baseline value is <see cref="null"/>.
-			/// If its implementation returns <see cref="false"/>, an exception will be thrown, otherwise <see cref="TValueEquality"/>' implementation will be called with <see cref="null"/>.
+			/// Checked in <see cref="MatchesBaseline"/> in the case where the baseline value is <see langword="null"/>.
+			/// If its implementation returns <see langword="false"/>, an exception will be thrown, otherwise <see cref="ConfigPropEditorUIGen{T,T}.TValueEquality"/>' implementation will be called with <see langword="null"/>.
 			/// </remarks>
 			protected abstract bool AllowNull { get; }
 
-			/// <inheritdoc cref="ConfigPropEditorUIGen.MatchesBaseline"/>
+			/// <inheritdoc cref="ConfigPropEditorUIGen{T,T}.MatchesBaseline"/>
 			protected override bool MatchesBaseline(TListed c, ConfigEditorMetadata metadata)
 				=> metadata.BaselineValues[c.Name] is TValue v
 					? TValueEquality(GetTValue(c), v)
@@ -285,7 +290,7 @@ namespace BizHawk.Experiment.AutoGenConfig
 			where TListed : Control
 			where TValue : struct
 		{
-			/// <inheritdoc cref="ConfigPropEditorUIGen.MatchesBaseline"/>
+			/// <inheritdoc cref="ConfigPropEditorUIGen{T,T}.MatchesBaseline"/>
 			protected override bool MatchesBaseline(TListed c, ConfigEditorMetadata metadata)
 				=> metadata.BaselineValues[c.Name] is TValue v ? TValueEquality(GetTValue(c), v) : throw new Exception();
 		}
@@ -314,7 +319,7 @@ namespace BizHawk.Experiment.AutoGenConfig
 							Maximum = int.MaxValue,
 							Minimum = int.MinValue,
 							Size = new Size(72, 20),
-							Value = baseline
+							Value = baseline,
 						}.Also(it =>
 						{
 							if (pi.GetCustomAttributes(typeof(RangeAttribute), false).FirstOrDefault() is RangeAttribute range)
@@ -323,11 +328,11 @@ namespace BizHawk.Experiment.AutoGenConfig
 								it.Minimum = (int) range.Minimum;
 							}
 							it.ValueChanged += ControlEventHandler;
-						})
+						}),
 					},
 					ForeColor = GetUnchangedComparisonColor(nestedName, in baseline, tag),
 					Name = nestedName,
-					Tag = tag
+					Tag = tag,
 				};
 			}
 
@@ -357,11 +362,11 @@ namespace BizHawk.Experiment.AutoGenConfig
 					AutoSize = true,
 					Controls = {
 						new Label { Anchor = AnchorStyles.None, AutoSize = true, Text = GetPropertyNameDesc(pi) },
-						new TextBox { AutoSize = true, Text = baseline }.Also(it => it.TextChanged += ControlEventHandler)
+						new TextBox { AutoSize = true, Text = baseline }.Also(it => it.TextChanged += ControlEventHandler),
 					},
 					ForeColor = GetUnchangedComparisonColor(nestedName, baseline, tag),
 					Name = nestedName,
-					Tag = tag
+					Tag = tag,
 				};
 			}
 
@@ -369,7 +374,7 @@ namespace BizHawk.Experiment.AutoGenConfig
 
 			protected override string SerializeTValue(string? v) => v == null ? NULL_SERIALIZATION : $"\"{v}\"";
 
-			protected override bool TValueEquality(string? a, string? b) => string.Equals(a, b) || string.IsNullOrEmpty(a) && string.IsNullOrEmpty(b);
+			protected override bool TValueEquality(string? a, string? b) => a == b || string.IsNullOrEmpty(a) && string.IsNullOrEmpty(b);
 		}
 
 		public sealed class UnrepresentablePropEditorUIGen : ConfigPropEditorUIGen<GroupBox, object?>
@@ -384,13 +389,13 @@ namespace BizHawk.Experiment.AutoGenConfig
 							AutoSize = true,
 							Controls = { new Label { AutoSize = true, Text = $"no editor found for type {pi.PropertyType}" } },
 							Location = new Point(4, 16),
-							MaximumSize = new Size(int.MaxValue, 20)
-						}
+							MaximumSize = new Size(int.MaxValue, 20),
+						},
 					},
 					MaximumSize = new Size(int.MaxValue, 40),
 					Name = $"{nesting}/{pi.Name}",
 					Tag = new ConfigPropEditorUITag(metadata, this),
-					Text = pi.Name
+					Text = pi.Name,
 				};
 
 			protected override object? GetTValue(GroupBox c) => throw new InvalidOperationException();

@@ -196,7 +196,7 @@ impl IStateable for WaterboxHost {
 
 fn unimp(nr: SyscallNumber) -> SyscallResult {
 	eprintln!("Stopped on unimplemented syscall {}", lookup_syscall(&nr));
-	unsafe { std::intrinsics::breakpoint() }
+	std::intrinsics::breakpoint();
 	Err(ENOSYS)
 }
 
@@ -361,6 +361,7 @@ extern "sysv64" fn syscall(
 				old	
 			} else if a1 > old {
 				h.memory_block.mmap_fixed(AddressRange { start: old, size: a1 - old }, Protection::RW, true).unwrap();
+				#[cfg(debug_assertions)]
 				println!("Allocated {} bytes on sbrk heap, usage {}/{}", a1 - old, a1 - addr.start, addr.size);
 				a1
 			} else {
@@ -432,6 +433,8 @@ extern "sysv64" fn syscall(
 			// so don't need to examine the arguments here and can just treat this as another yield
 			h.threads.yield_any(&mut h.context)
 		},
+		NR_GETPID => syscall_ok(1),
+		NR_GETPPID => syscall_ok(1),
 		_ => syscall_ret(unimp(nr)),
 	}
 }

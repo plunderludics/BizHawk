@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -12,6 +11,7 @@ namespace BizHawk.Common
 	/// <seealso cref="CRC32Checksum"/>
 	/// <seealso cref="MD5Checksum"/>
 	/// <seealso cref="SHA256Checksum"/>
+	/// <seealso cref="SHA512Checksum"/>
 	public static class SHA1Checksum
 	{
 		/// <remarks>in bits</remarks>
@@ -25,17 +25,9 @@ namespace BizHawk.Common
 
 		public /*static readonly*/const string Zero = "0000000000000000000000000000000000000000";
 
-#if NET6_0
+#if NET5_0_OR_GREATER
 		public static byte[] Compute(ReadOnlySpan<byte> data)
 			=> SHA1.HashData(data);
-
-		public static byte[] ComputeConcat(ReadOnlySpan<byte> dataA, ReadOnlySpan<byte> dataB)
-		{
-			using var impl = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
-			impl.AppendData(dataA);
-			impl.AppendData(dataB);
-			return impl.GetHashAndReset();
-		}
 #else
 		private static unsafe byte[] UnmanagedImpl(byte[] buffer)
 		{
@@ -58,20 +50,22 @@ namespace BizHawk.Common
 				if (_sha1Impl == null)
 				{
 					_sha1Impl = SHA1.Create();
-					Debug.Assert(_sha1Impl.CanReuseTransform && _sha1Impl.HashSize is EXPECTED_LENGTH);
+					Debug.Assert(_sha1Impl.CanReuseTransform && _sha1Impl.HashSize is EXPECTED_LENGTH, "nonstandard implementation?");
 				}
 				return _sha1Impl;
 			}
 		}
 
+		private static readonly bool UseUnmanagedImpl = RuntimeInformation.ProcessArchitecture == Architecture.X64 && LibBizHash.BizSupportsShaInstructions();
+
 		public static byte[] Compute(byte[] data)
-			=> LibBizHash.BizSupportsShaInstructions()
+			=> UseUnmanagedImpl
 				? UnmanagedImpl(data)
 				: SHA1Impl.ComputeHash(data);
 
 		public static byte[] ComputeConcat(byte[] dataA, byte[] dataB)
 		{
-			if (LibBizHash.BizSupportsShaInstructions()) return UnmanagedImpl(dataA.ConcatArray(dataB));
+			if (UseUnmanagedImpl) return UnmanagedImpl(dataA.ConcatArray(dataB));
 			using var impl = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
 			impl.AppendData(dataA);
 			impl.AppendData(dataB);
@@ -86,7 +80,17 @@ namespace BizHawk.Common
 
 		public static byte[] Compute(ReadOnlySpan<byte> data)
 			=> Compute(data.ToArray());
+#endif
 
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
+		public static byte[] ComputeConcat(ReadOnlySpan<byte> dataA, ReadOnlySpan<byte> dataB)
+		{
+			using var impl = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
+			impl.AppendData(dataA);
+			impl.AppendData(dataB);
+			return impl.GetHashAndReset();
+		}
+#else
 		public static byte[] ComputeConcat(ReadOnlySpan<byte> dataA, ReadOnlySpan<byte> dataB)
 			=> ComputeConcat(dataA.ToArray(), dataB.ToArray());
 #endif

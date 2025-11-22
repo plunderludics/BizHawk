@@ -219,7 +219,21 @@ EXPORT void snes_load_cartridge_super_gameboy(
 
     program->load();
 }
-// Note that bsmemory and sufamiturbo (a and b) are never loaded
+
+EXPORT void snes_load_cartridge_bsmemory(
+  const uint8_t* rom_data, const uint8_t* bsmemory_rom_data, int rom_size, int bsmemory_rom_size
+) {
+    emulator->connect(ID::Port::Expansion, ID::Device::Satellaview);
+
+    program->superFamicom.raw_data.resize(rom_size);
+    memcpy(program->superFamicom.raw_data.data(), rom_data, rom_size);
+
+    program->bsMemory.program.resize(bsmemory_rom_size);
+    memcpy(program->bsMemory.program.data(), bsmemory_rom_data, bsmemory_rom_size);
+
+    program->load();
+}
+// Note that sufamiturbo (a and b) are never loaded
 // I have no idea what that is but it probably should be supported frontend
 
 
@@ -270,11 +284,17 @@ EXPORT void snes_set_ppu_sprite_limit_enabled(bool enabled)
     // see ppu-fast/ppu.cpp in PPU::power(...)
     ppufast.ItemLimit = enabled ? 32 : 128;
     ppufast.TileLimit = enabled ? 34 : 128;
+    emulator->configure("Hacks/PPU/NoSpriteLimit", !enabled);
 }
 
 EXPORT void snes_set_overscan_enabled(bool enabled)
 {
     program->overscan = enabled;
+}
+
+EXPORT void snes_set_cursor_enabled(bool enabled)
+{
+    emulator->configure("Video/DrawCursor", enabled);
 }
 
 
@@ -314,7 +334,7 @@ EXPORT short* snes_get_audiobuffer_and_size(int& out_size) {
 const char* board;
 EXPORT const char* snes_get_board(void)
 {
-    if (!board) board = program->superFamicom.document["game/board"].text().data();
+    if (!board) board = strdup(program->superFamicom.document["game/board"].text().data());
 
     return board;
 }
@@ -336,17 +356,18 @@ EXPORT void* snes_get_memory_region(int id, int* size, int* word_size)
             *word_size = 1;
             return program->superFamicom.program.data();
 
-        // unused
-        case SNES_MEMORY::BSX_RAM:
+        case SNES_MEMORY::BSMEMORY_ROM:
             if (!cartridge.has.BSMemorySlot) break;
-            *size = mcc.rom.size();
+            *size = bsmemory.memory.size();
             *word_size = 1;
-            return mcc.rom.data();
-        case SNES_MEMORY::BSX_PRAM:
+            return bsmemory.memory.data();
+        case SNES_MEMORY::BSMEMORY_PSRAM:
             if (!cartridge.has.BSMemorySlot) break;
             *size = mcc.psram.size();
             *word_size = 1;
             return mcc.psram.data();
+
+        // unused
         case SNES_MEMORY::SUFAMI_TURBO_A_RAM:
             if (!cartridge.has.SufamiTurboSlotA) break;
             *size = sufamiturboA.ram.size();
@@ -384,11 +405,11 @@ EXPORT void* snes_get_memory_region(int id, int* size, int* word_size)
             *size = sizeof(ppufast.vram);
             *word_size = sizeof(*ppufast.vram);
             return ppufast.vram;
-        case SNES_MEMORY::OBJECTS: // returns a pointer to an array of "objects", not raw OAM memory
+        case SNES_MEMORY::OAM:
             if (!fast_ppu) break;
-            *size = sizeof(ppufast.objects);
-            *word_size = sizeof(*ppufast.objects);
-            return (void*) ppufast.objects;
+            *size = (128 * 32 + 128 * 2) / 8;
+            *word_size = 1;
+            return nullptr; // needs read_oam / write_oam functions below
         case SNES_MEMORY::CGRAM:
             if (!fast_ppu) break;
             *size = sizeof(ppufast.cgram);
@@ -407,6 +428,20 @@ EXPORT uint8_t snes_bus_read(unsigned addr)
 EXPORT void snes_bus_write(unsigned addr, uint8_t value)
 {
     bus.write(addr, value);
+}
+
+EXPORT uint8_t snes_read_oam(uint16_t addr)
+{
+    if (!SuperFamicom::system.fastPPU()) return 0;
+
+    return ppufast.readObject(addr);
+}
+
+EXPORT void snes_write_oam(uint16_t addr, uint8_t value)
+{
+    if (!SuperFamicom::system.fastPPU()) return;
+
+    return ppufast.writeObject(addr, value);
 }
 
 EXPORT void* snes_get_sgb_memory_region(int id, int* size)

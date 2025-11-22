@@ -1,6 +1,7 @@
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Atari.Jaguar;
 using BizHawk.Emulation.Cores.Consoles.Nintendo.Gameboy;
+using BizHawk.Emulation.Cores.Consoles.Nintendo.NDS;
 using BizHawk.Emulation.Cores.Consoles.Sega.gpgx;
 using BizHawk.Emulation.Cores.Consoles.Sega.PicoDrive;
 using BizHawk.Emulation.Cores.Nintendo.SNES;
@@ -9,7 +10,7 @@ namespace BizHawk.Client.EmuHawk
 {
 	public abstract partial class RetroAchievements
 	{
-		public enum ConsoleID : int
+		public enum ConsoleID : uint
 		{
 			UnknownConsoleID = 0,
 			MegaDrive = 1,
@@ -89,8 +90,11 @@ namespace BizHawk.Client.EmuHawk
 			ElektorTVGamesComputer = 75,
 			PCEngineCD = 76,
 			JaguarCD = 77,
+			DSi = 78,
+			TI83 = 79,
+			Uzebox = 80,
 
-			NumConsoleIDs
+			NumConsoleIDs,
 		}
 
 		protected ConsoleID SystemIdToConsoleId()
@@ -126,7 +130,9 @@ namespace BizHawk.Client.EmuHawk
 				VSystemID.Raw.Libretro => ConsoleID.UnknownConsoleID,
 				VSystemID.Raw.Lynx => ConsoleID.Lynx,
 				VSystemID.Raw.MSX => ConsoleID.MSX,
+				VSystemID.Raw.N3DS => ConsoleID.Nintendo3DS,
 				VSystemID.Raw.N64 => ConsoleID.N64,
+				VSystemID.Raw.NDS when Emu is NDS { IsDSi: true } => ConsoleID.DSi,
 				VSystemID.Raw.NDS => ConsoleID.DS,
 				VSystemID.Raw.NeoGeoCD => ConsoleID.NeoGeoCD,
 				VSystemID.Raw.NES => ConsoleID.NES,
@@ -151,9 +157,9 @@ namespace BizHawk.Client.EmuHawk
 				VSystemID.Raw.SMS => ConsoleID.MasterSystem,
 				VSystemID.Raw.SNES when Emu is LibsnesCore { IsSGB: true } => ConsoleID.GB,
 				VSystemID.Raw.SNES => ConsoleID.SNES,
-				VSystemID.Raw.TI83 => ConsoleID.UnknownConsoleID,
+				VSystemID.Raw.TI83 => ConsoleID.TI83,
 				VSystemID.Raw.TIC80 => ConsoleID.Tic80,
-				VSystemID.Raw.UZE => ConsoleID.UnknownConsoleID,
+				VSystemID.Raw.UZE => ConsoleID.Uzebox,
 				VSystemID.Raw.VB => ConsoleID.VirtualBoy,
 				VSystemID.Raw.VEC => ConsoleID.Vectrex,
 				VSystemID.Raw.Wii => ConsoleID.WII,

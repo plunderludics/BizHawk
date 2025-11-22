@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text;
@@ -13,8 +12,14 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class GbGpuView : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Properties.Resources.GambatteIcon;
+
 		[RequiredService]
-		public IGameboyCommon Gb { get; private set; }
+		public IGameboyCommon/*?*/ _gbCore { get; set; }
+
+		private IGameboyCommon Gb
+			=> _gbCore!;
 
 		// TODO: freeze semantics are a bit weird: details for a mouseover or freeze are taken from the current
 		// state, not the state at the last callback (and so can be quite different when update is set to manual).
@@ -38,6 +43,7 @@ namespace BizHawk.Client.EmuHawk
 		/// Whether the tiles are being drawn with the sprite or bg palettes
 		/// </summary>
 		private bool _tilesPalIsSprite;
+
 		/// <summary>
 		/// How far (in bytes, I guess?) we should offset into the tiles palette
 		/// </summary>
@@ -51,7 +57,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private Color _spriteback;
-		
+
 		[ConfigPersist]
 		public Color Spriteback
 		{
@@ -69,7 +75,7 @@ namespace BizHawk.Client.EmuHawk
 		public GbGpuView()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.GambatteIcon;
+			Icon = ToolIcon;
 			bmpViewBG.ChangeBitmapSize(256, 256);
 			bmpViewWin.ChangeBitmapSize(256, 256);
 			bmpViewTiles1.ChangeBitmapSize(128, 192);
@@ -82,7 +88,7 @@ namespace BizHawk.Client.EmuHawk
 			bmpViewMemory.ChangeBitmapSize(8, 16);
 
 			hScrollBarScanline.Value = 0;
-			hScrollBarScanline_ValueChanged(null, null); // not firing in this case??
+			hScrollBarScanline_ValueChanged(null, EventArgs.Empty); // not firing in this case??
 			radioButtonRefreshFrame.Checked = true;
 
 			KeyPreview = true;
@@ -557,9 +563,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private void GbGpuView_FormClosed(object sender, FormClosedEventArgs e)
-		{
-			Gb?.SetScanlineCallback(null, 0);
-		}
+			=> _gbCore?.SetScanlineCallback(null, 0);
 
 		private void radioButtonRefreshFrame_CheckedChanged(object sender, EventArgs e) { ComputeRefreshValues(); }
 		private void radioButtonRefreshScanline_CheckedChanged(object sender, EventArgs e) { ComputeRefreshValues(); }
@@ -616,29 +620,17 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return;
 			}
-
-			if (Gb != null)
+			if (!Visible)
 			{
-				if (!Visible)
-				{
-					if (_cbScanlineEmu != -2)
-					{
-						_cbScanlineEmu = -2;
-						Gb.SetScanlineCallback(null, 0);
-					}
-				}
-				else
-				{
-					if (_cbScanline != _cbScanlineEmu)
-					{
-						_cbScanlineEmu = _cbScanline;
-						if (_cbScanline == -2)
-							Gb.SetScanlineCallback(null, 0);
-						else
-							Gb.SetScanlineCallback(ScanlineCallback, _cbScanline);
-					}
-				}
+				if (_cbScanlineEmu is -2) return;
+				_cbScanlineEmu = -2;
+				Gb.SetScanlineCallback(null, 0);
+				return;
 			}
+			if (_cbScanline == _cbScanlineEmu) return;
+			_cbScanlineEmu = _cbScanline;
+			if (_cbScanline is -2) Gb.SetScanlineCallback(null, 0);
+			else Gb.SetScanlineCallback(ScanlineCallback, _cbScanline);
 		}
 
 		private string _freezeLabel;
@@ -1010,17 +1002,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (ModifierKeys.HasFlag(Keys.Control) && e.KeyCode == Keys.C)
 			{
-				// find the control under the mouse
-				Point m = Cursor.Position;
-				Control top = this;
-				Control found;
-				do
-				{
-					found = top.GetChildAtPoint(top.PointToClient(m));
-					top = found;
-				} while (found != null && found.HasChildren);
-
-				if (found is BmpView bv)
+				if (this.InnermostControlAt(Cursor.Position) is BmpView bv)
 				{
 					Clipboard.SetImage(bv.Bmp);
 					labelClipboard.Text = $"{bv.Text} copied to clipboard.";
@@ -1043,7 +1025,7 @@ namespace BizHawk.Client.EmuHawk
 				AllowFullOpen = true,
 				AnyColor = true,
 				FullOpen = true,
-				Color = Spriteback
+				Color = Spriteback,
 			};
 
 			if (this.ShowDialogWithTempMute(dlg).IsOk())

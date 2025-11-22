@@ -1,4 +1,3 @@
-﻿using System;
 using System.Windows.Forms;
 
 using BizHawk.Emulation.Common;
@@ -48,10 +47,9 @@ namespace BizHawk.Client.EmuHawk
 
 		private void OkBtn_Click(object sender, EventArgs e)
 		{
-			bool changed =
-				_settings.OSDMessageVerbosity.ToString() != osdMessageVerbositycomboBox1.SelectedItem.ToString() ||
-				_settings.BackgroundColor != _bgColor ||
-				_settings.UseCoreBorderForBackground != checkBoxShowCoreBrdColor.Checked;
+			var changed = checkBoxShowCoreBrdColor.Checked != _settings.UseCoreBorderForBackground
+				|| _bgColor != _settings.BackgroundColor
+				|| osdMessageVerbositycomboBox1.SelectedItem.ToString() != _settings.OSDMessageVerbosity.ToString();
 
 			if (changed)
 			{
@@ -122,7 +120,7 @@ namespace BizHawk.Client.EmuHawk
 				System.Drawing.Color.FromArgb(0x00, 0xFF, 0x00),
 				System.Drawing.Color.FromArgb(0x00, 0xFF, 0xFF),
 				System.Drawing.Color.FromArgb(0xFF, 0xFF, 0x00),
-				System.Drawing.Color.FromArgb(0xFF, 0xFF, 0xFF)
+				System.Drawing.Color.FromArgb(0xFF, 0xFF, 0xFF),
 			};
 
 			cd.CustomColors = new[]
@@ -142,7 +140,7 @@ namespace BizHawk.Client.EmuHawk
 				System.Drawing.ColorTranslator.ToOle(colors[12]),
 				System.Drawing.ColorTranslator.ToOle(colors[13]),
 				System.Drawing.ColorTranslator.ToOle(colors[14]),
-				System.Drawing.ColorTranslator.ToOle(colors[15])
+				System.Drawing.ColorTranslator.ToOle(colors[15]),
 			};
 
 			cd.Color = c;

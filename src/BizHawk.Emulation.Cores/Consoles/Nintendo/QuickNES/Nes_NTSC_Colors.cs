@@ -1,5 +1,3 @@
-﻿using System;
-
 namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 {
 	public static class Nes_NTSC_Colors
@@ -80,7 +78,6 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 					i += phases[tint_color] * sat;
 					q += phases[tint_color + 3] * sat;
 				}
-
 			}
 
 			YIQ_TO_RGB(y, i, q, out r, out g, out b);
@@ -88,9 +85,9 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 			g = Math.Min(1.0f, Math.Max(0.0f, g));
 			b = Math.Min(1.0f, Math.Max(0.0f, b));
 
-			outp[0] = (byte)(r * 255);
-			outp[1] = (byte)(g * 255);
-			outp[2] = (byte)(b * 255);
+			outp[0] = (byte)Math.Round(r * 255);
+			outp[1] = (byte)Math.Round(g * 255);
+			outp[2] = (byte)Math.Round(b * 255);
 		}
 	}
 }

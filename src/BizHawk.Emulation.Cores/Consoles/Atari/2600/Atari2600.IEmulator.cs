@@ -1,5 +1,4 @@
 ﻿using BizHawk.Emulation.Common;
-using System;
 
 namespace BizHawk.Emulation.Cores.Atari.Atari2600
 {
@@ -23,7 +22,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 
 			if (_controller.IsPressed("Toggle Left Difficulty") && !_leftDifficultySwitchHeld)
 			{
-				_leftDifficultySwitchPressed ^= true;
+				_leftDifficultySwitchPressed = !_leftDifficultySwitchPressed;
 				_leftDifficultySwitchHeld = true;
 			}
 			else if (!_controller.IsPressed("Toggle Left Difficulty"))
@@ -33,7 +32,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 
 			if (_controller.IsPressed("Toggle Right Difficulty") && !_rightDifficultySwitchHeld)
 			{
-				_rightDifficultySwitchPressed ^= true;
+				_rightDifficultySwitchPressed = !_rightDifficultySwitchPressed;
 				_rightDifficultySwitchHeld = true;
 			}
 			else if (!_controller.IsPressed("Toggle Right Difficulty"))
@@ -69,7 +68,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 
 			_tia.New_Frame = false;
 
-			if (renderSound == false)
+			if (!renderSound)
 			{
 				_tia.AudioClocks = 0; // we need this here since the async sound provider won't check in this case
 			}

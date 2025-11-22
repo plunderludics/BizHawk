@@ -111,7 +111,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 					if (!toggle)
 						irq_counter = (irq_counter & 0xFF) | (value << 8);
 					else irq_counter = (irq_counter & 0xFF00) | (value);
-					toggle ^= true;
+					toggle = !toggle;
 					break;
 				case 0x5800: //0xD800
 					irq_enable = value.Bit(4);
@@ -153,7 +153,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 		public override byte ReadPrg(int addr)
 		{
 			addr = ApplyMemoryMap(14, prg_banks_16k, addr);
-			return Rom[addr]; 
+			return Rom[addr];
 		}
 
 		public override byte ReadPpu(int addr)
@@ -167,7 +167,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			{
 				if (NES._isVS)
 				{
-					addr = addr - 0x2000;
+					addr -= 0x2000;
 					if (addr < 0x800)
 					{
 						return NES.CIRAM[addr];
@@ -194,7 +194,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				}
 				else
 				{
-					addr = addr - 0x2000;
+					addr -= 0x2000;
 					if (addr < 0x800)
 					{
 						NES.CIRAM[addr] = value;

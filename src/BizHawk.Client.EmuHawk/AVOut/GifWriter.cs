@@ -1,4 +1,3 @@
-﻿using System;
 using System.IO;
 using System.Drawing;
 
@@ -67,7 +66,7 @@ namespace BizHawk.Client.EmuHawk
 				return new GifToken(0, 0)
 				{
 					Frameskip = config.GifWriterFrameskip,
-					FrameDelay = config.GifWriterDelay
+					FrameDelay = config.GifWriterDelay,
 				};
 			}
 

@@ -50,8 +50,8 @@ private:
 
   #if defined(API_WINDOWS)
 
-  HANDLE _file = INVALID_HANDLE_VALUE;
-  HANDLE _map  = INVALID_HANDLE_VALUE;
+  HANDLE _file = nullptr;
+  HANDLE _map  = nullptr;
 
 public:
   auto operator=(file_map&& source) -> file_map& {
@@ -67,82 +67,15 @@ public:
     source._open = false;
     source._data = nullptr;
     source._size = 0;
-    source._file = INVALID_HANDLE_VALUE;
-    source._map = INVALID_HANDLE_VALUE;
+    source._file = nullptr;
+    source._map = nullptr;
 
     return *this;
   }
 
-  auto open(const string& filename, u32 mode_) -> bool {
-    close();
-    if(file::exists(filename) && file::size(filename) == 0) return _open = true;
+  auto open(const string& filename, u32 mode_) -> bool;
 
-    s32 desiredAccess, creationDisposition, protection, mapAccess;
-
-    switch(mode_) {
-    default: return false;
-    case mode::read:
-      desiredAccess = GENERIC_READ;
-      creationDisposition = OPEN_EXISTING;
-      protection = PAGE_READONLY;
-      mapAccess = FILE_MAP_READ;
-      break;
-    case mode::write:
-      //write access requires read access
-      desiredAccess = GENERIC_WRITE;
-      creationDisposition = CREATE_ALWAYS;
-      protection = PAGE_READWRITE;
-      mapAccess = FILE_MAP_ALL_ACCESS;
-      break;
-    case mode::modify:
-      desiredAccess = GENERIC_READ | GENERIC_WRITE;
-      creationDisposition = OPEN_EXISTING;
-      protection = PAGE_READWRITE;
-      mapAccess = FILE_MAP_ALL_ACCESS;
-      break;
-    case mode::append:
-      desiredAccess = GENERIC_READ | GENERIC_WRITE;
-      creationDisposition = CREATE_NEW;
-      protection = PAGE_READWRITE;
-      mapAccess = FILE_MAP_ALL_ACCESS;
-      break;
-    }
-
-    _file = CreateFileW(utf16_t(filename), desiredAccess, FILE_SHARE_READ, nullptr,
-      creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if(_file == INVALID_HANDLE_VALUE) return false;
-
-    _size = GetFileSize(_file, nullptr);
-
-    _map = CreateFileMapping(_file, nullptr, protection, 0, _size, nullptr);
-    if(_map == INVALID_HANDLE_VALUE) {
-      CloseHandle(_file);
-      _file = INVALID_HANDLE_VALUE;
-      return false;
-    }
-
-    _data = (u8*)MapViewOfFile(_map, mapAccess, 0, 0, _size);
-    return _open = true;
-  }
-
-  auto close() -> void {
-    if(_data) {
-      UnmapViewOfFile(_data);
-      _data = nullptr;
-    }
-
-    if(_map != INVALID_HANDLE_VALUE) {
-      CloseHandle(_map);
-      _map = INVALID_HANDLE_VALUE;
-    }
-
-    if(_file != INVALID_HANDLE_VALUE) {
-      CloseHandle(_file);
-      _file = INVALID_HANDLE_VALUE;
-    }
-
-    _open = false;
-  }
+  auto close() -> void;
 
   #else
 
@@ -229,3 +162,7 @@ public:
 };
 
 }
+
+#if defined(NALL_HEADER_ONLY)
+  #include <nall/file-map.cpp>
+#endif

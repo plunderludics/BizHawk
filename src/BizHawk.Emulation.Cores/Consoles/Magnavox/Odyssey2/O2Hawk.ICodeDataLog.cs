@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Components.I8048;
@@ -47,13 +46,13 @@ namespace BizHawk.Emulation.Cores.Consoles.O2Hawk
 
 			if (addr < 0x400)
 			{
-
+				// no-op (BIOS)
 			}
 			else
 			{
 				mapper.MapCDL(addr, flags);
 				return;
 			}
-		}	
+		}
 	}
 }

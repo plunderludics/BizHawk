@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Common;
 using BizHawk.Emulation.Cores.Components.M6502;
 using BizHawk.Emulation.Cores.Computers.Commodore64.Media;
@@ -9,6 +7,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 {
 	public sealed partial class Drive1541 : SerialPortDevice
 	{
+		private byte[][][] _diskDeltas;
 		private Disk _disk;
 		private int _bitHistory;
 		private int _bitsRemainingInLatchedByte;
@@ -26,10 +25,10 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 		private int _cpuClockNum;
 		private int _ratioDifference;
 		private int _driveLightOffTime;
-		private int[] _trackImageData = new int[1];
 		public Func<int> ReadIec = () => 0xFF;
 		public Action DebuggerStep;
 		public readonly Chip23128 DriveRom;
+		private bool _via1Ca1;
 
 		private struct CpuLink : IMOS6502XLink
 		{
@@ -51,20 +50,25 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			public void WriteMemory(ushort address, byte value) => _drive.Write(address, value);
 		}
 
-		public Drive1541(int clockNum, int clockDen)
+		public Drive1541(int clockNum, int clockDen, Func<int> getCurrentDiskNumber)
 		{
 			DriveRom = new Chip23128();
 			_cpu = new MOS6502X<CpuLink>(new CpuLink(this))
 			{
-				NMI = false
+				NMI = false,
+				AneConstant = 0xEF,
+				LxaConstant = 0xFE
 			};
 
 			_ram = new int[0x800];
 			Via0 = Chip6522.Create(ViaReadClock, ViaReadData, ViaReadAtn, 8);
+			Via0.ReadCa1 = ViaReadAtn;
 			Via1 = Chip6522.Create(ReadVia1PrA, ReadVia1PrB);
+			Via1.ReadCa1 = ViaReadByteReady;
 
 			_cpuClockNum = clockNum;
 			_driveCpuClockNum = clockDen * 16000000; // 16mhz
+			_getCurrentDiskNumber = getCurrentDiskNumber;
 		}
 
 		public override void SyncState(Serializer ser)
@@ -86,7 +90,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			ser.BeginSection("Disk6502");
 			_cpu.SyncState(ser);
 			ser.EndSection();
-			
+
 			ser.Sync("RAM", ref _ram, useNull: false);
 
 			ser.BeginSection("VIA0");
@@ -97,31 +101,53 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			Via1.SyncState(ser);
 			ser.EndSection();
 
-			ser.Sync("SystemCpuClockNumerator", ref _cpuClockNum);
-			ser.Sync("SystemDriveCpuRatioDifference", ref _ratioDifference);
-			ser.Sync("DriveLightOffTime", ref _driveLightOffTime);
-			// feos: drop 400KB of ROM data from savestates
-			//ser.Sync("TrackImageData", ref _trackImageData, useNull: false);
+			ser.Sync(nameof(_cpuClockNum), ref _cpuClockNum);
+			ser.Sync(nameof(_ratioDifference), ref _ratioDifference);
+			ser.Sync(nameof(_driveLightOffTime), ref _driveLightOffTime);
 
-			ser.Sync("DiskDensityCounter", ref _diskDensityCounter);
-			ser.Sync("DiskSupplementaryCounter", ref _diskSupplementaryCounter);
-			ser.Sync("DiskFluxReversalDetected", ref _diskFluxReversalDetected);
-			ser.Sync("DiskBitsRemainingInDataEntry", ref _diskBitsLeft);
-			ser.Sync("DiskDataEntryIndex", ref _diskByteOffset);
-			ser.Sync("DiskDataEntry", ref _diskBits);
-			ser.Sync("DiskCurrentCycle", ref _diskCycle);
-			ser.Sync("DiskDensityConfig", ref _diskDensity);
-			ser.Sync("PreviousCA1", ref _previousCa1);
-			ser.Sync("CountsBeforeRandomTransition", ref _countsBeforeRandomTransition);
-			ser.Sync("CurrentRNG", ref _rngCurrent);
-			ser.Sync("Clocks", ref _clocks);
-			ser.Sync("CpuClocks", ref _cpuClocks);
-			ser.Sync("OverflowFlagDelayShiftRegister", ref _overflowFlagDelaySr);
-			ser.Sync("DiskWriteBitsRemaining", ref _diskWriteBitsRemaining);
-			ser.Sync("DiskWriteEnabled", ref _diskWriteEnabled);
-			ser.Sync("DiskWriteLatch", ref _diskWriteLatch);
-			ser.Sync("DiskOutputBits", ref _diskOutputBits);
-			ser.Sync("DiskWriteProtected", ref _diskWriteProtected);
+			ser.Sync(nameof(_diskDensityCounter), ref _diskDensityCounter);
+			ser.Sync(nameof(_diskSupplementaryCounter), ref _diskSupplementaryCounter);
+			ser.Sync(nameof(_diskFluxReversalDetected), ref _diskFluxReversalDetected);
+			ser.Sync(nameof(_diskBitsLeft), ref _diskBitsLeft);
+			ser.Sync(nameof(_diskByteOffset), ref _diskByteOffset);
+			ser.Sync(nameof(_diskBits), ref _diskBits);
+			ser.Sync(nameof(_diskCycle), ref _diskCycle);
+			ser.Sync(nameof(_diskDensity), ref _diskDensity);
+			ser.Sync(nameof(_previousCa1), ref _previousCa1);
+			ser.Sync(nameof(_countsBeforeRandomTransition), ref _countsBeforeRandomTransition);
+			ser.Sync(nameof(_rngCurrent), ref _rngCurrent);
+			ser.Sync(nameof(_clocks), ref _clocks);
+			ser.Sync(nameof(_cpuClocks), ref _cpuClocks);
+			ser.Sync(nameof(_overflowFlagDelaySr), ref _overflowFlagDelaySr);
+			ser.Sync(nameof(_diskWriteBitsRemaining), ref _diskWriteBitsRemaining);
+			ser.Sync(nameof(_diskWriteEnabled), ref _diskWriteEnabled);
+			ser.Sync(nameof(_diskWriteLatch), ref _diskWriteLatch);
+			ser.Sync(nameof(_diskOutputBits), ref _diskOutputBits);
+			ser.Sync(nameof(_diskWriteProtected), ref _diskWriteProtected);
+			ser.Sync(nameof(_via1Ca1), ref _via1Ca1);
+
+			if (ser.IsReader)
+			{
+				ResetDeltas();
+			}
+			else
+			{
+				SaveDeltas();
+			}
+
+			for (var diskNumber = 0; diskNumber < _usedDiskTracks.Length; diskNumber++)
+			{
+				ser.Sync($"{nameof(_usedDiskTracks)}{diskNumber}", ref _usedDiskTracks[diskNumber], useNull: false);
+				for (var trackNumber = 0; trackNumber < 84; trackNumber++)
+				{
+					ser.Sync($"{nameof(_diskDeltas)}{diskNumber},{trackNumber}", ref _diskDeltas[diskNumber][trackNumber], useNull: true);
+				}
+			}
+
+			if (ser.IsReader)
+			{
+				LoadDeltas();
+			}
 		}
 
 		public override void ExecutePhase()
@@ -145,7 +171,6 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 		private void ExecuteSystem()
 		{
-			Via0.Ca1 = ViaReadAtn();
 			Via0.ExecutePhase();
 			Via1.ExecutePhase();
 
@@ -157,7 +182,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 			_overflowFlagDelaySr >>= 1;
 
-			_cpu.IRQ = !(Via0.Irq && Via1.Irq); // active low IRQ line
+			_cpu.IRQ = Via0.Irq || Via1.Irq;
 			_cpu.ExecuteOne();
 
 			if (_ledEnabled)
@@ -175,11 +200,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			Via0.HardReset();
 			Via1.HardReset();
 			_trackNumber = 34;
-			for (var i = 0; i < _ram.Length; i++)
-			{
-				_ram[i] = 0x00;
-			}
-
+			_ram.AsSpan().Fill(0);
 			_diskDensity = 0;
 			_diskFluxReversalDetected = false;
 			_diskByteOffset = 0;
@@ -212,8 +233,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 		{
 			if (_disk != null)
 			{
-				_trackImageData = _disk.GetDataForTrack(_trackNumber);
-				_diskBits = _trackImageData[_diskByteOffset] >> (Disk.FluxBitsPerEntry - _diskBitsLeft);
+				var track = _disk.Tracks[_trackNumber];
+				_diskBits = track.Bits[_diskByteOffset] >> (DiskTrack.FluxBitsPerEntry - _diskBitsLeft);
 				_diskWriteProtected = _disk.WriteProtected;
 			}
 			else
@@ -225,7 +246,6 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 		public void RemoveMedia()
 		{
 			_disk = null;
-			_trackImageData = null;
 			_diskBits = 0;
 		}
 	}

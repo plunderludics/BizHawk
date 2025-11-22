@@ -7,11 +7,6 @@ namespace nall::CD {
 
 enum : s32 { InvalidLBA = 100 * 60 * 75 };
 
-struct BCD {
-  static auto encode(u8 value) -> u8 { return value / 10 << 4 | value % 10; }
-  static auto decode(u8 value) -> u8 { return (value >> 4) * 10 + (value & 15); }
-};
-
 struct MSF {
   u8 minute;        //00-99
   u8 second;        //00-59
@@ -273,7 +268,9 @@ struct Session {
           q[0] = track.control << 4 | 1;
           q[1] = BCD::encode(trackID);
           q[2] = BCD::encode(indexID);
-          auto msf = MSF(lba - track.indices[1].lba);
+          auto msf = indexID == 0
+          ? MSF(track.indices[0].end - lba)
+          : MSF(lba - track.indices[1].lba);
           q[3] = BCD::encode(msf.minute);
           q[4] = BCD::encode(msf.second);
           q[5] = BCD::encode(msf.frame);

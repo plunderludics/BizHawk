@@ -19,6 +19,9 @@
 	path = waterbox/melon/melonDS
 	url = https://github.com/TASEmulators/melonDS.git
 	branch = melonbiz
+[submodule "waterbox/melon/BizPlatform/faad2"]
+	path = waterbox/melon/BizPlatform/faad2
+	url = https://github.com/knik0/faad2.git
 [submodule "waterbox/musl"]
 	path = waterbox/musl
 	url = https://github.com/nattthebear/musl.git
@@ -28,9 +31,6 @@
 [submodule "submodules/gambatte"]
 	path = submodules/gambatte
 	url = https://github.com/pokemon-speedrunning/gambatte-core.git
-[submodule "waterbox/llvm-project"]
-	path = waterbox/llvm-project
-	url = https://github.com/llvm/llvm-project.git
 [submodule "submodules/libdarm"]
 	path = submodules/libdarm
 	url = https://github.com/jbremer/darm.git
@@ -54,7 +54,49 @@
 [submodule "waterbox/mame-arcade/mame"]
 	path = waterbox/mame-arcade/mame
 	url = https://github.com/TASEmulators/mame.git
-	branch = mamehawk0250
+	branch = mamehawk0252
 [submodule "ExternalProjects/librcheevos/rcheevos"]
 	path = ExternalProjects/librcheevos/rcheevos
 	url = https://github.com/RetroAchievements/rcheevos.git
+[submodule "encore/encore"]
+	path = encore/encore
+	url = https://github.com/CasualPokePlayer/encore.git
+	branch = headless
+[submodule "ExternalProjects/SDL2/SDL"]
+	path = ExternalProjects/SDL2/SDL
+	url = https://github.com/libsdl-org/SDL.git
+	branch = SDL2
+[submodule "ExternalProjects/SDL2/libusb"]
+	path = ExternalProjects/SDL2/libusb
+	url = https://github.com/libusb/libusb.git
+[submodule "quicknes/core"]
+	path = quicknes/core
+	url = https://github.com/TASEmulators/quickerNES.git
+	branch = main
+[submodule "waterbox/gpgx/Genesis-Plus-GX"]
+	path = waterbox/gpgx/Genesis-Plus-GX
+	url = https://github.com/TASEmulators/Genesis-Plus-GX.git
+	branch = tasvideos-3.1
+[submodule "waterbox/stella/core"]
+	path = waterbox/stella/core
+	url = https://github.com/TASEmulators/stella.git
+	branch = tasvideos-1
+[submodule "waterbox/uae/libretro-uae"]
+	path = waterbox/uae/libretro-uae
+	url = https://github.com/TASEmulators/libretro-uae.git
+	branch = wbx-1
+[submodule "ExternalProjects/FlooohChips/chips"]
+	path = ExternalProjects/FlooohChips/chips
+	url = https://github.com/floooh/chips.git
+[submodule "waterbox/dosbox/dosbox-x"]
+	path = waterbox/dosbox/dosbox-x
+	url = https://github.com/TASEmulators/dosbox-x.git
+	branch = wbx
+[submodule "waterbox/dsda/core"]
+	path = waterbox/dsda/core
+	url = https://github.com/TASEmulators/dsda-doom.git
+	branch = wbx
+[submodule "waterbox/opera/opera-libretro"]
+	path = waterbox/opera/opera-libretro
+	url = https://github.com/TASEmulators/opera-libretro.git
+	branch = wbx

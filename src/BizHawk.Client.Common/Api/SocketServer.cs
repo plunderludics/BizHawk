@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -16,13 +15,15 @@ namespace BizHawk.Client.Common
 			=> Encoding.ASCII.GetBytes(payload.Length.ToString()).Concat(LENGTH_PREFIX_SEPARATOR).ToArray()
 				.ConcatArray(payload);
 
+		private readonly ProtocolType _protocol;
+
 		private IPEndPoint _remoteEp;
 
-		private Socket _soc = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+		private Socket _soc;
 
 		private readonly Func<byte[]> _takeScreenshotCallback;
 
-		private (string HostIP, int Port) _targetAddr;
+		private (string HostIP, ushort Port) _targetAddr;
 
 		public bool Connected { get; private set; }
 
@@ -36,7 +37,7 @@ namespace BizHawk.Client.Common
 			}
 		}
 
-		public int Port
+		public ushort Port
 		{
 			get => _targetAddr.Port;
 			set
@@ -46,7 +47,7 @@ namespace BizHawk.Client.Common
 			}
 		}
 
-		public (string HostIP, int Port) TargetAddress
+		public (string HostIP, ushort Port) TargetAddress
 		{
 			get => _targetAddr;
 			set
@@ -64,16 +65,21 @@ namespace BizHawk.Client.Common
 
 		public bool Successful { get; private set; }
 
-		public SocketServer(Func<byte[]> takeScreenshotCallback, string ip, int port)
+		public SocketServer(Func<byte[]> takeScreenshotCallback, ProtocolType protocol, string ip, ushort port)
 		{
+			_protocol = protocol;
+			ReinitSocket(out _soc);
 			_takeScreenshotCallback = takeScreenshotCallback;
 			TargetAddress = (ip, port);
 		}
 
+		private void ReinitSocket(out Socket socket)
+			=> socket = new(AddressFamily.InterNetwork, SocketType.Stream, _protocol);
+
 		private void Connect()
 		{
 			_remoteEp = new IPEndPoint(IPAddress.Parse(_targetAddr.HostIP), _targetAddr.Port);
-			_soc = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+			ReinitSocket(out _soc);
 			_soc.Connect(_remoteEp);
 			Connected = true;
 		}
@@ -170,7 +176,7 @@ namespace BizHawk.Client.Common
 				return Successful ? "Screenshot was sent" : "Screenshot could not be sent";
 			}
 			var resp = ReceiveString();
-			return resp == "" ? "Failed to get a response" : resp;
+			return resp.Length is 0 ? "Failed to get a response" : resp;
 		}
 
 		public int SendString(string sendString, Encoding encoding = null)

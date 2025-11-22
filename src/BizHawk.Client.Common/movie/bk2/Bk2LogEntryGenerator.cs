@@ -1,4 +1,3 @@
-﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -6,77 +5,62 @@ using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
 {
-	internal class Bk2LogEntryGenerator : ILogEntryGenerator
+	public static class Bk2LogEntryGenerator
 	{
-		private readonly string _systemId;
-		private readonly IController _source;
+		/// <summary>
+		/// Gets an input log entry that is considered empty. (booleans will be false, axes will be neutral)
+		/// </summary>
+		public static string EmptyEntry(IController source) => CreateLogEntry(source, createEmpty: true);
 
-		public Bk2LogEntryGenerator(string systemId, IController source)
-		{
-			_systemId = systemId;
-			_source = source;
-		}
+		/// <summary>
+		/// Generates an input log entry for the current state of source
+		/// </summary>
+		public static string GenerateLogEntry(IController source) => CreateLogEntry(source);
 
-		public bool IsEmpty => EmptyEntry == GenerateLogEntry();
-
-		public string EmptyEntry => CreateLogEntry(createEmpty: true);
-
-		public string GenerateLogEntry() => CreateLogEntry();
-
-		public string GenerateLogKey()
+		/// <summary>
+		/// Generates a human readable key that will specify the names of the
+		/// buttons and the order they are in. This is intended to simply be
+		/// documentation of the meaning of the mnemonics and not to be used to
+		/// enforce the mnemonic values
+		/// </summary>
+		public static string GenerateLogKey(ControllerDefinition definition)
 		{
 			var sb = new StringBuilder();
-			sb.Append("LogKey:");
 
-			foreach (var group in _source.Definition.ControlsOrdered.Where(static c => c.Count is not 0))
+			foreach (var group in definition.ControlsOrdered.Where(static c => c.Count is not 0))
 			{
 				sb.Append('#');
-				foreach (var button in group)
+				foreach ((string buttonName, _) in group)
 				{
-					sb.Append(button).Append('|');
+					sb.Append(buttonName).Append('|');
 				}
 			}
 
 			return sb.ToString();
 		}
 
-		public IDictionary<string, string> Map()
+		private static string CreateLogEntry(IController source, bool createEmpty = false)
 		{
-			var dict = new Dictionary<string, string>();
-			foreach (var button in _source.Definition.OrderedControlsFlat)
-			{
-				if (_source.Definition.BoolButtons.Contains(button))
-				{
-					dict.Add(button, Bk2MnemonicLookup.Lookup(button, _systemId).ToString());
-				}
-				else if (_source.Definition.Axes.ContainsKey(button))
-				{
-					dict.Add(button, Bk2MnemonicLookup.LookupAxis(button, _systemId));
-				}
-			}
+			if (!createEmpty && source.Definition.MnemonicsCache is null)
+				throw new InvalidOperationException("Can't generate log entry with empty mnemonics cache");
 
-			return dict;
-		}
-
-		private string CreateLogEntry(bool createEmpty = false)
-		{
 			var sb = new StringBuilder();
 
 			sb.Append('|');
 
-			foreach (var group in _source.Definition.ControlsOrdered.Where(static c => c.Count is not 0))
+			foreach (var group in source.Definition.ControlsOrdered)
 			{
-				foreach (var button in group)
+				foreach ((string buttonName, var axisSpec) in group)
 				{
-					if (_source.Definition.Axes.TryGetValue(button, out var range))
+					if (axisSpec.HasValue)
 					{
-						var val = createEmpty ? range.Neutral : _source.AxisValue(button);
+						var val = createEmpty ? axisSpec.Value.Neutral : source.AxisValue(buttonName);
 						sb.Append(val.ToString().PadLeft(5, ' ')).Append(',');
 					}
-					else if (_source.Definition.BoolButtons.Contains(button))
+					else
 					{
-						sb.Append(!createEmpty && _source.IsPressed(button)
-							? Bk2MnemonicLookup.Lookup(button, _systemId)
+						sb.Append(!createEmpty && source.IsPressed(buttonName)
+							? source.Definition.MnemonicsCache[buttonName]
 							: '.');
 					}
 				}

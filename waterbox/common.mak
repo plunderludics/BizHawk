@@ -23,25 +23,37 @@ print-%: ;
 
 #LD_PLUGIN := $(shell gcc --print-file-name=liblto_plugin.so)
 
+ifneq (,$(wildcard $(SYSROOT)/bin/musl-clang))
+CC := $(SYSROOT)/bin/musl-clang
+else ifneq (,$(wildcard $(SYSROOT)/bin/musl-gcc))
 CC := $(SYSROOT)/bin/musl-gcc
+else
+$(error Compiler not found in sysroot)
+endif
 COMMONFLAGS := -fvisibility=hidden -I$(WATERBOX_DIR)/emulibc -Wall -mcmodel=large \
-	-mstack-protector-guard=global -no-pie -fno-pic -fno-pie -fcf-protection=none \
+	-mstack-protector-guard=global -fno-pic -fno-pie -fcf-protection=none \
 	-MD -MP
-CCFLAGS := $(CCFLAGS) $(COMMONFLAGS)
-LDFLAGS := $(LDFLAGS) -static -Wl,--eh-frame-hdr -T $(LINKSCRIPT) #-Wl,--plugin,$(LD_PLUGIN)
+CCFLAGS := $(COMMONFLAGS) $(CCFLAGS)
+LDFLAGS := $(LDFLAGS) -static -no-pie -Wl,--eh-frame-hdr,-O2 -T $(LINKSCRIPT) #-Wl,--plugin,$(LD_PLUGIN)
 CCFLAGS_DEBUG := -O0 -g
-CCFLAGS_RELEASE := -O3 -flto
-CCFLAGS_RELEASE_ASONLY := -O3
+CCFLAGS_RELEASE := -O3 -flto -DNDEBUG
+CCFLAGS_RELEASE_ASONLY := -O3 -DNDEBUG
 LDFLAGS_DEBUG :=
 LDFLAGS_RELEASE :=
-CXXFLAGS := $(CXXFLAGS) $(COMMONFLAGS) -I$(SYSROOT)/include/c++/v1 -fno-use-cxa-atexit
+CXXFLAGS := $(COMMONFLAGS) $(CXXFLAGS) -I$(SYSROOT)/include/c++/v1 -fno-use-cxa-atexit -fvisibility-inlines-hidden
 CXXFLAGS_DEBUG := -O0 -g
-CXXFLAGS_RELEASE := -O3 -flto
+CXXFLAGS_RELEASE := -O3 -flto -DNDEBUG
 CXXFLAGS_RELEASE_ASONLY := -O3
 
 EXTRA_LIBS := -L $(SYSROOT)/lib/linux -lclang_rt.builtins-x86_64 $(EXTRA_LIBS)
+CPP_EXTRA_LIBS := -lc++ -lc++abi -lunwind $(EXTRA_LIBS)
+
 ifneq ($(filter %.cpp,$(SRCS)),)
-EXTRA_LIBS := -lc++ -lc++abi -lunwind $(EXTRA_LIBS)
+EXTRA_LIBS += $(CPP_EXTRA_LIBS)
+endif
+
+ifneq ($(filter %.cxx,$(SRCS)),)
+EXTRA_LIBS += $(CPP_EXTRA_LIBS)
 endif
 
 _OBJS := $(addsuffix .o,$(abspath $(SRCS)))
@@ -56,6 +68,18 @@ $(OBJ_DIR)/%.cpp.o: %.cpp
 	@echo cxx $<
 	@mkdir -p $(@D)
 	@$(CC) -c -o $@ $< $(CXXFLAGS) $(CXXFLAGS_RELEASE) $(PER_FILE_FLAGS_$<)
+$(OBJ_DIR)/%.cxx.o: %.cxx
+	@echo cxx $<
+	@mkdir -p $(@D)
+	@$(CC) -c -o $@ $< $(CXXFLAGS) $(CXXFLAGS_RELEASE) $(PER_FILE_FLAGS_$<)
+$(OBJ_DIR)/%.s.o: %.s
+	@echo cc $<
+	@mkdir -p $(@D)
+	@$(CC) -c -o $@ $< $(CCFLAGS) $(CCFLAGS_RELEASE_ASONLY) $(PER_FILE_FLAGS_$<)
+$(OBJ_DIR)/%.S.o: %.S
+	@echo cc $<
+	@mkdir -p $(@D)
+	@$(CC) -c -o $@ $< $(CCFLAGS) $(CCFLAGS_RELEASE_ASONLY) $(PER_FILE_FLAGS_$<)
 $(DOBJ_DIR)/%.c.o: %.c
 	@echo cc $<
 	@mkdir -p $(@D)
@@ -64,11 +88,27 @@ $(DOBJ_DIR)/%.cpp.o: %.cpp
 	@echo cxx $<
 	@mkdir -p $(@D)
 	@$(CC) -c -o $@ $< $(CXXFLAGS) $(CXXFLAGS_DEBUG) $(PER_FILE_FLAGS_$<)
+$(DOBJ_DIR)/%.cxx.o: %.cxx
+	@echo cxx $<
+	@mkdir -p $(@D)
+	@$(CC) -c -o $@ $< $(CXXFLAGS) $(CXXFLAGS_DEBUG) $(PER_FILE_FLAGS_$<)
+$(DOBJ_DIR)/%.s.o: %.s
+	@echo cc $<
+	@mkdir -p $(@D)
+	@$(CC) -c -o $@ $< $(CCFLAGS) $(CCFLAGS_DEBUG) $(PER_FILE_FLAGS_$<)
+$(DOBJ_DIR)/%.S.o: %.S
+	@echo cc $<
+	@mkdir -p $(@D)
+	@$(CC) -c -o $@ $< $(CCFLAGS) $(CCFLAGS_DEBUG) $(PER_FILE_FLAGS_$<)
 $(OBJ_DIR)/%.c.s: %.c
 	@echo cc -S $<
 	@mkdir -p $(@D)
 	@$(CC) -c -S -o $@ $< $(CCFLAGS) $(CCFLAGS_RELEASE_ASONLY) $(PER_FILE_FLAGS_$<)
 $(OBJ_DIR)/%.cpp.s: %.cpp
+	@echo cxx -S $<
+	@mkdir -p $(@D)
+	@$(CC) -c -S -o $@ $< $(CXXFLAGS) $(CXXFLAGS_RELEASE_ASONLY) $(PER_FILE_FLAGS_$<)
+$(OBJ_DIR)/%.cxx.s: %.cxx
 	@echo cxx -S $<
 	@mkdir -p $(@D)
 	@$(CC) -c -S -o $@ $< $(CXXFLAGS) $(CXXFLAGS_RELEASE_ASONLY) $(PER_FILE_FLAGS_$<)
@@ -95,13 +135,13 @@ $(TARGET_DEBUG): $(DOBJS) $(EMULIBC_DOBJS) $(LINKSCRIPT)
 install: $(TARGET_RELEASE)
 	@cp -f $< $(OUTPUTDLL_DIR)
 	@zstd --stdout --ultra -22 --threads=0 $< > $(OUTPUTDLL_DIR)/$(TARGET).zst
-	@cp $(OUTPUTDLL_DIR)/$(TARGET).zst $(OUTPUTDLLCOPY_DIR)/$(TARGET).zst || true
+	@cp $(OUTPUTDLL_DIR)/$(TARGET).zst $(OUTPUTDLLCOPY_DIR)/$(TARGET).zst 2> /dev/null || true
 	@echo Release build of $(TARGET) installed.
 
 install-debug: $(TARGET_DEBUG)
 	@cp -f $< $(OUTPUTDLL_DIR)
-	@zstd --stdout --ultra -22 --threads=0 $< > $(OUTPUTDLL_DIR)/$(TARGET).zst
-	@cp $(OUTPUTDLL_DIR)/$(TARGET).zst $(OUTPUTDLLCOPY_DIR)/$(TARGET).zst || true
+	@zstd --stdout -1 --threads=0 $< > $(OUTPUTDLL_DIR)/$(TARGET).zst
+	@cp $(OUTPUTDLL_DIR)/$(TARGET).zst $(OUTPUTDLLCOPY_DIR)/$(TARGET).zst 2> /dev/null || true
 	@echo Debug build of $(TARGET) installed.
 
 else

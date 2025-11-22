@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -9,8 +8,6 @@ using BizHawk.Emulation.Cores.Nintendo.Gameboy;
 using BizHawk.Emulation.Cores.Nintendo.GBHawk;
 using BizHawk.Emulation.Cores.Nintendo.Sameboy;
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 using static BizHawk.Emulation.Cores.Nintendo.Gameboy.Gameboy;
 using static BizHawk.Emulation.Cores.Nintendo.GBHawk.GBHawk;
 using static BizHawk.Emulation.Cores.Nintendo.Sameboy.Sameboy;
@@ -19,7 +16,13 @@ namespace BizHawk.Tests.Testroms.GB
 {
 	public static class GBHelper
 	{
-		public enum ConsoleVariant { CGB_C, CGB_D, DMG, DMG_B }
+		public enum ConsoleVariant
+		{
+			CGB_C,
+			CGB_D,
+			DMG,
+			DMG_B,
+		}
 
 		public readonly struct CoreSetup
 		{
@@ -48,6 +51,31 @@ namespace BizHawk.Tests.Testroms.GB
 
 			public readonly override string ToString()
 				=> $"{Variant} in {CoreName}{(UseBIOS ? string.Empty : " (no BIOS)")}";
+		}
+
+		public readonly struct DummyRomAsset : IRomAsset
+		{
+			private readonly byte[] _fileData;
+
+#pragma warning disable CA1065 // yes, really throw
+			public string? Extension
+				=> throw new NotImplementedException();
+
+			public byte[]? FileData
+				=> _fileData;
+
+			public GameInfo? Game
+				=> throw new NotImplementedException();
+
+			public byte[]? RomData
+				=> throw new NotImplementedException();
+
+			public string? RomPath
+				=> throw new NotImplementedException();
+#pragma warning restore CA1065
+
+			public DummyRomAsset(byte[] fileData)
+				=> _fileData = fileData;
 		}
 
 		private static readonly GambatteSettings GambatteSettings = new() { CGBColors = GBColors.ColorType.vivid };
@@ -155,7 +183,7 @@ namespace BizHawk.Tests.Testroms.GB
 				ConsoleVariant.CGB_C => biosAvailable ? SameBoySyncSettings_GBC_C_USEBIOS : SameBoySyncSettings_GBC_C_NOBIOS,
 				ConsoleVariant.CGB_D => biosAvailable ? SameBoySyncSettings_GBC_D_USEBIOS : SameBoySyncSettings_GBC_D_NOBIOS,
 				ConsoleVariant.DMG or ConsoleVariant.DMG_B => biosAvailable ? SameBoySyncSettings_GB_USEBIOS : SameBoySyncSettings_GB_NOBIOS,
-				_ => throw new InvalidOperationException()
+				_ => throw new InvalidOperationException(),
 			};
 
 		public static DummyFrontend.ClassInitCallbackDelegate InitGBCore(CoreSetup setup, string romFilename, byte[] rom)
@@ -167,8 +195,16 @@ namespace BizHawk.Tests.Testroms.GB
 				{
 					CoreNames.Gambatte => new Gameboy(coreComm, game, rom, GambatteSettings, GetGambatteSyncSettings(setup.Variant, setup.UseBIOS), deterministic: true),
 					CoreNames.GbHawk => new GBHawk(coreComm, game, rom, new(), GetGBHawkSyncSettings(setup.Variant)),
-					CoreNames.Sameboy => new Sameboy(coreComm, game, rom, SameBoySettings, GetSameBoySyncSettings(setup.Variant, setup.UseBIOS), deterministic: true),
-					_ => throw new InvalidOperationException("unknown GB core")
+					CoreNames.Sameboy => new Sameboy(new CoreLoadParameters<SameboySettings, SameboySyncSettings>
+					{
+						Comm = coreComm,
+						DeterministicEmulationRequested = true,
+						Game = game,
+						Roms = { new DummyRomAsset(rom) },
+						Settings = SameBoySettings,
+						SyncSettings = GetSameBoySyncSettings(setup.Variant, setup.UseBIOS),
+					}),
+					_ => throw new InvalidOperationException("unknown GB core"),
 				};
 				var biosWaitDuration = setup.UseBIOS || setup.CoreName is CoreNames.Sameboy
 					? setup.Variant.IsColour()
@@ -187,7 +223,7 @@ namespace BizHawk.Tests.Testroms.GB
 			{
 				CoreNames.Gambatte => ImageUtils.PaletteSwap(img, setup.Variant.IsColour() ? UnVividGBCPaletteMap : UnVividGBPaletteMap),
 				CoreNames.Sameboy => setup.Variant.IsColour() ? ImageUtils.PaletteSwap(img, UnVividGBCPaletteMap) : img,
-				_ => img
+				_ => img,
 			};
 	}
 }

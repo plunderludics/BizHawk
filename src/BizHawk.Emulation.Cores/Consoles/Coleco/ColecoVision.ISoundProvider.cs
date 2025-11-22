@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.ColecoVision
@@ -54,6 +52,5 @@ namespace BizHawk.Emulation.Cores.ColecoVision
 		{
 			throw new Exception();
 		}
-
 	}
 }

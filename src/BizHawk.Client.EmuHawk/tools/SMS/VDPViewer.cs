@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Drawing.Imaging;
@@ -12,6 +11,9 @@ namespace BizHawk.Client.EmuHawk
 	[SpecializedTool("VDP Viewer")]
 	public partial class SmsVdpViewer : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Properties.Resources.SmsIcon;
+
 		[RequiredService]
 		private ISmsGpuView Vdp { get; set; }
 
@@ -25,7 +27,7 @@ namespace BizHawk.Client.EmuHawk
 		public SmsVdpViewer()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.SmsIcon;
+			Icon = ToolIcon;
 
 			bmpViewTiles.ChangeBitmapSize(256, 128);
 			bmpViewPalette.ChangeBitmapSize(16, 2);
@@ -178,17 +180,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (ModifierKeys.HasFlag(Keys.Control) && e.KeyCode == Keys.C)
 			{
-				// find the control under the mouse
-				Point m = Cursor.Position;
-				Control top = this;
-				Control found;
-				do
-				{
-					found = top.GetChildAtPoint(top.PointToClient(m));
-					top = found;
-				} while (found != null && found.HasChildren);
-
-				if (found is BmpView bv)
+				if (this.InnermostControlAt(Cursor.Position) is BmpView bv)
 				{
 					Clipboard.SetImage(bv.Bmp);
 				}

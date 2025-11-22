@@ -4,7 +4,7 @@ using BizHawk.Emulation.Cores.Components;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
 {
-	//Mapper 069 is FME7 
+	//Mapper 069 is FME7
 	//or, Sunsoft-5, which is FME7 with additional sound hardware
 
 	internal sealed class Sunsoft_5 : Sunsoft_FME7
@@ -270,7 +270,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				addr = CalcWRAMAddress(addr, prg_bank_mask_8k);
 				return Rom[addr];
 			}
-			else if (!wram_ram_enabled)
+			else if (!wram_ram_enabled || Wram is null)
 				return 0xFF; //empty bus
 			else
 			{
@@ -282,7 +282,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 		public override void WriteWram(int addr, byte value)
 		{
 			if (!wram_ram_selected) return;
-			else if (!wram_ram_enabled)
+			else if (!wram_ram_enabled || Wram is null)
 				return; //empty bus
 			else
 			{
@@ -290,6 +290,5 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 				Wram[addr] = value;
 			}
 		}
-	
 	}
 }

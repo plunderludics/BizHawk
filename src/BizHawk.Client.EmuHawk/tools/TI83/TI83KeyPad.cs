@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 
 using BizHawk.Client.Common;
@@ -11,6 +10,9 @@ namespace BizHawk.Client.EmuHawk
 {
 	public sealed partial class TI83KeyPad : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Resources.CalculateIcon;
+
 		[RequiredService]
 		// ReSharper disable once UnusedAutoPropertyAccessor.Local
 		public TI83Common Emu { get; private set; }
@@ -20,7 +22,7 @@ namespace BizHawk.Client.EmuHawk
 		public TI83KeyPad()
 		{
 			InitializeComponent();
-			Icon = Resources.CalculateIcon;
+			Icon = ToolIcon;
 			LeftButton.Image = Resources.WhiteTriLeft;
 			RightButton.Image = Resources.WhiteTriRight;
 			DownButton.Image = Resources.WhiteTriDown;
@@ -112,8 +114,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void ShowHotkeysMenuItem_Click(object sender, EventArgs e)
 		{
-			TI83ToolTips ^= true;
-
+			TI83ToolTips = !TI83ToolTips;
 			if (TI83ToolTips)
 			{
 				SetToolTips();

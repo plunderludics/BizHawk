@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Common.NumberExtensions;
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
@@ -53,7 +52,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 		private int cycles;
 		private byte output;
 		private int stream_idx;
-		private byte[] data = new byte[0];
+		private byte[] data = [ ];
 
 		private byte streamoutput => data[stream_idx];
 
@@ -72,7 +71,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 		{
 			cycles = 0;
 			stream_idx = 0;
-			data = new byte[0];
+			data = Array.Empty<byte>();
 		}
 
 		public bool IsTransferring()

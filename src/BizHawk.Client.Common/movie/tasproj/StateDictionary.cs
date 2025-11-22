@@ -1,8 +1,8 @@
-﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using BizHawk.Common;
 
 namespace BizHawk.Client.Common
@@ -17,7 +17,8 @@ namespace BizHawk.Client.Common
 			{
 				byte[] bytes = new byte[_streams[key].Length];
 				_streams[key].Seek(0, SeekOrigin.Begin);
-				_streams[key].Read(bytes, 0, bytes.Length);
+				var bytesRead = _streams[key].Read(bytes, offset: 0, count: bytes.Length);
+				Debug.Assert(bytesRead == bytes.Length, "reached end-of-file while reading state");
 				return bytes;
 			}
 			set => SetState(key, new MemoryStream(value));
@@ -25,16 +26,23 @@ namespace BizHawk.Client.Common
 
 		public void SetState(int frame, Stream stream)
 		{
-			if (!_streams.ContainsKey(frame))
+			if (_streams.TryGetValue(frame, out var foundStream))
 			{
-				string filename =  TempFileManager.GetTempFilename("State");
-				_streams[frame] = new FileStream(filename, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
+				foundStream.Seek(0, SeekOrigin.Begin);
 			}
 			else
-				_streams[frame].Seek(0, SeekOrigin.Begin);
+			{
+				_streams[frame] = foundStream = new FileStream(
+					TempFileManager.GetTempFilename("State"),
+					FileMode.Create,
+					FileAccess.ReadWrite,
+					FileShare.None,
+					4096,
+					FileOptions.DeleteOnClose);
+			}
 
-			_streams[frame].SetLength(stream.Length);
-			stream.CopyTo(_streams[frame]);
+			foundStream.SetLength(stream.Length);
+			stream.CopyTo(foundStream);
 		}
 
 		public ICollection<int> Keys => _streams.Keys;
@@ -79,10 +87,7 @@ namespace BizHawk.Client.Common
 		}
 
 		public IEnumerator<KeyValuePair<int, byte[]>> GetEnumerator()
-		{
-			foreach (var kvp in _streams)
-				yield return new KeyValuePair<int, byte[]>(kvp.Key, this[kvp.Key]);
-		}
+			=> _streams.Select(kvp => new KeyValuePair<int, byte[]>(kvp.Key, this[kvp.Key])).GetEnumerator();
 
 		public bool Remove(int key)
 		{

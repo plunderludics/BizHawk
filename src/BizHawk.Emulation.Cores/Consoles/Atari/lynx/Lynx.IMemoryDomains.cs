@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 
 using BizHawk.Emulation.Common;
@@ -11,7 +10,13 @@ namespace BizHawk.Emulation.Cores.Atari.Lynx
 		{
 			var mms = new List<MemoryDomain>
 			{
-				new MemoryDomainIntPtr("RAM", MemoryDomain.Endian.Little, LibLynx.GetRamPointer(Core), 65536, true, 2)
+				new MemoryDomainIntPtr(
+					"RAM",
+					MemoryDomain.Endian.Little,
+					LibLynx.GetRamPointer(Core),
+					size: 65536,
+					writable: true,
+					wordSize: 2),
 			};
 
 			if (LibLynx.GetSaveRamPtr(Core, out var s, out var p))

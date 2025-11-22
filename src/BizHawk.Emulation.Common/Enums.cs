@@ -7,7 +7,8 @@
 	{
 		NTSC,
 		PAL,
-		Dendy
+		Dendy,
+		SECAM,
 	}
 
 	/// <summary>
@@ -17,7 +18,7 @@
 	{
 		Into,
 		Out,
-		Over
+		Over,
 	}
 
 	/// <summary>
@@ -33,6 +34,10 @@
 		Unknown,
 		Bios,
 		Overdump,
-		NotInDatabase
+		NotInDatabase,
+		// MAME
+		Imperfect,
+		Unimplemented,
+		NotWorking,
 	}
 }

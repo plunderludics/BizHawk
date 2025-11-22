@@ -1,0 +1,20 @@
+<!--
+Plunderludics.UnityHawk.SharedBuffers is code for opening sharedmemory buffers for sharing input, texture, etc
+Used by the UnityHawk external tool and also UnityHawkLuaLibrary (within Bizhawk core), but not on the Unity side.
+-->
+
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+	</PropertyGroup>
+	<Import Project="../MainSlnCommon.props" />
+	<PropertyGroup>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Nullable>disable</Nullable>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="SharedMemory" />
+		<ProjectReference Include="$(ProjectDir)../Plunderludics.UnityHawk.Shared/Plunderludics.UnityHawk.Shared.csproj" />
+		<Analyzer Remove="@(Analyzer)" />  <!-- disable ReflectionCache to avoid the Bizhawk.Common dependency -->
+	</ItemGroup>
+</Project>

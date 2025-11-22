@@ -3,11 +3,6 @@
 using System.Collections.Immutable;
 using System.Linq;
 
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.Operations;
-
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class FirstOrDefaultOnStructAnalyzer : DiagnosticAnalyzer
 {
@@ -19,7 +14,8 @@ public sealed class FirstOrDefaultOnStructAnalyzer : DiagnosticAnalyzer
 		defaultSeverity: DiagnosticSeverity.Warning,
 		isEnabledByDefault: true);
 
-	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(DiagUseFirstOrNull);
+	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; }
+		= ImmutableArray.Create(HawkSourceAnalyzer.DiagWTF, DiagUseFirstOrNull);
 
 	public override void Initialize(AnalysisContext context)
 	{
@@ -42,8 +38,17 @@ public sealed class FirstOrDefaultOnStructAnalyzer : DiagnosticAnalyzer
 					var operation = (IInvocationOperation) oac.Operation;
 					var calledSym = operation.TargetMethod.ConstructedFrom;
 					if (!(firstOrDefaultWithPredSym!.Matches(calledSym) || firstOrDefaultNoPredSym!.Matches(calledSym))) return;
-					var receiverExprType = (INamedTypeSymbol) operation.SemanticModel.GetTypeInfo((CSharpSyntaxNode) operation.Arguments[0].Syntax)!.ConvertedType!;
-					if (receiverExprType.TypeArguments[0].IsValueType) oac.ReportDiagnostic(Diagnostic.Create(DiagUseFirstOrNull, operation.Syntax.GetLocation()));
+					var receiverExpr = operation.Arguments[0].Syntax;
+					var receiverExprType = operation.SemanticModel!.GetTypeInfo(
+						(CSharpSyntaxNode) receiverExpr,
+						oac.CancellationToken).ConvertedType!;
+					var collectionElemType = receiverExprType switch
+					{
+						INamedTypeSymbol nts => nts.TypeArguments[0],
+						IArrayTypeSymbol ats => ats.ElementType,
+						_ => throw HawkSourceAnalyzer.ReportWTF(receiverExpr, oac, message: $"[{nameof(FirstOrDefaultOnStructAnalyzer)}] receiver parameter's effective type was of an unexpected kind (neither class/struct nor array): {receiverExprType.GetType().FullName}"),
+					};
+					if (collectionElemType.IsValueType) DiagUseFirstOrNull.ReportAt(operation.LocWithoutReceiver(), oac);
 				},
 				OperationKind.Invocation);
 		});

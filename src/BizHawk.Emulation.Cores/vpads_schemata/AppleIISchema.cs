@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 
@@ -38,7 +37,7 @@ namespace BizHawk.Emulation.Cores
 					new ButtonSchema(286, 18, "-"),
 					new ButtonSchema(307, 18, "="),
 					new ButtonSchema(331, 18, "Delete"),
-					
+
 					/************************** Row 2 **************************/
 					new ButtonSchema(10, 42, "Tab") { DisplayName = " Tab " },
 					new ButtonSchema(52, 42, "Q"),

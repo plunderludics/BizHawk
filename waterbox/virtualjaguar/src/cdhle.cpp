@@ -63,9 +63,9 @@ struct Track {
 struct TOC {
 	uint8_t padding_0;
 	uint8_t padding_1;
-	uint8_t num_sessions;
 	uint8_t min_track_num;
 	uint8_t max_track_num;
+	uint8_t num_sessions;
 	uint8_t last_lead_out_mins;
 	uint8_t last_lead_out_secs;
 	uint8_t last_lead_out_frames;
@@ -89,9 +89,13 @@ void CDHLEInit(void)
 	{
 		jaguarCdInserted = true;
 		cd_toc_callback(&toc);
-		assert(toc.num_sessions >= 2); // need at least 2 sessions
-		int32_t bootTrackNum = 0;
-		for (uint32_t i = 0; i < 127; i++)
+		if (toc.num_sessions < 2)
+		{
+			fprintf(stderr, "%s\n", "need at least 2 sessions!!!");
+			return;
+		}
+		uint32_t bootTrackNum = 0;
+		for (uint32_t i = 1; i < 127; i++)
 		{
 			if (toc.tracks[i].session_num == 1)
 			{
@@ -99,7 +103,11 @@ void CDHLEInit(void)
 				break;
 			}
 		}
-		assert(bootTrackNum != 0);
+		if (bootTrackNum == 0)
+		{
+			fprintf(stderr, "%s\n", "could not find boot track!!!");
+			return;
+		}
 		Track& bootTrack = toc.tracks[bootTrackNum];
 		int32_t startLba = bootTrack.start_mins * 4500 + bootTrack.start_secs * 75 + bootTrack.start_frames - 150;
 		fprintf(stderr, "timecode: %02d:%02d:%02d, startLba %04X\n", bootTrack.start_mins, bootTrack.start_secs, bootTrack.start_frames, startLba);
@@ -109,12 +117,13 @@ void CDHLEInit(void)
 		for (int32_t i = 0; i < numLbas; i++)
 		{
 			cd_read_callback(startLba + i, buf2352);
-			static const char* atariHeader = "ATARI APPROVED DATA HEADER ATRI ";
-			static const char* byteSwappedHeader = "TARA IPARPVODED TA AEHDAREA RT I"; // some dumps are byteswapped, detect these and fix them
+			// the ? here represents a wildcard, these are suppose to be ' ' for the first data track, but it appears the CD bios doesn't actually check it?
+			static const char* atariHeader = "ATARI APPROVED DATA HEADER ATRI?";
+			static const char* byteSwappedHeader = "TARA IPARPVODED TA AEHDAREA RT?I"; // some dumps are byteswapped, detect these and fix them
 			
 			for (uint32_t j = 0; j < (2352 - 32 - 4 - 4); j++)
 			{
-				if (!memcmp(&buf2352[j], atariHeader, 32))
+				if (!memcmp(&buf2352[j], atariHeader, 32 - 1))
 				{
 					fprintf(stderr, "startLba + i %04X\n", startLba + i);
 					cd_boot_addr = GET32(buf2352, j + 32);
@@ -127,7 +136,7 @@ void CDHLEInit(void)
 					break;
 				}
 
-				if (!memcmp(&buf2352[j], byteSwappedHeader, 32))
+				if (!memcmp(&buf2352[j], byteSwappedHeader, 32 - 2))
 				{
 					fprintf(stderr, "(byteswapped) startLba + i %04X\n", startLba + i);
 					cd_boot_addr = *(uint16_t*)&buf2352[j + 32] << 16 | *(uint16_t*)&buf2352[j + 32 + 2];
@@ -143,7 +152,11 @@ void CDHLEInit(void)
 
 			if (foundHeader) break;
 		}
-		assert(foundHeader);
+		if (!foundHeader)
+		{
+			fprintf(stderr, "%s\n", "could not find boot track header!!!");
+			return;
+		}
 	}
 
 	CDHLEReset();
@@ -226,7 +239,8 @@ void CDHLEReset(void)
 			}
 		}
 
-		cd_read_addr_start = dstStart;
+		//eh not sure why I did this?
+		//cd_read_addr_start = dstStart;
 
 		SET32(jaguarMainRAM, 4, cd_boot_addr);
 		SET16(jaguarMainRAM, 0x3004, 0x0403); // BIOS VER
@@ -629,6 +643,24 @@ static void CD_uread(void)
 static void CD_setup(void)
 {
 	// probaby don't really care about this
+	// but to be safe, let's just reset everything
+	cd_initm = false;
+	cd_muted = false;
+	cd_paused = false;
+	cd_jerry = false;
+	cd_mode = 0;
+	cd_osamp = 0;
+
+	cd_is_reading = false;
+	cd_read_orig_addr_start = 0;
+	cd_read_addr_start = 0;
+	cd_read_addr_end = 0;
+	cd_read_lba = 0;
+	memset(cd_buf2352, 0, sizeof(cd_buf2352));
+	cd_buf_pos = 0;
+	cd_buf_rm = 0;
+	cd_buf_circular_size = 0;
+
 	cd_setup = true;
 }
 
@@ -647,6 +679,12 @@ static void CD_osamp(void)
 static void CD_getoc(void)
 {
 	// this is for debugging only, retail games will not call this
+	// although some homebrew games seem to call it?
+	uint32_t addr = m68k_get_reg(M68K_REG_A0);
+	for (uint32_t i = 0; i < sizeof(TOC); i++)
+	{
+		JaguarWriteByte(addr + i, ((uint8_t*)&toc)[i], M68K);
+	}
 }
 
 static void CD_initm(void)

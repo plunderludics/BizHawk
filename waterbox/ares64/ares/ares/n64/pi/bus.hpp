@@ -1,11 +1,14 @@
-inline auto PI::readWord(u32 address) -> u32 {
+inline auto PI::readWord(u32 address, Thread& thread) -> u32 {
   if(address <= 0x046f'ffff) return ioRead(address);
 
   if (unlikely(io.ioBusy)) {
-    writeForceFinish(); //technically, we should wait until Queue::PI_BUS_Write
+    debug(unusual, "[PI::readWord] PI read to 0x", hex(address, 8L), " will not behave as expected because PI writing is in progress");
+    thread.step(writeForceFinish() * 2);
     return io.busLatch;
   }
-  return busRead<Word>(address);
+  thread.step(250 * 2);
+  io.busLatch = busRead<Word>(address);
+  return io.busLatch;
 }
 
 template <u32 Size>
@@ -41,16 +44,16 @@ inline auto PI::busRead(u32 address) -> u32 {
     if(cartridge.flash) return cartridge.flash.read<Size>(address);
     return unmapped;
   }
-  if(address <= 0x13fe'ffff) {
-    if(cartridge.rom  ) return cartridge.rom.read<Size>(address);
-    return unmapped;
+  if(cartridge.isviewer.enabled() && address >= 0x13f0'0000 && address <= 0x13ff'ffff) {
+    return cartridge.isviewer.read<Size>(address);
   }
-  if(address <= 0x13ff'ffff) return cartridge.isviewer.read<Size>(address);
-  if(address <= 0x7fff'ffff) return unmapped;
-  return unmapped; //accesses here actually lock out the RCP
+  if(address <= 0x1000'0000 + cartridge.rom.size - 1) {
+    return cartridge.rom.read<Size>(address);
+  }
+  return unmapped;
 }
 
-inline auto PI::writeWord(u32 address, u32 data) -> void {
+inline auto PI::writeWord(u32 address, u32 data, Thread& thread) -> void {
   if(address <= 0x046f'ffff) return ioWrite(address, data);
 
   if(io.ioBusy) return;
@@ -91,13 +94,16 @@ inline auto PI::busWrite(u32 address, u32 data) -> void {
     if(cartridge.flash) return cartridge.flash.write<Size>(address, data);
     return;
   }
-  if(address <= 0x13fe'ffff) {
-    if(cartridge.rom  ) return cartridge.rom.write<Size>(address, data);
-    return;
+  if(address >= 0x13f0'0000 && address <= 0x13ff'ffff) {
+    if(cartridge.isviewer.enabled()) {
+      writeForceFinish(); //Debugging channel for homebrew, be gentle
+      return cartridge.isviewer.write<Size>(address, data);      
+    } else {
+      debug(unhandled, "[PI::busWrite] attempt to write to ISViewer: ROM is too big so ISViewer is disabled");
+    }
   }
-  if(address <= 0x13ff'ffff) {
-    writeForceFinish(); //Debugging channel for homebrew, be gentle
-    return cartridge.isviewer.write<Size>(address, data);
+  if(address <= 0x1000'0000 + cartridge.rom.size - 1) {
+    return cartridge.rom.write<Size>(address, data);
   }
   if(address <= 0x7fff'ffff) return;
 }
@@ -106,7 +112,7 @@ inline auto PI::writeFinished() -> void {
   io.ioBusy = 0;
 }
 
-inline auto PI::writeForceFinish() -> void {
+inline auto PI::writeForceFinish() -> u32 {
   io.ioBusy = 0;
-  queue.remove(Queue::PI_BUS_Write);
+  return queue.remove(Queue::PI_BUS_Write);
 }

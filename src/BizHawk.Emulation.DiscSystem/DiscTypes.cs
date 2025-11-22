@@ -1,19 +1,26 @@
-using System;
-
 namespace BizHawk.Emulation.DiscSystem
 {
 	/// <summary>
 	/// Represents a TOC entry discovered in the Q subchannel data of the lead-in track by the reader. These are stored redundantly.
-	/// It isn't clear whether we need anything other than the SubchannelQ data, so I abstracted this in case we need it.
+	/// For CDs, all that is needed is SubchannelQ data.
+	/// However, for DVDs (and similar formats, e.g. UMDs), this isn't sufficient.
+	/// DVDs don't have CD subchannels (so this data is mostly junk for such).
+	/// Even worse, DVDs are large enough where they might not be able to fit within absolute timestamps (due to BCD constraints).
+	/// They do have physical sectors numbers within the lead-in for the start and end of the data zone.
+	/// As such, we'll include the absolute timestamp separately here, which can be used to create an LBA later on (without being constrained by BCD).
+	/// Note, this is a bit nonsense for DVDs, the physical sector number on a DVD for LBA 0 is 196608, and that is what's stored in the DVD lead-in.
 	/// </summary>
 	public class RawTOCEntry
 	{
 		public SubchannelQ QData;
+		public int AbsoluteTimestamp;
 	}
 
 	public enum DiscInterface
 	{
-		BizHawk, MednaDisc, LibMirage
+		BizHawk,
+		MednaDisc,
+		LibMirage,
 	}
 
 	public enum SessionFormat
@@ -21,14 +28,29 @@ namespace BizHawk.Emulation.DiscSystem
 		None = -1,
 		Type00_CDROM_CDDA = 0x00,
 		Type10_CDI = 0x10,
-		Type20_CDXA = 0x20
+		Type20_CDXA = 0x20,
 	}
 
 	/// <summary>
 	/// encapsulates a 2 digit BCD number as used various places in the CD specs
 	/// </summary>
-	public struct BCD2
+	public struct BCD2 : IEquatable<BCD2>
 	{
+		public bool Equals(BCD2 other)
+		{
+			return BCDValue == other.BCDValue;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is BCD2 other && Equals(other);
+		}
+
+		public override int GetHashCode()
+		{
+			return BCDValue.GetHashCode();
+		}
+
 		/// <summary>
 		/// The raw BCD value. you can't do math on this number! but you may be asked to supply it to a game program.
 		/// The largest number it can logically contain is 99
@@ -48,14 +70,10 @@ namespace BizHawk.Emulation.DiscSystem
 		/// makes a BCD2 from a decimal number. don't supply a number > 99 or you might not like the results
 		/// </summary>
 		public static BCD2 FromDecimal(int d)
-		{
-			return new BCD2 { DecimalValue = d };
-		}
+			=> new() { DecimalValue = d };
 
 		public static BCD2 FromBCD(byte b)
-		{
-			return new BCD2 { BCDValue = b };
-		}
+			=> new() { BCDValue = b };
 
 		public static int BCDToInt(byte n)
 		{
@@ -65,29 +83,32 @@ namespace BizHawk.Emulation.DiscSystem
 
 		public static byte IntToBCD(int n)
 		{
-			int tens = Math.DivRem(n, 10, out var ones);
+			var tens = Math.DivRem(n, 10, out var ones);
 			return (byte)((tens << 4) | ones);
 		}
 
 		public override string ToString()
-		{
-			return BCDValue.ToString("X2");
-		}
+			=> BCDValue.ToString("X2");
+
+		public static bool operator ==(BCD2 lhs, BCD2 rhs) => lhs.BCDValue == rhs.BCDValue;
+		public static bool operator !=(BCD2 lhs, BCD2 rhs) => lhs.BCDValue != rhs.BCDValue;
+		public static bool operator <(BCD2 lhs, BCD2 rhs) => lhs.BCDValue < rhs.BCDValue;
+		public static bool operator >(BCD2 lhs, BCD2 rhs) => lhs.BCDValue > rhs.BCDValue;
+		public static bool operator <=(BCD2 lhs, BCD2 rhs) => lhs.BCDValue <= rhs.BCDValue;
+		public static bool operator >=(BCD2 lhs, BCD2 rhs) => lhs.BCDValue >= rhs.BCDValue;
 	}
 
 	public static class MSF
 	{
 		public static int ToInt(int m, int s, int f)
-		{
-				return m * 60 * 75 + s * 75 + f;
-		}
+			=> m * 60 * 75 + s * 75 + f;
 	}
 
 	/// <summary>
 	/// todo - rename to MSF? It can specify durations, so maybe it should be not suggestive of timestamp
 	/// TODO - can we maybe use BCD2 in here
 	/// </summary>
-	public struct Timestamp
+	public readonly struct Timestamp
 	{
 		/// <summary>
 		/// Checks if the string is a legit MSF. It's strict.
@@ -115,17 +136,17 @@ namespace BizHawk.Emulation.DiscSystem
 			MIN = SEC = FRAC = 0;
 			Negative = false;
 
-			Valid = false;
-			if (str.Length != 8) return;
-			if (str[0] < '0' || str[0] > '9') return;
-			if (str[1] < '0' || str[1] > '9') return;
-			if (str[2] != ':') return;
-			if (str[3] < '0' || str[3] > '9') return;
-			if (str[4] < '0' || str[4] > '9') return;
-			if (str[5] != ':') return;
-			if (str[6] < '0' || str[6] > '9') return;
-			if (str[7] < '0' || str[7] > '9') return;
-			Valid = true;
+			Valid = str is [
+				>= '0' and <= '9',
+				>= '0' and <= '9',
+				':',
+				>= '0' and <= '9',
+				>= '0' and <= '9',
+				':',
+				>= '0' and <= '9',
+				>= '0' and <= '9',
+			];
+			if (!Valid) return;
 
 			MIN = (byte)((str[0] - '0') * 10 + (str[1] - '0'));
 			SEC = (byte)((str[3] - '0') * 10 + (str[4] - '0'));

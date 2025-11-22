@@ -1,8 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+
+using BizHawk.Common.CollectionExtensions;
+
 using NymaTypes;
 using static BizHawk.Emulation.Cores.Waterbox.NymaCore;
 using static BizHawk.Emulation.Cores.Waterbox.NymaCore.NymaSettingsInfo;
@@ -97,8 +99,9 @@ namespace BizHawk.Emulation.Cores.Waterbox
 	{
 		public SettingT Setting { get; private set; }
 		private readonly bool _isSyncSetting;
-		public MednaPropertyDescriptor(SettingT setting, bool isSyncSetting)
-			: base(setting.SettingsKey, new Attribute[0])
+
+		protected MednaPropertyDescriptor(SettingT setting, bool isSyncSetting)
+			: base(setting.SettingsKey, [ ])
 		{
 			Setting = setting;
 			_isSyncSetting = isSyncSetting;
@@ -199,7 +202,6 @@ namespace BizHawk.Emulation.Cores.Waterbox
 					.SingleOrDefault(d => d.Name == (string)value)
 					?.Value
 					?? Setting.DefaultValue;
-
 			}
 			public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
 			{
@@ -279,7 +281,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		}
 		private static ulong Parse(string s)
 		{
-			if (s.StartsWith("0x"))
+			if (s.StartsWith("0x", StringComparison.Ordinal))
 			{
 				return ulong.Parse(s.Substring(2), NumberStyles.HexNumber);
 			}
@@ -295,9 +297,9 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		public override Type PropertyType => typeof(double);
 		protected override object ConvertFromString(string s)
 		{
-			var ret = double.Parse(s);
-			if (Setting.Min != null && ret < double.Parse(Setting.Min) || Setting.Max != null && ret > double.Parse(Setting.Max))
-				ret = double.Parse(Setting.DefaultValue);
+			var ret = double.Parse(s, NumberFormatInfo.InvariantInfo);
+			if (Setting.Min != null && ret < double.Parse(Setting.Min, NumberFormatInfo.InvariantInfo) || Setting.Max != null && ret > double.Parse(Setting.Max, NumberFormatInfo.InvariantInfo))
+				ret = double.Parse(Setting.DefaultValue, NumberFormatInfo.InvariantInfo);
 			return ret;
 		}
 		protected override string ConvertToString(object o)
@@ -311,7 +313,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		public Port Port { get; private set; }
 		public int PortIndex { get; private set; }
 		public PortPropertyDescriptor(Port port, int index)
-			: base(port.Name, new Attribute[0])
+			: base(port.Name, [ ])
 		{
 			Port = port;
 			PortIndex = index;
@@ -342,18 +344,10 @@ namespace BizHawk.Emulation.Cores.Waterbox
 
 		public override void SetValue(object component, object value)
 		{
-			if ((string)value == Port.DefaultSettingsValue)
-			{
-				ResetValue(component);
-			}
-			else if (!Port.AllowedDevices.Any(d => d.SettingValue == (string)value))
-			{
-				// does not validate
-			}
-			else
-			{
-				((NymaSyncSettings)component).PortDevices[PortIndex] = (string)value;
-			}
+			var str = (string) value;
+			if (str == Port.DefaultSettingsValue) ResetValue(component);
+			else if (Port.AllowedDevices.Exists(d => d.SettingValue == str)) ((NymaSyncSettings) component).PortDevices[PortIndex] = str;
+			// else does not validate
 		}
 
 		public override bool ShouldSerializeValue(object component)
@@ -375,7 +369,6 @@ namespace BizHawk.Emulation.Cores.Waterbox
 					.SingleOrDefault(d => d.Name == (string)value)
 					?.SettingValue
 					?? Port.DefaultSettingsValue;
-
 			}
 			public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
 			{
@@ -401,7 +394,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 	{
 		public string LayerName { get; private set; }
 		public LayerPropertyDescriptor(string layerName)
-			: base(layerName, new Attribute[0])
+			: base(layerName, [ ])
 		{
 			LayerName = layerName;
 		}
@@ -427,12 +420,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 		}
 
 		public override void SetValue(object component, object value)
-		{
-			if ((bool)value)
-				((NymaSettings)component).DisabledLayers.Remove(LayerName);
-			else
-				((NymaSettings)component).DisabledLayers.Add(LayerName);
-		}
+			=> ((NymaSettings) component).DisabledLayers.SetMembership(LayerName, shouldBeMember: !((bool) value));
 
 		public override bool ShouldSerializeValue(object component)
 		{

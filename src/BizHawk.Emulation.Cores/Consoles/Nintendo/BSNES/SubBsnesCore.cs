@@ -4,10 +4,14 @@ using BizHawk.Emulation.Cores.Nintendo.SNES;
 
 namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 {
-	[PortedCore(CoreNames.SubBsnes115, "")]
-	[ServiceNotApplicable(new[] { typeof(IDriveLight) })]
+	[PortedCore(
+		name: CoreNames.SubBsnes115,
+		author: "bsnes team",
+		portedVersion: "v115+",
+		portedUrl: "https://github.com/bsnes-emu/bsnes")]
 	public class SubBsnesCore : IEmulator, ICycleTiming
 	{
+		[CoreConstructor(VSystemID.Raw.Satellaview)]
 		[CoreConstructor(VSystemID.Raw.SGB)]
 		[CoreConstructor(VSystemID.Raw.SNES)]
 		public SubBsnesCore(CoreLoadParameters<BsnesCore.SnesSettings, BsnesCore.SnesSyncSettings> loadParameters)
@@ -80,6 +84,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 				}
 
 				if (!framePassed) _bsnesCore.IsLagFrame = false;
+				if (framePassed) _bsnesCore.AdvanceRtc();
 				_bsnesCore.FrameAdvancePost();
 
 				return true;

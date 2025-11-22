@@ -2,22 +2,24 @@
 
 MEDNAFLAGS := \
 	-Imednafen -Icommon -Imednafen/src/trio \
-	-DHAVE_CONFIG_H=1 -DMDFN_DISABLE_NO_OPT_ERRWARN=1 \
+	-DHAVE_CONFIG_H=1 -DMDFN_DISABLE_NO_OPT_ERRWARN=1 -DMDFN_PSS_STYLE=1 \
 	-fwrapv \
 	-fno-strict-aliasing \
 	-fomit-frame-pointer \
 	-fsigned-char \
-	-fno-aggressive-loop-optimizations \
 	-fno-fast-math \
 	-fno-unsafe-math-optimizations \
 	-fjump-tables \
 	-mfunction-return=keep \
-	-mindirect-branch=keep \
-	-mno-indirect-branch-register \
 	-Wall -Wshadow -Wempty-body -Wignored-qualifiers \
 	-Wvla -Wvariadic-macros -Wdisabled-optimization -Werror=write-strings \
-	--param max-gcse-memory=300000000 \
 	-Dprivate=public # the gods have abandoned us
+
+ifneq (,$(wildcard ../sysroot/bin/musl-gcc))
+MEDNAFLAGS := $(MEDNAFLAGS) -fno-aggressive-loop-optimizations \
+	-mindirect-branch=keep -mno-indirect-branch-register \
+	--param max-gcse-memory=300000000
+endif
 
 CCFLAGS := $(MEDNAFLAGS) -std=gnu99
 CXXFLAGS := $(MEDNAFLAGS) -std=gnu++11

@@ -1,7 +1,7 @@
-﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
+
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Common
 {
@@ -24,7 +24,7 @@ namespace BizHawk.Common
 			}
 
 			// is there a better way to do this?  i couldn't find any documentation...
-			return t.ToString().Contains('*');
+			return t.ToString().ContainsOrdinal('*');
 		}
 
 		/// <summary>
@@ -105,7 +105,7 @@ namespace BizHawk.Common
 			{
 				return o1.Equals(o2);
 			}
-			
+
 			foreach (var field in GetAllFields(t1))
 			{
 				if (!DeepEquals(field.GetValue(o1), field.GetValue(o2)))

@@ -1,14 +1,13 @@
-﻿using System;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
+
 using Newtonsoft.Json;
 
 namespace BizHawk.Client.Common
 {
 	internal partial class TasMovie
 	{
-		public Func<string> ClientSettingsForSave { get; set; }
-		public Action<string> GetClientSettingsOnLoad { get; set; }
+		public Func<string> InputRollSettingsForSave { get; set; }
+		public string InputRollSettings { get; private set; }
 
 		protected override void AddLumps(ZipStateSaver bs, bool isBackup = false)
 		{
@@ -18,30 +17,29 @@ namespace BizHawk.Client.Common
 
 		private void AddTasProjLumps(ZipStateSaver bs, bool isBackup = false)
 		{
-			var settings = JsonConvert.SerializeObject(TasStateManager.Settings);
+			// at this point, TasStateManager may be null if we're currently importing a .bk2
+
+			var settings = JsonConvert.SerializeObject(TasStateManager?.Settings ?? Session.Settings.DefaultTasStateManagerSettings);
 			bs.PutLump(BinaryStateLump.StateHistorySettings, tw => tw.WriteLine(settings));
-			bs.PutLump(BinaryStateLump.LagLog, tw => LagLog.Save(tw));
+			bs.PutLump(BinaryStateLump.LagLog, tw => LagLog.Save(tw), zstdCompress: true);
 			bs.PutLump(BinaryStateLump.Markers, tw => tw.WriteLine(Markers.ToString()));
 
-			if (ClientSettingsForSave != null)
+			if (InputRollSettingsForSave != null)
 			{
-				var clientSettingsJson = ClientSettingsForSave();
-				bs.PutLump(BinaryStateLump.ClientSettings, (TextWriter tw) => tw.Write(clientSettingsJson));
+				var inputRollSettingsJson = InputRollSettingsForSave();
+				bs.PutLump(BinaryStateLump.ClientSettings, (TextWriter tw) => tw.Write(inputRollSettingsJson));
 			}
 
-			if (VerificationLog.Any())
+			if (VerificationLog.Count is not 0)
 			{
 				bs.PutLump(BinaryStateLump.VerificationLog, tw => tw.WriteLine(VerificationLog.ToInputLog()));
 			}
 
-			if (Branches.Any())
-			{
-				Branches.Save(bs);
-			}
+			if (Branches.Count is not 0) Branches.Save(bs);
 
 			bs.PutLump(BinaryStateLump.Session, tw => tw.WriteLine(JsonConvert.SerializeObject(TasSession)));
 
-			if (!isBackup)
+			if (!isBackup && TasStateManager is not null)
 			{
 				bs.PutLump(BinaryStateLump.StateHistory, bw => TasStateManager.SaveStateHistory(bw));
 			}
@@ -49,7 +47,7 @@ namespace BizHawk.Client.Common
 
 		protected override void ClearBeforeLoad()
 		{
-			ClearBk2Fields();
+			base.ClearBeforeLoad();
 			ClearTasprojExtras();
 		}
 
@@ -60,25 +58,25 @@ namespace BizHawk.Client.Common
 			Markers.Clear();
 			ChangeLog.Clear();
 		}
-		
-		protected override void LoadFields(ZipStateLoader bl, bool preload)
-		{
-			LoadBk2Fields(bl, preload);
 
-			if (!preload)
+		protected override void LoadFields(ZipStateLoader bl)
+		{
+			base.LoadFields(bl);
+
+			if (MovieService.IsCurrentTasVersion(Header[HeaderKeys.MovieVersion]))
 			{
-				if (MovieService.IsCurrentTasVersion(Header[HeaderKeys.MovieVersion]))
-				{
-					LoadTasprojExtras(bl);
-				}
-				else
-				{
-					Session.PopupMessage("The current .tasproj is not compatible with this version of BizHawk! .tasproj features failed to load.");
-					Markers.Add(0, StartsFromSavestate ? "Savestate" : "Power on");
-				}
+				LoadTasprojExtras(bl);
 			}
+			else
+			{
+				Session.PopupMessage("The current .tasproj is not compatible with this version of BizHawk! .tasproj features failed to load.");
+				Markers.Add(0, StartsFromSavestate ? "Savestate" : "Power on");
+			}
+
+			ChangeLog.Clear();
+			Changes = false;
 		}
-		
+
 		private void LoadTasprojExtras(ZipStateLoader bl)
 		{
 			bl.GetLump(BinaryStateLump.LagLog, abort: false, tr => LagLog.Load(tr));
@@ -95,26 +93,13 @@ namespace BizHawk.Client.Common
 				}
 			});
 
-			if (GetClientSettingsOnLoad != null)
+			bl.GetLump(BinaryStateLump.ClientSettings, abort: false, tr =>
 			{
-				string clientSettings = "";
-				bl.GetLump(BinaryStateLump.ClientSettings, abort: false, tr =>
-				{
-					string line;
-					while ((line = tr.ReadLine()) != null)
-					{
-						if (!string.IsNullOrWhiteSpace(line))
-						{
-							clientSettings = line;
-						}
-					}
-				});
+				string inputRollSettings = tr.ReadToEnd();
 
-				if (!string.IsNullOrWhiteSpace(clientSettings))
-				{
-					GetClientSettingsOnLoad(clientSettings);
-				}
-			}
+				if (!string.IsNullOrEmpty(inputRollSettings))
+					InputRollSettings = inputRollSettings;
+			});
 
 			bl.GetLump(BinaryStateLump.VerificationLog, abort: false, tr =>
 			{
@@ -127,7 +112,7 @@ namespace BizHawk.Client.Common
 						break;
 					}
 
-					if (line.StartsWith("|"))
+					if (line.StartsWith('|'))
 					{
 						VerificationLog.Add(line);
 					}
@@ -142,6 +127,7 @@ namespace BizHawk.Client.Common
 				try
 				{
 					TasSession = JsonConvert.DeserializeObject<TasSession>(json);
+					Branches.Current = TasSession.CurrentBranch;
 				}
 				catch
 				{
@@ -149,7 +135,7 @@ namespace BizHawk.Client.Common
 				}
 			});
 
-			ZwinderStateManagerSettings settings = new ZwinderStateManagerSettings();
+			var settings = new ZwinderStateManagerSettings();
 			bl.GetLump(BinaryStateLump.StateHistorySettings, abort: false, tr =>
 			{
 				var json = tr.ReadToEnd();
@@ -163,11 +149,11 @@ namespace BizHawk.Client.Common
 				}
 			});
 
-			bl.GetLump(BinaryStateLump.StateHistory, abort: false, br =>
+			TasStateManager?.Dispose();
+			var hasHistory = bl.GetLump(BinaryStateLump.StateHistory, abort: false, br =>
 			{
 				try
 				{
-					TasStateManager?.Dispose();
 					TasStateManager = ZwinderStateManager.Create(br, settings, IsReserved);
 				}
 				catch
@@ -181,6 +167,20 @@ namespace BizHawk.Client.Common
 					Session.PopupMessage("State history was corrupted, clearing and working with a fresh history.");
 				}
 			});
+
+			if (!hasHistory)
+			{
+				try
+				{
+					TasStateManager = new ZwinderStateManager(settings, IsReserved);
+				}
+				catch
+				{
+					TasStateManager = new ZwinderStateManager(
+						Session.Settings.DefaultTasStateManagerSettings,
+						IsReserved);
+				}
+			}
 		}
 	}
 }

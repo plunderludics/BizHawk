@@ -1,5 +1,3 @@
-﻿using System;
-
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.GBHawkLink3x
@@ -502,7 +500,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.GBHawkLink3x
 			}
 			else
 			{
-				samples = new short[0];
+				samples = Array.Empty<short>();
 				nsamp = 0;
 			}
 		}

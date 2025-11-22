@@ -8,7 +8,7 @@ Gamepad::Gamepad(Node::Port parent) {
   port->setAllocate([&](auto name) { return allocate(name); });
   port->setConnect([&] { return connect(); });
   port->setDisconnect([&] { return disconnect(); });
-  port->setSupported({"Controller Pak", "Rumble Pak"});
+  port->setSupported({"Controller Pak", "Rumble Pak", "Transfer Pak"});
 
   x           = node->append<Node::Input::Axis>  ("X-Axis");
   y           = node->append<Node::Input::Axis>  ("Y-Axis");
@@ -33,7 +33,7 @@ Gamepad::~Gamepad() {
 }
 
 auto Gamepad::save() -> void {
-/*
+#if false
   if(!slot) return;
   if(slot->name() == "Controller Pak") {
     ram.save(pak->write("save.pak"));
@@ -43,7 +43,7 @@ auto Gamepad::save() -> void {
       transferPak.ram.save(pak->write("gbram.pak"));
     }
   }
-*/
+#endif
 }
 
 auto Gamepad::allocate(string name) -> Node::Peripheral {
@@ -135,36 +135,39 @@ auto Gamepad::comm(n8 send, n8 recv, n8 input[], n8 output[]) -> n2 {
   if(input[0] == 0x02 && send >= 3 && recv >= 1) {
     //controller pak
     if(ram) {
-      u32 address = (input[1] << 8 | input[2] << 0) & ~31;
+      u16 address = (input[1] << 8 | input[2] << 0) & ~31;
       if(pif.addressCRC(address) == (n5)input[2]) {
         for(u32 index : range(recv - 1)) {
-          output[index] = ram.read<Byte>(address++);
+          if(address <= 0x7FFF) output[index] = ram.read<Byte>(address);
+          else output[index] = 0;
+          address++;
         }
-        output[recv - 1] = pif.dataCRC({&output[0], recv - 1});
+        output[recv - 1] = pif.dataCRC({&output[0], recv - 1u});
         valid = 1;
       }
     }
 
     //rumble pak
     if(motor) {
-      u32 address = (input[1] << 8 | input[2] << 0) & ~31;
+      u16 address = (input[1] << 8 | input[2] << 0) & ~31;
       if(pif.addressCRC(address) == (n5)input[2]) {
         for(u32 index : range(recv - 1)) {
-          output[index] = 0x80;
+          if(address <= 0x7FFF) output[index] = 0;
+          else if(address <= 0x8FFF) output[index] = 0x80;
+          else output[index] = motor->enable() ? 0xFF : 0x00;
+          address++;
         }
-        output[recv - 1] = pif.dataCRC({&output[0], recv - 1});
+        output[recv - 1] = pif.dataCRC({&output[0], recv - 1u});
         valid = 1;
       }
     }
 
     //transfer pak
     if(transferPak) {
-      u32 address = (input[1] << 8 | input[2] << 0) & ~31;
+      u16 address = (input[1] << 8 | input[2] << 0) & ~31;
       if(pif.addressCRC(address) == (n5)input[2]) {
-        for(u32 index : range(recv - 1)) {
-          output[index] = transferPak.read(address++);
-        }
-        output[recv - 1] = pif.dataCRC({&output[0], recv - 1});
+        for(u32 index : range(recv - 1)) output[index] = transferPak.read(address++);
+        output[recv - 1] = pif.dataCRC({&output[0], recv - 1u});
         valid = 1;
       }
     }
@@ -174,34 +177,35 @@ auto Gamepad::comm(n8 send, n8 recv, n8 input[], n8 output[]) -> n2 {
   if(input[0] == 0x03 && send >= 3 && recv >= 1) {
     //controller pak
     if(ram) {
-      u32 address = (input[1] << 8 | input[2] << 0) & ~31;
+      u16 address = (input[1] << 8 | input[2] << 0) & ~31;
       if(pif.addressCRC(address) == (n5)input[2]) {
         for(u32 index : range(send - 3)) {
-          ram.write<Byte>(address++, input[3 + index]);
+          if(address <= 0x7FFF) ram.write<Byte>(address, input[3 + index]);
+          address++;
         }
-        output[0] = pif.dataCRC({&input[3], send - 3});
+        output[0] = pif.dataCRC({&input[3], send - 3u});
         valid = 1;
       }
     }
 
     //rumble pak
     if(motor) {
-      u32 address = (input[1] << 8 | input[2] << 0) & ~31;
+      u16 address = (input[1] << 8 | input[2] << 0) & ~31;
       if(pif.addressCRC(address) == (n5)input[2]) {
-        output[0] = pif.dataCRC({&input[3], send - 3});
+        output[0] = pif.dataCRC({&input[3], send - 3u});
         valid = 1;
-        rumble(input[3] & 1);
+        if(address >= 0xC000) rumble(input[3] & 1);
       }
     }
 
     //transfer pak
     if(transferPak) {
-      u32 address = (input[1] << 8 | input[2] << 0) & ~31;
+      u16 address = (input[1] << 8 | input[2] << 0) & ~31;
       if(pif.addressCRC(address) == (n5)input[2]) {
         for(u32 index : range(send - 3)) {
           transferPak.write(address++, input[3 + index]);
         }
-        output[0] = pif.dataCRC({&input[3], send - 3});
+        output[0] = pif.dataCRC({&input[3], send - 3u});
         valid = 1;
       }
     }
@@ -231,6 +235,63 @@ auto Gamepad::read() -> n32 {
   platform->input(z);
   platform->input(start);
 
+#if false
+  auto cardinalMax   = 85.0;
+  auto diagonalMax   = 69.0;
+  auto innerDeadzone =  7.0; // default should remain 7 (~8.2% of 85) as the deadzone is axial in nature and fights cardinalMax
+  auto outerDeadzoneRadiusMax = 2.0 / sqrt(2.0) * (diagonalMax / cardinalMax * (cardinalMax - innerDeadzone) + innerDeadzone); //from linear scaling equation, substitute outerDeadzoneRadiusMax*sqrt(2)/2 for lengthAbsoluteX and set diagonalMax as the result then solve for outerDeadzoneRadiusMax
+
+  //scale {-32768 ... +32767} to {-outerDeadzoneRadiusMax ... +outerDeadzoneRadiusMax}
+  auto ax = x->value() * outerDeadzoneRadiusMax / 32767.0;
+  auto ay = y->value() * outerDeadzoneRadiusMax / 32767.0;
+  
+  //create inner axial dead-zone in range {-innerDeadzone ... +innerDeadzone} and scale from it up to outer circular dead-zone of radius outerDeadzoneRadiusMax
+  auto length = sqrt(ax * ax + ay * ay);
+  if(length <= outerDeadzoneRadiusMax) {
+    auto lengthAbsoluteX = abs(ax);
+    auto lengthAbsoluteY = abs(ay);
+    if(lengthAbsoluteX <= innerDeadzone) {
+      lengthAbsoluteX = 0.0;
+    } else {
+      lengthAbsoluteX = (lengthAbsoluteX - innerDeadzone) * cardinalMax / (cardinalMax - innerDeadzone) / lengthAbsoluteX;
+    }
+    ax *= lengthAbsoluteX;
+    if(lengthAbsoluteY <= innerDeadzone) {
+      lengthAbsoluteY = 0.0;
+    } else {
+      lengthAbsoluteY = (lengthAbsoluteY - innerDeadzone) * cardinalMax / (cardinalMax - innerDeadzone) / lengthAbsoluteY;
+    }
+    ay *= lengthAbsoluteY;
+  } else {
+    length = outerDeadzoneRadiusMax / length;
+    ax *= length;
+    ay *= length;
+  }
+  
+  //bound diagonals to an octagonal range {-diagonalMax ... +diagonalMax}
+  if(ax != 0.0 && ay != 0.0) {
+    auto slope = ay / ax;
+    auto edgex = copysign(cardinalMax / (abs(slope) + (cardinalMax - diagonalMax) / diagonalMax), ax);
+    auto edgey = copysign(min(abs(edgex * slope), cardinalMax / (1.0 / abs(slope) + (cardinalMax - diagonalMax) / diagonalMax)), ay);
+    edgex = edgey / slope;
+
+    length = sqrt(ax * ax + ay * ay);
+    auto distanceToEdge = sqrt(edgex * edgex + edgey * edgey);
+    if(length > distanceToEdge) {
+      ax = edgex;
+      ay = edgey;
+    }
+  }
+
+  //keep cardinal input within positive and negative bounds of cardinalMax
+  if(abs(ax) > cardinalMax) ax = copysign(cardinalMax, ax);
+  if(abs(ay) > cardinalMax) ay = copysign(cardinalMax, ay);
+  
+  //add epsilon to counteract floating point precision error
+  ax = copysign(abs(ax) + 1e-09, ax);
+  ay = copysign(abs(ay) + 1e-09, ay);
+#endif
+  
   n32 data;
   data.byte(0) = y->value();
   data.byte(1) = x->value();
@@ -250,7 +311,7 @@ auto Gamepad::read() -> n32 {
   data.bit(29) = z->value();
   data.bit(30) = b->value();
   data.bit(31) = a->value();
-
+  
   //when L+R+Start are pressed: the X/Y axes are zeroed, RST is set, and Start is cleared
   if(l->value() && r->value() && start->value()) {
     data.byte(0) = 0;  //Y-Axis

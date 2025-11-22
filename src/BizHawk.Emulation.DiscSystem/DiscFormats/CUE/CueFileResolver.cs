@@ -1,7 +1,8 @@
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 
-using BizHawk.Common.PathExtensions;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Emulation.DiscSystem.CUE
 {
@@ -11,56 +12,18 @@ namespace BizHawk.Emulation.DiscSystem.CUE
 	public class CueFileResolver
 	{
 		public bool caseSensitive = false;
-		public bool IsHardcodedResolve { get; private set; }
-		private string baseDir;
 
-		/// <summary>
-		/// Retrieving the FullName from a FileInfo can be slow (and probably other operations), so this will cache all the needed values
-		/// TODO - could we treat it like an actual cache and only fill the FullName if it's null?
-		/// </summary>
-		private struct MyFileInfo
-		{
-			public string FullName;
-			public FileInfo FileInfo;
-		}
-
-		private DirectoryInfo diBasedir;
-		private MyFileInfo[] fisBaseDir;
+		private string _baseDir;
+		private string[] _baseDirPaths;
 
 		/// <summary>
 		/// sets the base directory and caches the list of files in the directory
 		/// </summary>
 		public void SetBaseDirectory(string baseDir)
 		{
-			this.baseDir = baseDir;
-			diBasedir = new DirectoryInfo(baseDir);
+			this._baseDir = baseDir;
 			//list all files, so we don't scan repeatedly.
-			fisBaseDir = MyFileInfosFromFileInfos(diBasedir.GetFiles());
-		}
-
-		/// <summary>
-		/// TODO - doesnt seem like we're using this...
-		/// </summary>
-		public void SetHardcodeResolve(IDictionary<string, string> hardcodes)
-		{
-			IsHardcodedResolve = true;
-			fisBaseDir = new MyFileInfo[hardcodes.Count];
-			int i = 0;
-			foreach (var kvp in hardcodes)
-			{
-				fisBaseDir[i++] = new MyFileInfo { FullName = kvp.Key, FileInfo = new FileInfo(kvp.Value) };
-			}
-		}
-
-		private MyFileInfo[] MyFileInfosFromFileInfos(FileInfo[] fis)
-		{
-			var myfis = new MyFileInfo[fis.Length];
-			for (int i = 0; i < fis.Length; i++)
-			{
-				myfis[i].FileInfo = fis[i];
-				myfis[i].FullName = fis[i].FullName;
-			}
-			return myfis;
+			_baseDirPaths = Directory.GetFiles(baseDir).Select(Path.GetFullPath).ToArray();
 		}
 
 		/// <summary>
@@ -72,58 +35,48 @@ namespace BizHawk.Emulation.DiscSystem.CUE
 		/// </summary>
 		public List<string> Resolve(string path)
 		{
-			var (targetFile, targetFragment, _) = path.SplitPathToDirFileAndExt();
-			DirectoryInfo di = null;
-			MyFileInfo[] fileInfos;
-			if (!string.IsNullOrEmpty(Path.GetDirectoryName(path)))
-			{
-				di = new FileInfo(path).Directory;
-				//fileInfos = di.GetFiles(Path.GetFileNameWithoutExtension(path)); //does this work?
-				fileInfos = MyFileInfosFromFileInfos(di.GetFiles()); //we (probably) have to enumerate all the files to do a search anyway, so might as well do this
-				//TODO - don't do the search until a resolve fails
-			}
-			else
-			{
-				di = diBasedir;
-				fileInfos = fisBaseDir;
-			}
+			var interpretedAsRel = Path.Combine(_baseDir, path);
+			string targetFile = Path.GetFileName(path);
+			string targetFragment = Path.GetFileNameWithoutExtension(path);
 
-			var results = new List<FileInfo>();
-			foreach (var fi in fileInfos)
+			var directory = Path.GetDirectoryName(path);
+			var filePaths = Directory.Exists(directory) ? Directory.GetFiles(directory).Select(Path.GetFullPath) : _baseDirPaths;
+			//TODO - don't do the search until a resolve fails // leftover comment from 3c26d48a59f64a7a94bda57fbcfd13eca49d8b9d, is this still relevant?
+
+			var results = new List<string>();
+			foreach (var filePath in filePaths)
 			{
-				var ext = Path.GetExtension(fi.FullName).ToLowerInvariant();
+				var ext = Path.GetExtension(filePath).ToLowerInvariant();
 
 				//some choices are always bad: (we're looking for things like .bin and .wav)
 				//it's a little unclear whether we should go for a whitelist or a blacklist here.
 				//there's similar numbers of cases either way.
 				//perhaps we could code both (and prefer choices from the whitelist)
-				if (ext == ".cue" || ext == ".sbi" || ext == ".ccd" || ext == ".sub")
+				if (ext is not ".iso" && (Disc.IsValidExtension(ext) || ext is ".sbi" or ".sub"))
 					continue;
 
 				//continuing the bad plan: forbid archives (always a wrong choice, not supported anyway)
 				//we should have a list prioritized by extension and score that way
-				if (ext == ".7z" || ext == ".rar" || ext == ".zip" || ext == ".bz2" || ext == ".gz")
+				if (ext is ".7z" or ".rar" or ".zip" or ".bz2" or ".gz")
 					continue;
 
-				string fragment = Path.GetFileNameWithoutExtension(fi.FullName);
+				var fragment = Path.GetFileNameWithoutExtension(filePath);
 				//match files with differing extensions
-				int cmp = string.Compare(fragment, targetFragment, !caseSensitive);
+				var cmp = string.Compare(fragment, targetFragment, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
 				if (cmp != 0)
 					//match files with another extension added on (likely to be mygame.bin.ecm)
-					cmp = string.Compare(fragment, targetFile, !caseSensitive);
+					cmp = string.Compare(fragment, targetFile, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
 				if (cmp == 0)
 				{
 					//take care to add an exact match at the beginning
-					if (fi.FullName.ToLowerInvariant() == Path.Combine(baseDir,path).ToLowerInvariant())
-						results.Insert(0, fi.FileInfo);
+					if (filePath.EqualsIgnoreCase(interpretedAsRel))
+						results.Insert(0, filePath);
 					else
-						results.Add(fi.FileInfo);
+						results.Add(filePath);
 				}
 			}
-			var ret = new List<string>();
-			foreach (var fi in results)
-				ret.Add(fi.FullName);
-			return ret;
+
+			return results;
 		}
 	}
 }

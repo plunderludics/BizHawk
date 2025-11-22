@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 
 using BizHawk.Common;
@@ -9,7 +8,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	{
 		private readonly int[][] _banksA; // 8000
 
-		private readonly int[][] _banksB = new int[0][]; // A000
+		private readonly int[][] _banksB = [ ]; // A000
 
 		private int _bankMask;
 
@@ -115,6 +114,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		{
 			ser.Sync("BankMask", ref _bankMask);
 			ser.Sync("BankNumber", ref _bankNumber);
+
+			if (ser.IsReader)
+			{
+				BankSet(_bankNumber);
+			}
 		}
 
 		private void BankSet(int index)
@@ -157,15 +161,6 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			if (addr == 0x00)
 			{
 				BankSet(val);
-			}
-		}
-
-		public override void SyncState(Serializer ser)
-		{
-			base.SyncState(ser);
-			if (ser.IsReader)
-			{
-				BankSet(_bankNumber);
 			}
 		}
 	}

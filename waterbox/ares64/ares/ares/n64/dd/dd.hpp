@@ -1,6 +1,8 @@
 //Disk Drive
 
-struct DD : Memory::IO<DD> {
+#include <nall/bcd.hpp>
+
+struct DD : Memory::PI<DD> {
   Node::Object obj;
   Node::Port port;
   Node::Peripheral node;
@@ -9,7 +11,6 @@ struct DD : Memory::IO<DD> {
   Memory::Writable c2s;
   Memory::Writable ds;
   Memory::Writable ms;
-  Memory::Writable rtc;
   Memory::Writable disk;
   Memory::Writable error;
 
@@ -24,6 +25,21 @@ struct DD : Memory::IO<DD> {
       Node::Debugger::Tracer::Notification io;
     } tracer;
   } debugger;
+
+  struct RTC {
+    Memory::Writable ram;
+
+    //rtc.cpp
+    auto load() -> void;
+    auto reset() -> void;
+    auto save() -> void;
+    auto serialize(serializer& s) -> void;
+    auto tick(u32 offset) -> void;
+    auto tickClock() -> void;
+    auto tickSecond() -> void;
+    auto valid() -> bool;
+    auto daysInMonth(u8 month, u8 year) -> u8;
+  } rtc;
 
   auto title() const -> string { return information.title; }
   auto cic() const -> string { return information.cic; }
@@ -57,14 +73,9 @@ struct DD : Memory::IO<DD> {
   auto motorStop() -> void;
   auto motorChange() -> void;
 
-  //rtc.cpp
-  auto rtcLoad() -> void;
-  auto rtcSave() -> void;
-  auto rtcTick(u32 offset) -> void;
-  auto rtcTickClock() -> void;
-  auto rtcTickSecond() -> void;
-
   //io.cpp
+  auto readHalf(u32 address) -> u16;
+  auto writeHalf(u32 address, u16 data) -> void;
   auto readWord(u32 address) -> u32;
   auto writeWord(u32 address, u32 data) -> void;
 
@@ -75,13 +86,6 @@ struct DD : Memory::IO<DD> {
     string title;
     string cic;
   } information;
-
-  struct BCD {
-    static auto encode(u8 value) -> u8 { return value / 10 << 4 | value % 10; }
-    static auto decode(u8 value) -> u8 { return (value >> 4) * 10 + (value & 15); }
-  };
-
-  std::function<u64()> rtcCallback = []() { return 0; };
 
 private:
   struct Interrupt {
@@ -128,6 +132,7 @@ private:
       n1 writeProtect;
       n1 mechaError;
       n1 diskChanged;
+      n1 diskPresent;
     } status;
 
     n16 currentTrack;

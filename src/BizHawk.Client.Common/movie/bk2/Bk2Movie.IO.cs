@@ -1,9 +1,11 @@
-﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 
+using BizHawk.Bizware.Graphics;
 using BizHawk.Common;
 using BizHawk.Common.IOExtensions;
+using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -22,35 +24,11 @@ namespace BizHawk.Client.Common
 				return;
 			}
 
-			var backupName = Filename;
-			backupName = backupName.Insert(Filename.LastIndexOf("."), $".{DateTime.Now:yyyy-MM-dd HH.mm.ss}");
+			var backupName = Filename.InsertBeforeLast('.', insert: $".{DateTime.Now:yyyy-MM-dd HH.mm.ss}", out _);
 			backupName = Path.Combine(Session.BackupDirectory, Path.GetFileName(backupName));
 
 			Write(backupName, isBackup: true);
 		}
-
-		public virtual bool Load(bool preload)
-		{
-			var file = new FileInfo(Filename);
-			if (!file.Exists)
-			{
-				return false;
-			}
-
-			using var bl = ZipStateLoader.LoadAndDetect(Filename, true);
-			if (bl == null)
-			{
-				return false;
-			}
-
-			ClearBeforeLoad();
-			LoadFields(bl, preload);
-
-			Changes = false;
-			return true;
-		}
-
-		public bool PreLoadHeaderAndLength() => Load(true);
 
 		protected virtual void Write(string fn, bool isBackup = false)
 		{
@@ -61,7 +39,7 @@ namespace BizHawk.Client.Common
 				Header[HeaderKeys.OriginalEmulatorVersion] = Header[HeaderKeys.EmulatorVersion];
 			}
 			Header[HeaderKeys.EmulatorVersion] = VersionInfo.GetEmuVersion();
-			CreateDirectoryIfNotExists(fn);
+			Directory.CreateDirectory(Path.GetDirectoryName(fn)!);
 
 			using var bs = new ZipStateSaver(fn, Session.Settings.MovieCompressionLevel);
 			AddLumps(bs, isBackup);
@@ -72,30 +50,18 @@ namespace BizHawk.Client.Common
 			}
 		}
 
-		private void SetCycleValues()
+		public void SetCycleValues() //TODO IEmulator should not be an instance prop of movies, it should be passed in to every call (i.e. from MovieService) --yoshi
 		{
 			// The saved cycle value will only be valid if the end of the movie has been emulated.
-			if (this.IsAtEnd())
+			if (this.IsAtEnd() && Emulator.AsCycleTiming() is { } cycleCore)
 			{
-				if (Emulator is ICycleTiming cycleCore)
-				{
-					Header[HeaderKeys.CycleCount] = cycleCore.CycleCount.ToString();
-					Header[HeaderKeys.ClockRate] = cycleCore.ClockRate.ToString(CultureInfo.InvariantCulture);
-				}
+				// legacy movies may incorrectly have no ClockRate header value set
+				Header[HeaderKeys.ClockRate] = cycleCore.ClockRate.ToString(NumberFormatInfo.InvariantInfo);
+				Header[HeaderKeys.CycleCount] = cycleCore.CycleCount.ToString();
 			}
 			else
 			{
-				Header.Remove(HeaderKeys.CycleCount);
-				Header.Remove(HeaderKeys.ClockRate);
-			}
-		}
-
-		private static void CreateDirectoryIfNotExists(string fn)
-		{
-			var file = new FileInfo(fn);
-			if (file.Directory != null && !file.Directory.Exists)
-			{
-				Directory.CreateDirectory(file.Directory.ToString());
+				Header.Remove(HeaderKeys.CycleCount); // don't allow invalid cycle count fields to stay set
 			}
 		}
 
@@ -125,7 +91,10 @@ namespace BizHawk.Client.Common
 
 				if (SavestateFramebuffer != null)
 				{
-					bs.PutLump(BinaryStateLump.Framebuffer, (BinaryWriter bw) => bw.Write(SavestateFramebuffer));
+					bs.PutLump(
+						BinaryStateLump.Framebuffer,
+						s => QuickBmpFile.Save(new BitmapBufferVideoProvider(SavestateFramebuffer), s, SavestateFramebuffer.Width, SavestateFramebuffer.Height),
+						zstdCompress: false);
 				}
 			}
 			else if (StartsFromSaveRam)
@@ -134,85 +103,33 @@ namespace BizHawk.Client.Common
 			}
 		}
 
-		protected virtual void ClearBeforeLoad()
+		protected override void ClearBeforeLoad()
 		{
+			base.ClearBeforeLoad();
 			ClearBk2Fields();
 		}
 
-		protected void ClearBk2Fields()
+		private void ClearBk2Fields()
 		{
-			Header.Clear();
 			Log.Clear();
-			Subtitles.Clear();
-			Comments.Clear();
 			_syncSettingsJson = "";
 			TextSavestate = null;
 			BinarySavestate = null;
 		}
 
-		protected virtual void LoadFields(ZipStateLoader bl, bool preload)
+		protected override void LoadFields(ZipStateLoader bl)
 		{
-			LoadBk2Fields(bl, preload);
+			base.LoadFields(bl);
+			LoadBk2Fields(bl);
 		}
 
-		protected void LoadBk2Fields(ZipStateLoader bl, bool preload)
+		private void LoadBk2Fields(ZipStateLoader bl)
 		{
-			bl.GetLump(BinaryStateLump.Movieheader, abort: true, tr =>
-			{
-				string line;
-				while ((line = tr.ReadLine()) != null)
-				{
-					if (!string.IsNullOrWhiteSpace(line))
-					{
-						var pair = line.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
-
-						if (pair.Length > 1)
-						{
-							if (!Header.ContainsKey(pair[0]))
-							{
-								Header.Add(pair[0], pair[1]);
-							}
-						}
-					}
-				}
-			});
-
 			bl.GetLump(BinaryStateLump.Input, abort: true, tr =>
 			{
 				IsCountingRerecords = false;
 				ExtractInputLog(tr, out _);
 				IsCountingRerecords = true;
-			});
-
-			if (preload)
-			{
-				return;
-			}
-
-			bl.GetLump(BinaryStateLump.Comments, abort: false, tr =>
-			{
-				string line;
-				while ((line = tr.ReadLine()) != null)
-				{
-					if (!string.IsNullOrWhiteSpace(line))
-					{
-						Comments.Add(line);
-					}
-				}
-			});
-
-			bl.GetLump(BinaryStateLump.Subtitles, abort: false, tr =>
-			{
-				string line;
-				while ((line = tr.ReadLine()) != null)
-				{
-					if (!string.IsNullOrWhiteSpace(line))
-					{
-						Subtitles.AddFromString(line);
-					}
-				}
-
-				Subtitles.Sort();
 			});
 
 			bl.GetLump(BinaryStateLump.SyncSettings, abort: false, tr =>
@@ -223,6 +140,7 @@ namespace BizHawk.Client.Common
 					if (!string.IsNullOrWhiteSpace(line))
 					{
 						_syncSettingsJson = line;
+						break;
 					}
 				}
 			});
@@ -235,9 +153,17 @@ namespace BizHawk.Client.Common
 				bl.GetLump(BinaryStateLump.Framebuffer, false,
 					br =>
 					{
-						var fb = br.ReadAllBytes();
-						SavestateFramebuffer = new int[fb.Length / sizeof(int)];
-						Buffer.BlockCopy(fb, 0, SavestateFramebuffer, 0, fb.Length);
+						if (bl.Version < 3)
+						{
+							var fb = MemoryMarshal.Cast<byte, int>(br.ReadAllBytes());
+							// width and height are unknown, so just use dummy values
+							SavestateFramebuffer = new BitmapBuffer(fb.Length / 4, 1, fb.ToArray());
+						}
+						else
+						{
+							QuickBmpFile.LoadAuto(br.BaseStream, out var bmp);
+							SavestateFramebuffer = new BitmapBuffer(bmp.BufferWidth, bmp.BufferHeight, bmp.GetVideoBuffer());
+						}
 					});
 			}
 			else if (StartsFromSaveRam)

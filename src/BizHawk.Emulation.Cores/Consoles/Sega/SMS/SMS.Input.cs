@@ -1,8 +1,4 @@
-﻿
-using BizHawk.Common;
-using BizHawk.Emulation.Common;
-
-namespace BizHawk.Emulation.Cores.Sega.MasterSystem
+﻿namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 {
 	public partial class SMS
 	{
@@ -37,7 +33,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 			value &= _controllerDeck.ReadPort1_c2(_controller);
 
 			PostsetControllerState(1);
-			
+
 			if (!IsGameGear_C && SyncSettings.UseKeyboard)
 			{
 				// 7 represents ordinary controller reads
@@ -54,7 +50,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 							value &= (byte)~(1 << bit);
 						}
 					}
-				}			
+				}
 			}
 
 			return value;
@@ -129,12 +125,12 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 			const int phaserRadius = 4;
 
 			// specifically lightgun needs to do things on a per-line basis
-			if (!IsGameGear_C) 
+			if (!IsGameGear_C)
 			{
 				if (SyncSettings.Port1 == SMSControllerTypes.Phaser)
 				{
 					byte phaserX = (byte)(_controller.AxisValue("P1 X") + 20);
-					int phaserY = (int)_controller.AxisValue("P1 Y");
+					int phaserY = _controller.AxisValue("P1 Y");
 					int scanline = Vdp.ScanLine;
 
 					if (!LatchLightPhaser1 && phaserY >= scanline - phaserRadius && phaserY <= scanline + phaserRadius)
@@ -155,7 +151,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 				if (SyncSettings.Port2 == SMSControllerTypes.Phaser)
 				{
 					byte phaserX = (byte)(_controller.AxisValue("P2 X") + 20);
-					int phaserY = (int)_controller.AxisValue("P2 Y");
+					int phaserY = _controller.AxisValue("P2 Y");
 					int scanline = Vdp.ScanLine;
 
 					if (!LatchLightPhaser2 && phaserY >= scanline - phaserRadius && phaserY <= scanline + phaserRadius)
@@ -177,7 +173,7 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 
 		private byte ReadPort0()
 		{
-			if (IsGameGear_C == false)
+			if (!IsGameGear_C)
 			{
 				return 0xFF;
 			}
@@ -185,8 +181,8 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 			_lagged = false;
 
 			byte value = 0xC0;
-			if ((_controller.IsPressed("Pause") && !IsGameGear) ||
-				(_controller.IsPressed("P1 Start") && IsGameGear_C))
+			if ((!IsGameGear && _controller.IsPressed("Pause"))
+				|| (IsGameGear_C && _controller.IsPressed("P1 Start")))
 			{
 				value ^= 0x80;
 			}
@@ -246,4 +242,4 @@ namespace BizHawk.Emulation.Cores.Sega.MasterSystem
 			}
 		}
 	}
-} 
+}

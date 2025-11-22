@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 
 using BizHawk.Common;
@@ -12,10 +11,11 @@ namespace BizHawk.Emulation.Cores.Components
 
 	// Sound refactor TODO: IMixedSoundProvider must inherit ISoundProvider
 	// TODo: this provides "fake" sync sound by hardcoding the number of samples
-	public sealed class HuC6280PSG : ISoundProvider, IMixedSoundProvider
+	public sealed class HuC6280PSG : ISoundProvider, IMixedSoundProvider, IPCEngineSoundDebuggable
 	{
 		private readonly int _spf;
-		public class PSGChannel
+
+		public sealed class PSGChannel : IPCEngineSoundDebuggable.ChannelData
 		{
 			public ushort Frequency;
 			public byte Panning;
@@ -27,6 +27,24 @@ namespace BizHawk.Emulation.Cores.Components
 			public short DDAValue;
 			public short[] Wave = new short[32];
 			public float SampleOffset;
+
+			bool IPCEngineSoundDebuggable.ChannelData.DDA
+				=> DDA;
+
+			bool IPCEngineSoundDebuggable.ChannelData.Enabled
+				=> Enabled;
+
+			ushort IPCEngineSoundDebuggable.ChannelData.Frequency
+				=> Frequency;
+
+			bool IPCEngineSoundDebuggable.ChannelData.NoiseChannel
+				=> NoiseChannel;
+
+			byte IPCEngineSoundDebuggable.ChannelData.Volume
+				=> Volume;
+
+			public short[] CloneWaveform()
+				=> (short[]) Wave.Clone();
 		}
 
 		public PSGChannel[] Channels = new PSGChannel[8];
@@ -74,6 +92,12 @@ namespace BizHawk.Emulation.Cores.Components
 			frameStopTime = cycles;
 		}
 
+		public ReadOnlySpan<IPCEngineSoundDebuggable.ChannelData> GetPSGChannelData()
+			=> Channels;
+
+		public void SetChannelMuted(int channelIndex, bool newIsMuted)
+			=> UserMute[channelIndex] = newIsMuted;
+
 		internal void WritePSG(byte register, byte value, long cycles)
 		{
 			commands.Enqueue(new QueuedCommand { Register = register, Value = value, Time = cycles - frameStartTime });
@@ -104,7 +128,7 @@ namespace BizHawk.Emulation.Cores.Components
 					Channels[VoiceLatch].Volume = (byte)(value & 0x1F);
 					Channels[VoiceLatch].Enabled = (value & 0x80) != 0;
 					Channels[VoiceLatch].DDA = (value & 0x40) != 0;
-					if (Channels[VoiceLatch].Enabled == false && Channels[VoiceLatch].DDA)
+					if (!Channels[VoiceLatch].Enabled && Channels[VoiceLatch].DDA)
 					{
 						//for the soudn debugger, this might be a useful indication that a new note has begun.. but not for sure
 						WaveTableWriteOffset = 0;
@@ -114,7 +138,7 @@ namespace BizHawk.Emulation.Cores.Components
 					Channels[VoiceLatch].Panning = value;
 					break;
 				case 6: // Wave data
-					if (Channels[VoiceLatch].DDA == false)
+					if (!Channels[VoiceLatch].DDA)
 					{
 						Channels[VoiceLatch].Wave[WaveTableWriteOffset++] = (short)((value * 2047) - 32767);
 						WaveTableWriteOffset &= 31;
@@ -193,8 +217,8 @@ namespace BizHawk.Emulation.Cores.Components
 
 		private void MixChannel(short[] samples, int start, int len, PSGChannel channel)
 		{
-			if (channel.Enabled == false) return;
-			if (channel.DDA == false && channel.Volume == 0) return;
+			if (!channel.Enabled) return;
+			if (!channel.DDA && channel.Volume == 0) return;
 
 			short[] wave = channel.Wave;
 			int freq;
@@ -211,7 +235,7 @@ namespace BizHawk.Emulation.Cores.Components
 			else
 			{
 				if (channel.Frequency <= 1) return;
-				freq = PsgBase / (32 * ((int)channel.Frequency));
+				freq = PsgBase / (32 * channel.Frequency);
 			}
 
 			int globalPanFactorLeft = VolumeReductionTable[MainVolumeLeft];

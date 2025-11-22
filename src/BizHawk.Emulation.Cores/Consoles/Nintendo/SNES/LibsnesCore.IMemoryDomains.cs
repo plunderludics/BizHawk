@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 
 using BizHawk.Common;
@@ -38,6 +37,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.SNES
 			MakeMemoryDomain("WRAM", LibsnesApi.SNES_MEMORY.WRAM, MemoryDomain.Endian.Little);
 			MakeMemoryDomain("CARTROM", LibsnesApi.SNES_MEMORY.CARTRIDGE_ROM, MemoryDomain.Endian.Little, byteSize: 2); //there are signs this doesnt work on SGB?
 			MakeMemoryDomain("CARTRAM", LibsnesApi.SNES_MEMORY.CARTRIDGE_RAM, MemoryDomain.Endian.Little, byteSize: 2);
+			MakeMemoryDomain("SA1 IRAM", LibsnesApi.SNES_MEMORY.SA1_IRAM, MemoryDomain.Endian.Little, byteSize: 2);
 			MakeMemoryDomain("VRAM", LibsnesApi.SNES_MEMORY.VRAM, MemoryDomain.Endian.Little, byteSize: 2);
 			MakeMemoryDomain("OAM", LibsnesApi.SNES_MEMORY.OAM, MemoryDomain.Endian.Little, byteSize: 2);
 			MakeMemoryDomain("CGRAM", LibsnesApi.SNES_MEMORY.CGRAM, MemoryDomain.Endian.Little, byteSize: 2);
@@ -60,7 +60,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.SNES
 
 			if (IsSGB)
 			{
-				// NOTE: CGB has 32K of wram, and DMG has 8KB of wram. Not sure how to control this right now.. bsnes might not have any ready way of doign that? I couldnt spot it. 
+				// NOTE: CGB has 32K of wram, and DMG has 8KB of wram. Not sure how to control this right now.. bsnes might not have any ready way of doign that? I couldnt spot it.
 				// You wouldnt expect a DMG game to access excess wram, but what if it tried to? maybe an oversight in bsnes?
 				MakeMemoryDomain("SGB WRAM", LibsnesApi.SNES_MEMORY.SGB_WRAM, MemoryDomain.Endian.Little);
 
@@ -172,8 +172,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.SNES
 
 					break;
 				case LibsnesApi.SNES_MAPPER.SUPERFXROM:
-					if ((bank >= 0x40 && bank <= 0x5f) || (bank >= 0xc0 && bank <= 0xdf) ||
-						(low >= 0x8000 && ((bank >= 0x00 && bank <= 0x3f) || (bank >= 0x80 && bank <= 0xbf))))
+					if (bank is (>= 0x40 and <= 0x5F) or (>= 0xC0 and <= 0xDF)
+						|| (low >= 0x8000 && bank is (>= 0x00 and <= 0x3F) or (>= 0x80 and <= 0xBF)))
 					{
 						return Api.QUERY_peek(LibsnesApi.SNES_MEMORY.SYSBUS, (uint)addr);
 					}
@@ -194,17 +194,17 @@ namespace BizHawk.Emulation.Cores.Nintendo.SNES
 
 					break;
 				case LibsnesApi.SNES_MAPPER.BSCHIROM:
-					if ((bank >= 0x40 && bank <= 0x5f) || (bank >= 0xc0 && bank <= 0xdf) ||
-						(low >= 0x8000 && ((bank >= 0x00 && bank <= 0x1f) || (bank >= 0x80 && bank <= 0x9f))))
+					if (bank is (>= 0x40 and <= 0x5F) or (>= 0xC0 and <= 0xDF)
+						|| (low >= 0x8000 && bank is (>= 0x00 and <= 0x1F) or (>= 0x80 and <= 0x9F)))
 					{
 						return Api.QUERY_peek(LibsnesApi.SNES_MEMORY.SYSBUS, (uint)addr);
 					}
 
 					break;
 				case LibsnesApi.SNES_MAPPER.BSXROM:
-					if ((bank >= 0x40 && bank <= 0x7f) || bank >= 0xc0 ||
-						(low >= 0x8000 && ((bank >= 0x00 && bank <= 0x3f) || (bank >= 0x80 && bank <= 0xbf))) ||
-						(low >= 0x6000 && low <= 0x7fff && (bank >= 0x20 && bank <= 0x3f)))
+					if (bank is (>= 0x40 and <= 0x7F) or >= 0xC0
+						|| (low >= 0x8000 && bank is (>= 0x00 and <= 0x3F) or (>= 0x80 and <= 0xBF))
+						|| (low is >= 0x6000 and <= 0x7FFF && bank is >= 0x20 and <= 0x3F))
 					{
 						return Api.QUERY_peek(LibsnesApi.SNES_MEMORY.SYSBUS, (uint)addr);
 					}

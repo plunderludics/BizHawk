@@ -1,9 +1,10 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Reflection;
-using BizHawk.Emulation.Common;
+
+using BizHawk.Common.CollectionExtensions;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Client.Common
 {
@@ -18,46 +19,28 @@ namespace BizHawk.Client.Common
 		/// Returns a value indicating whether or not there is an importer for the given extension
 		/// </summary>
 		public static bool IsValidMovieExtension(string extension)
-		{
-			return Importers
-				.Select(i => i.Value)
-				.Any(e => string.Equals(extension, e.Extension, StringComparison.OrdinalIgnoreCase));
-		}
+			=> Importers.Any(kvp => kvp.Value.Extension.EqualsIgnoreCase(extension));
 
 		public static readonly FilesystemFilterSet AvailableImporters = new FilesystemFilterSet(
-			Importers.Values.OrderBy(attr => attr.Emulator)
+			combinedEntryDesc: "Movie Files",
+			filters: Importers.Values.OrderBy(static attr => attr.Emulator)
 				.Select(attr => new FilesystemFilter(attr.Emulator, new[] { attr.Extension.Substring(1) })) // substring removes initial '.'
-				.ToArray())
-			{
-				CombinedEntryDesc = "Movie Files",
-			};
+				.ToArray());
 
 		// Attempt to import another type of movie file into a movie object.
 		public static ImportResult ImportFile(
 			IDialogParent dialogParent,
 			IMovieSession session,
-			IEmulator emulator,
 			string path,
 			Config config)
 		{
 			string ext = Path.GetExtension(path) ?? "";
-			var importerType = ImporterForExtension(ext);
-
-			if (importerType == default)
-			{
-				return ImportResult.Error($"No importer found for file type {ext}");
-			}
-
+			var result = Importers.FirstOrNull(kvp => kvp.Value.Extension.EqualsIgnoreCase(ext));
 			// Create a new instance of the importer class using the no-argument constructor
-
-			return importerType.GetConstructor(Array.Empty<Type>())?.Invoke(Array.Empty<object>()) is IMovieImport importer
-				? importer.Import(dialogParent, session, emulator, path, config)
-				: ImportResult.Error($"No importer found for file type {ext}");
-		}
-
-		private static Type ImporterForExtension(string ext)
-		{
-			return Importers.First(i => string.Equals(i.Value.Extension, ext, StringComparison.OrdinalIgnoreCase)).Key;
+			return result is { Key: var importerType }
+				&& importerType.GetConstructor(Type.EmptyTypes)?.Invoke(Array.Empty<object>()) is IMovieImport importer
+					? importer.Import(dialogParent, session, path, config)
+					: ImportResult.Error($"No importer found for file type {ext}");
 		}
 	}
 }

@@ -1,12 +1,13 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Text;
+
 using BizHawk.Common;
 using BizHawk.Common.CollectionExtensions;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.BizInvoke
 {
@@ -82,10 +83,12 @@ namespace BizHawk.BizInvoke
 		/// How far into a class pointer the first field is.  Different on mono and fw.
 		/// </summary>
 		private static readonly int ClassFieldOffset;
+
 		/// <summary>
 		/// How far into a string pointer the first chair is.
 		/// </summary>
 		private static readonly int StringOffset;
+
 		/// <summary>
 		/// How far into a value array type element 0 is.
 		/// </summary>
@@ -110,18 +113,11 @@ namespace BizHawk.BizInvoke
 			where T : class
 		{
 			var nonTrivialAdapter = adapter.GetType() != CallingConventionAdapters.Native.GetType();
-			InvokerImpl? impl;
-			lock (Impls)
-			{
-				var baseType = typeof(T);
-				if (!Impls.TryGetValue(baseType, out impl))
-				{
-					impl = CreateProxy(baseType, false, nonTrivialAdapter);
-					Impls.Add(baseType, impl!);
-				}
-			}
-
-			if (impl!.IsMonitored)
+			InvokerImpl impl;
+			lock (Impls) impl = Impls.GetValueOrPut(
+				typeof(T),
+				baseType => CreateProxy(baseType, monitor: false, nonTrivialAdapter: nonTrivialAdapter));
+			if (impl.IsMonitored)
 			{
 				throw new InvalidOperationException("Class was previously proxied with a monitor!");
 			}
@@ -134,18 +130,11 @@ namespace BizHawk.BizInvoke
 			where T : class
 		{
 			var nonTrivialAdapter = adapter.GetType() != CallingConventionAdapters.Native.GetType();
-			InvokerImpl? impl;
-			lock (Impls)
-			{
-				var baseType = typeof(T);
-				if (!Impls.TryGetValue(baseType, out impl))
-				{
-					impl = CreateProxy(baseType, true, nonTrivialAdapter);
-					Impls.Add(baseType, impl!);
-				}
-			}
-
-			if (!(impl!.IsMonitored))
+			InvokerImpl impl;
+			lock (Impls) impl = Impls.GetValueOrPut(
+				typeof(T),
+				baseType => CreateProxy(baseType, monitor: true, nonTrivialAdapter: nonTrivialAdapter));
+			if (!impl.IsMonitored)
 			{
 				throw new InvalidOperationException("Class was previously proxied without a monitor!");
 			}
@@ -166,11 +155,8 @@ namespace BizHawk.BizInvoke
 				throw new InvalidOperationException("Type must be public");
 			}
 
-			var baseConstructor = baseType.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
-			if (baseConstructor == null)
-			{
-				throw new InvalidOperationException("Base type must have a zero arg constructor");
-			}
+			_ = baseType.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null)
+				?? throw new InvalidOperationException("Base type must have a zero arg constructor");
 
 			var baseMethods = baseType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
 				.Select(static m => (Info: m, Attr: m.GetCustomAttributes(true).OfType<BizImportAttribute>().FirstOrDefault()))
@@ -201,13 +187,13 @@ namespace BizHawk.BizInvoke
 
 			var adapterField = type.DefineField("CallingConvention", typeof(ICallingConventionAdapter), FieldAttributes.Public);
 
-			foreach (var mi in baseMethods)
+			foreach (var (info, attr) in baseMethods)
 			{
-				var entryPointName = mi.Attr!.EntryPoint ?? mi.Info.Name;
+				var entryPointName = attr!.EntryPoint ?? info.Name;
 
-				var hook = mi.Attr.Compatibility
-					? ImplementMethodDelegate(type, mi.Info, mi.Attr.CallingConvention, entryPointName, monitorField, nonTrivialAdapter)
-					: ImplementMethodCalli(type, mi.Info, mi.Attr.CallingConvention, entryPointName, monitorField, adapterField);
+				var hook = attr.Compatibility
+					? ImplementMethodDelegate(type, info, attr.CallingConvention, entryPointName, monitorField, nonTrivialAdapter)
+					: ImplementMethodCalli(type, info, attr.CallingConvention, entryPointName, monitorField, adapterField);
 
 				postCreateHooks.Add(hook);
 			}
@@ -239,6 +225,18 @@ namespace BizHawk.BizInvoke
 			var paramTypes = paramInfos.Select(p => p.ParameterType).ToArray();
 			var returnType = baseMethod.ReturnType;
 
+			static Type[]? NullifyIfEmpty(Type[]? t)
+				=> t?.Length == 0 ? null : t;
+
+			static Type[]?[]? NullifyIfAllNull(Type[]?[] t)
+				=> t.All(t => t == null) ? null : t;
+
+			// this stuff is required for in
+			var paramTypeRequiredCustomModifiers = NullifyIfAllNull(paramInfos.Select(pi => NullifyIfEmpty(pi.GetRequiredCustomModifiers())).ToArray());
+			var paramTypeOptionalCustomModifiers = NullifyIfAllNull(paramInfos.Select(pi => NullifyIfEmpty(pi.GetOptionalCustomModifiers())).ToArray());
+			var returnTypeRequiredCustomModifiers = NullifyIfEmpty(baseMethod.ReturnParameter?.GetRequiredCustomModifiers());
+			var returnTypeOptionalCustomModifiers = NullifyIfEmpty(baseMethod.ReturnParameter?.GetRequiredCustomModifiers());
+
 			if (paramTypes.Concat(new[] { returnType }).Any(typeof(Delegate).IsAssignableFrom))
 			{
 				// this isn't a problem if CallingConventionAdapters.Waterbox is a no-op, but it is otherwise:  we don't
@@ -261,7 +259,11 @@ namespace BizHawk.BizInvoke
 				MethodAttributes.Virtual | MethodAttributes.Public,
 				CallingConventions.HasThis,
 				returnType,
-				paramTypes);
+				returnTypeRequiredCustomModifiers,
+				returnTypeOptionalCustomModifiers,
+				paramTypes,
+				paramTypeRequiredCustomModifiers,
+				paramTypeOptionalCustomModifiers);
 
 			var il = method.GetILGenerator();
 
@@ -276,7 +278,7 @@ namespace BizHawk.BizInvoke
 
 			il.Emit(OpCodes.Ldarg_0);
 			il.Emit(OpCodes.Ldfld, field);
-			for (int i = 0; i < paramTypes.Length; i++)
+			for (var i = 0; i < paramTypes.Length; i++)
 			{
 				il.Emit(OpCodes.Ldarg, (short)(i + 1));
 			}
@@ -350,9 +352,8 @@ namespace BizHawk.BizInvoke
 		{
 			var paramInfos = baseMethod.GetParameters();
 			var paramTypes = paramInfos.Select(p => p.ParameterType).ToArray();
-			var paramLoadInfos = new List<ParameterLoadInfo>();
 			var returnType = baseMethod.ReturnType;
-			if (returnType != typeof(void) && !returnType.IsPrimitive && !returnType.IsPointer && !returnType.IsEnum)
+			if (returnType != typeof(void) && returnType is { IsPrimitive: false, IsPointer: false, IsEnum: false })
 			{
 				throw new InvalidOperationException("Only primitive return types are supported");
 			}
@@ -382,11 +383,12 @@ namespace BizHawk.BizInvoke
 			}
 
 			// phase 1:  empty eval stack and each parameter load thunk does any prep work it needs to do
-			for (int i = 0; i < paramTypes.Length; i++)
-			{
-				// arg 0 is this, so + 1
-				paramLoadInfos.Add(EmitParamterLoad(il, i + 1, paramTypes[i], adapterField));
-			}
+			var paramLoadInfos = paramTypes
+				.Select(
+					// arg 0 is this, so + 1
+					(t, i) => EmitParamterLoad(il, i + 1, t, adapterField))
+				.ToArray();
+
 			// phase 2:  actually load the individual params, leaving each one on the stack
 			foreach (var pli in paramLoadInfos)
 			{
@@ -441,7 +443,7 @@ namespace BizHawk.BizInvoke
 			{
 				var entryPtr = dll.GetProcAddrOrThrow(entryPointName);
 				o.GetType().GetField(field.Name).SetValue(
-					o, adapter.GetDepartureFunctionPointer(entryPtr, new ParameterInfo(returnType, paramTypes), o));
+					o, adapter.GetDepartureFunctionPointer(entryPtr, new(returnType, paramTypes), o));
 			};
 		}
 
@@ -466,6 +468,7 @@ namespace BizHawk.BizInvoke
 			il.Emit(OpCodes.Conv_I);
 		}
 
+#if false
 		/// <summary>
 		/// load a UIntPtr constant in an IL stream
 		/// </summary>
@@ -486,6 +489,7 @@ namespace BizHawk.BizInvoke
 
 			il.Emit(OpCodes.Conv_U);
 		}
+#endif
 
 		/// <summary>
 		/// emit a single parameter load with unmanaged conversions.  The evaluation stack will be empty when the IL generated here runs,
@@ -532,7 +536,7 @@ namespace BizHawk.BizInvoke
 					throw new NotImplementedException("Multidimensional arrays are not supported!");
 				}
 
-				if (type.Name.Contains('*'))
+				if (type.Name.ContainsOrdinal('*'))
 				{
 					throw new NotImplementedException("Only 0-based 1-dimensional arrays are supported!");
 				}
@@ -655,7 +659,7 @@ namespace BizHawk.BizInvoke
 					});
 			}
 
-			if (type.IsClass)
+			if (type is { IsClass: true, IsPointer: false })
 			{
 				// non ref of class can just be passed as pointer
 				// Just like in the `ref struct` case, if the fields aren't compatible, that's the caller's problem.
@@ -707,7 +711,7 @@ namespace BizHawk.BizInvoke
 		public CallingConvention CallingConvention { get; }
 
 		/// <remarks>The annotated method's name is used iff <see langword="null"/>.</remarks>
-		public string? EntryPoint { get; set; } = null;
+		public string? EntryPoint { get; set; }
 
 		/// <summary><see langword="true"/> iff a compatibility interop should be used, which is slower but supports more argument types.</summary>
 		public bool Compatibility { get; set; }

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Threading;
 
 using BizHawk.Emulation.Common;
@@ -50,10 +49,11 @@ namespace BizHawk.Client.Common
 		{
 			lock (ThreadMutex)
 			{
-				if (_currentHostThread != null)
-				{
-					throw new InvalidOperationException("Can't have lua running in two host threads at a time!");
-				}
+				// [UnityHawk: fuck it, why can't we]
+				// if (_currentHostThread != null)
+				// {
+				// 	throw new InvalidOperationException("Can't have lua running in two host threads at a time!");
+				// }
 
 				_currentHostThread = Thread.CurrentThread;
 				CurrentFile = luaFile;

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 
@@ -61,16 +60,16 @@ namespace BizHawk.Client.EmuHawk
 			IEnumerable<VideoWriterInfo> list,
 			T owner,
 			IEmulator emulator,
-			Config config,
-			out int resizeW,
-			out int resizeH,
-			out bool pad,
-			ref bool audioSync)
+			Config config)
 				where T : IMainFormForTools, IDialogParent
 		{
 			var dlg = new VideoWriterChooserForm(owner, emulator, config)
 			{
-				labelDescriptionBody = { Text = "" }
+				checkBoxASync = { Checked = config.VideoWriterAudioSyncEffective },
+				checkBoxPad = { Checked = config.AVWriterPad },
+				numericTextBoxH = { Text = Math.Max(0, config.AVWriterResizeHeight).ToString() },
+				numericTextBoxW = { Text = Math.Max(0, config.AVWriterResizeWidth).ToString() },
+				labelDescriptionBody = { Text = "" },
 			};
 
 			int idx = 0;
@@ -95,8 +94,6 @@ namespace BizHawk.Client.EmuHawk
 				c.Enabled = false;
 			}
 
-			dlg.checkBoxASync.Checked = audioSync;
-
 			IVideoWriter ret = null;
 			if (owner.ShowDialogAsChild(dlg).IsOk()
 				&& dlg.listBox1.SelectedIndex is not -1)
@@ -106,20 +103,14 @@ namespace BizHawk.Client.EmuHawk
 				config.VideoWriter = vwi.Attribs.ShortName;
 			}
 
-			if (ret != null && dlg.checkBoxResize.Checked)
+			if (ret is not null)
 			{
-				resizeW = dlg.numericTextBoxW.IntValue;
-				resizeH = dlg.numericTextBoxH.IntValue;
+				(config.AVWriterResizeWidth, config.AVWriterResizeHeight) = dlg.checkBoxResize.Checked
+					? (dlg.numericTextBoxW.IntValue, dlg.numericTextBoxH.IntValue)
+					: (-1, -1);
+				config.AVWriterPad = dlg.checkBoxPad.Checked;
+				config.VideoWriterAudioSyncEffective = config.VideoWriterAudioSync = dlg.checkBoxASync.Checked;
 			}
-			else
-			{
-				resizeW = -1;
-				resizeH = -1;
-			}
-
-			pad = dlg.checkBoxPad.Checked;
-			audioSync = dlg.checkBoxASync.Checked;
-
 			dlg.Dispose();
 			return ret;
 		}

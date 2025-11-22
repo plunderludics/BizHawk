@@ -1,6 +1,4 @@
-﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -19,6 +17,9 @@ namespace BizHawk.Client.EmuHawk
 	{
 		private static readonly FilesystemFilterSet BotFilesFSFilterSet = new(new FilesystemFilter("Bot files", new[] { "bot" }));
 
+		public static Icon ToolIcon
+			=> Resources.BasicBot;
+
 		private string _currentFileName = "";
 
 		private string CurrentFileName
@@ -33,7 +34,6 @@ namespace BizHawk.Client.EmuHawk
 					: WindowTitleStatic;
 				UpdateWindowTitle();
 			}
-
 		}
 
 		private bool _isBotting;
@@ -56,8 +56,7 @@ namespace BizHawk.Client.EmuHawk
 		private int _dataSize;
 
 		private Dictionary<string, double> _cachedControlProbabilities;
-		private ILogEntryGenerator _logGenerator;
-		
+
 		private bool _previousDisplayMessage;
 		private bool _previousInvisibleEmulation;
 
@@ -91,7 +90,7 @@ namespace BizHawk.Client.EmuHawk
 		public BasicBot()
 		{
 			InitializeComponent();
-			Icon = Resources.BasicBot;
+			Icon = ToolIcon;
 			NewMenuItem.Image = Resources.NewFile;
 			OpenMenuItem.Image = Resources.OpenFile;
 			SaveMenuItem.Image = Resources.SaveAs;
@@ -145,13 +144,14 @@ namespace BizHawk.Client.EmuHawk
 
 			_previousInvisibleEmulation = InvisibleEmulationCheckBox.Checked = Settings.InvisibleEmulation;
 			_previousDisplayMessage = Config.DisplayMessages;
+			Closing += (_, _) => StopBot();
 		}
 
 		private Dictionary<string, double> ControlProbabilities =>
 			ControlProbabilityPanel.Controls
 				.OfType<BotControlsRow>()
 				.ToDictionary(tkey => tkey.ButtonName, tvalue => tvalue.Probability);
-		
+
 		private int SelectedSlot
 			=> 1 + StartFromSlotBox.SelectedIndex;
 
@@ -385,9 +385,7 @@ namespace BizHawk.Client.EmuHawk
 			=> MemoryDomainsMenuItem.ReplaceDropDownItems(MemoryDomains.MenuItems(SetMemoryDomain, _currentDomain.Name).ToArray());
 
 		private void BigEndianMenuItem_Click(object sender, EventArgs e)
-		{
-			_bigEndian ^= true;
-		}
+			=> _bigEndian = !_bigEndian;
 
 		private void DataSizeMenuItem_DropDownOpened(object sender, EventArgs e)
 		{
@@ -412,9 +410,7 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private void TurboWhileBottingMenuItem_Click(object sender, EventArgs e)
-		{
-			Settings.TurboWhenBotting ^= true;
-		}
+			=> Settings.TurboWhenBotting = !Settings.TurboWhenBotting;
 
 		private void RunBtn_Click(object sender, EventArgs e)
 		{
@@ -800,7 +796,7 @@ namespace BizHawk.Client.EmuHawk
 					Probability = 0.0,
 					Location = new Point(marginLeft, startY + accumulatedY),
 					TabIndex = count + 1,
-					ProbabilityChangedCallback = AssessRunButtonStatus
+					ProbabilityChangedCallback = AssessRunButtonStatus,
 				};
 				control.Scale(UIHelper.AutoScaleFactor);
 
@@ -839,7 +835,7 @@ namespace BizHawk.Client.EmuHawk
 				1 => _currentDomain.PeekByte(addr),
 				2 => _currentDomain.PeekUshort(addr, _bigEndian),
 				4 => (int) _currentDomain.PeekUint(addr, _bigEndian),
-				_ => _currentDomain.PeekByte(addr)
+				_ => _currentDomain.PeekByte(addr),
 			};
 
 			return val;
@@ -939,7 +935,7 @@ namespace BizHawk.Client.EmuHawk
 					3 => (currentValue <= bestValue),
 					4 => (currentValue < bestValue),
 					5 => (currentValue != bestValue),
-					_ => false
+					_ => false,
 				};
 
 			if (!TestValue(MainComparisonType, current.Maximize, comparison.Maximize)) return false;
@@ -1003,7 +999,7 @@ namespace BizHawk.Client.EmuHawk
 			InputManager.SyncControls(Emulator, MovieSession, Config);
 
 			if (clear_log) { _currentBotAttempt.Log.Clear(); }
-			_currentBotAttempt.Log.Add(_logGenerator.GenerateLogEntry());
+			_currentBotAttempt.Log.Add(Bk2LogEntryGenerator.GenerateLogEntry(InputManager.ClickyVirtualPadController));
 		}
 
 		private void StartBot()
@@ -1029,7 +1025,6 @@ namespace BizHawk.Client.EmuHawk
 				MovieSession.Movie.IsCountingRerecords = false;
 			}
 
-			_logGenerator = MovieSession.Movie.LogGeneratorInstance(InputManager.ClickyVirtualPadController);
 			_cachedControlProbabilities = ControlProbabilities;
 
 			_doNotUpdateValues = true;
@@ -1077,6 +1072,16 @@ namespace BizHawk.Client.EmuHawk
 			return null;
 		}
 
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				components?.Dispose();
+				if (_isBotting) RestoreConfigFlags(); // disposed while running? least we can do is not clobber config
+			}
+			base.Dispose(disposing: disposing);
+		}
+
 		private void StopBot()
 		{
 			RunBtn.Visible = true;
@@ -1088,18 +1093,19 @@ namespace BizHawk.Client.EmuHawk
 			_targetFrame = 0;
 			reset_curent(0);
 			GoalGroupBox.Enabled = true;
-
-			if (MovieSession.Movie.IsRecording())
-			{
-				MovieSession.Movie.IsCountingRerecords = _oldCountingSetting;
-			}
-
-			Config.DisplayMessages = _previousDisplayMessage;
-			MainForm.InvisibleEmulation = _previousInvisibleEmulation;
+			RestoreConfigFlags();
 			MainForm.PauseEmulator();
 			SetNormalSpeed();
 			UpdateBotStatusIcon();
 			MessageLabel.Text = "Bot stopped";
+		}
+
+		private void RestoreConfigFlags()
+		{
+			Config.DisplayMessages = _previousDisplayMessage;
+			MainForm.InvisibleEmulation = _previousInvisibleEmulation;
+			var movie = MovieSession.Movie;
+			if (movie.IsRecording()) movie.IsCountingRerecords = _oldCountingSetting;
 		}
 
 		private void UpdateBotStatusIcon()
@@ -1294,13 +1300,11 @@ namespace BizHawk.Client.EmuHawk
 
 		private void HelpToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			Process.Start("https://tasvideos.org/Bizhawk/BasicBot");
+			Util.OpenUrlExternal("https://tasvideos.org/Bizhawk/BasicBot");
 		}
 
 		private void InvisibleEmulationCheckBox_CheckedChanged(object sender, EventArgs e)
-		{
-			Settings.InvisibleEmulation ^= true;
-		}
+			=> Settings.InvisibleEmulation = !Settings.InvisibleEmulation;
 
 		private void MaximizeAddressBox_TextChanged(object sender, EventArgs e)
 		{

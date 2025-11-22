@@ -1,6 +1,6 @@
-﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
@@ -16,7 +16,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
     */
     public partial class NECUPD765 : IPortIODevice
     {
-        public string outputfile = @"D:\Dropbox\Dropbox\_Programming\TASVideos\BizHawk\output\zxhawkio-" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".csv";
+        public string outputfile = @"D:\Dropbox\Dropbox\_Programming\TASVideos\BizHawk\output\zxhawkio-" + DateTime.Now.ToString("yyyyMMdd_HHmmss", DateTimeFormatInfo.InvariantInfo) + ".csv";
         public string outputString = "STATUS,WRITE,READ,CODE,MT,MF,SK,CMDCNT,RESCNT,EXECCNT,EXECLEN\r\n";
         public bool writeDebug = false;
 
@@ -82,7 +82,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
                     //outputString += ",," + data + "," + ActiveCommand.CommandCode + "\r\n";
                     BuildCSVLine();
                 }
-                    
+
                 return true;
             }
 
@@ -98,7 +98,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
                     BuildCSVLine();
                     //System.IO.File.WriteAllText(outputfile, outputString);
                 }
-                    
+
                 return true;
             }
 
@@ -123,7 +123,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
                     BuildCSVLine();
                     //System.IO.File.WriteAllText(outputfile, outputString);
                 }
-                    
+
                 return true;
             }
 

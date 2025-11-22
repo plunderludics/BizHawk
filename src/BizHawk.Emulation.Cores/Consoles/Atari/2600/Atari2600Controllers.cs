@@ -1,4 +1,3 @@
-﻿using System;
 using System.Linq;
 
 using BizHawk.Common;
@@ -148,8 +147,8 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 
 		public int Read_Pot(IController c, int pot)
 		{
-			int x = (int)c.AxisValue(Definition.Axes[pot]);
-			
+			int x = c.AxisValue(Definition.Axes[pot]);
+
 			x = -x;
 			x += 127;
 
@@ -213,7 +212,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			{
 				is_pressed = c.IsPressed($"P{PortNum} Button 2");
 			}
-			
+
 			if (is_pressed)
 			{
 				return 10;
@@ -266,7 +265,7 @@ namespace BizHawk.Emulation.Cores.Atari.Atari2600
 			byte temp2 = 0;
 
 			int temp1 = (int)Math.Floor(angle / 45);
-			temp1 = temp1 % 4;
+			temp1 %= 4;
 
 			if (temp1 == 0)
 			{

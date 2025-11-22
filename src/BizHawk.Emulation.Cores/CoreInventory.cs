@@ -1,8 +1,9 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+
+using BizHawk.Common.CollectionExtensions;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores
@@ -21,17 +22,9 @@ namespace BizHawk.Emulation.Cores
 
 		public class Core
 		{
-			private class RomGameFake : IRomAsset
-			{
-				public byte[] RomData { get; set; }
-				public byte[] FileData { get; set; }
-				public string Extension { get; set; }
-				public string RomPath { get; set; }
-				public GameInfo Game { get; set; }
-			}
-
 			// map parameter names to locations in the constructor
 			private readonly Dictionary<string, int> _paramMap = new Dictionary<string, int>();
+
 			// If true, this is a new style constructor that takes a CoreLoadParameters object
 			private readonly bool _useCoreLoadParameters;
 
@@ -79,11 +72,17 @@ namespace BizHawk.Emulation.Cores
 			/// </summary>
 			/// <value></value>
 			public string Name { get; }
+
 			public Type Type { get; }
+
 			public ConstructorInfo CTor { get; }
+
 			public CorePriority Priority { get; }
+
 			public CoreAttribute CoreAttr { get; }
+
 			public Type SettingsType { get; } = typeof(object);
+
 			public Type SyncSettingsType { get; } = typeof(object);
 
 			private void Bp(object[] parameters, string name, object value)
@@ -149,7 +148,7 @@ namespace BizHawk.Emulation.Cores
 
 		public IEnumerable<Core> GetCores(string system)
 		{
-			_systems.TryGetValue(system, out var cores);
+			_ = _systems.TryGetValue(system, out var cores);
 			return cores ?? Enumerable.Empty<Core>();
 		}
 
@@ -162,13 +161,7 @@ namespace BizHawk.Emulation.Cores
 			void ProcessConstructor(Type type, CoreConstructorAttribute consAttr, CoreAttribute coreAttr, ConstructorInfo cons)
 			{
 				var core = new Core(type, consAttr, coreAttr, cons);
-				if (!_systems.TryGetValue(consAttr.System, out var ss))
-				{
-					ss = new List<Core>();
-					_systems.Add(consAttr.System, ss);
-				}
-
-				ss.Add(core);
+				_systems.GetValueOrPutNew(consAttr.System).Add(core);
 				systemsFlat[type] = core;
 			}
 			foreach (var assy in assys)
@@ -204,6 +197,7 @@ namespace BizHawk.Emulation.Cores
 		/// The gamedb has requested this core for this game
 		/// </summary>
 		GameDbPreference = -300,
+
 		/// <summary>
 		/// The user has indicated in preferences that this is their favorite core
 		/// </summary>
@@ -218,10 +212,12 @@ namespace BizHawk.Emulation.Cores
 		/// Most cores should use this
 		/// </summary>
 		Normal = 0,
+
 		/// <summary>
 		/// Experimental, special use, or garbage core
 		/// </summary>
 		Low = 100,
+
 		/// <summary>
 		/// TODO:  Do we need this?  Does it need a better name?
 		/// </summary>
@@ -232,10 +228,12 @@ namespace BizHawk.Emulation.Cores
 	public sealed class CoreConstructorAttribute : Attribute
 	{
 		public string System { get; }
+
 		public CoreConstructorAttribute(string system)
 		{
 			System = system;
 		}
+
 		public CorePriority Priority { get; set; }
 	}
 
@@ -245,11 +243,17 @@ namespace BizHawk.Emulation.Cores
 	public interface ICoreInventoryParameters
 	{
 		CoreComm Comm { get; }
+
 		GameInfo Game { get; }
+
 		List<IRomAsset> Roms { get; }
+
 		List<IDiscAsset> Discs { get; }
+
 		bool DeterministicEmulationRequested { get; }
+
 		object FetchSettings(Type emulatorType, Type settingsType);
+
 		object FetchSyncSettings(Type emulatorType, Type syncSettingsType);
 	}
 }

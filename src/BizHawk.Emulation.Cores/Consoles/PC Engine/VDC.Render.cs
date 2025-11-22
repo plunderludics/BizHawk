@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.PCEngine
@@ -13,7 +12,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 		 + ActiveLine is the current offset into the framebuffer. 0 is the first
 		   line of active display, and the last value will be BufferHeight-1.
 		 + BackgroundY is the current offset into the scroll plane. It is set with BYR
-		   register at certain sync points and incremented every scanline. 
+		   register at certain sync points and incremented every scanline.
 		   Its values range from 0 - $1FF.
 		 + RCRCounter is set to $40 at the first line of active display, and incremented each
 		   scanline thereafter.
@@ -91,7 +90,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 
 				cpu.Execute(455 - HBlankCycles - 2);
 
-				if (InActiveDisplay == false && DmaRequested)
+				if (!InActiveDisplay && DmaRequested)
 					RunDmaForScanline();
 
 				ScanLine++;
@@ -107,10 +106,11 @@ namespace BizHawk.Emulation.Cores.PCEngine
 
 		public void RenderScanLine()
 		{
-			if (((ActiveLine + ViewStartLine) >= pce.Settings.BottomLine) ||
-				((ActiveLine + ViewStartLine) < pce.Settings.TopLine))	
+			if (pce.Settings.BottomLine <= ActiveLine + ViewStartLine
+				|| ActiveLine + ViewStartLine < pce.Settings.TopLine)
+			{
 				return;
-
+			}
 			RenderBackgroundScanline(pce.Settings.ShowBG1);
 			RenderSpritesScanline(pce.Settings.ShowOBJ1);
 		}
@@ -121,7 +121,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 		{
 			Array.Clear(PriorityBuffer, 0, FrameWidth);
 
-			if (BackgroundEnabled == false)
+			if (!BackgroundEnabled)
 			{
 				int p = vce.Palette[256];
 				fixed (int* FBptr = FrameBuffer)
@@ -201,7 +201,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 		{
 			Array.Clear(PriorityBuffer, 0, FrameWidth);
 
-			if (BackgroundEnabled == false)
+			if (!BackgroundEnabled)
 			{
 				for (int i = 0; i < FrameWidth; i++)
 					FrameBuffer[((ActiveLine + ViewStartLine - pce.Settings.TopLine) * FramePitch) + i] = vce.Palette[256];
@@ -241,7 +241,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 
 		public void RenderSpritesScanline(bool show)
 		{
-			if (SpritesEnabled == false)
+			if (!SpritesEnabled)
 			{
 				return;
 			}
@@ -285,7 +285,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 					patternNo &= 0x1FE;
 
 				int yofs = 0;
-				if (vflip == false)
+				if (!vflip)
 				{
 					yofs = (ActiveLine - y) & 15;
 					if (height == 32)
@@ -350,7 +350,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 					}
 				}
 
-				if (hflip == false)
+				if (!hflip)
 				{
 					if (x + width > 0 && y + height > 0)
 					{
@@ -382,7 +382,6 @@ namespace BizHawk.Emulation.Cores.PCEngine
 								if ((priority || PriorityBuffer[xs] == 0) && show)
 									FrameBuffer[((ActiveLine + ViewStartLine - pce.Settings.TopLine) * FramePitch) + xs] = vce.Palette[paletteBase + pixel];
 							}
-
 						}
 					}
 				}

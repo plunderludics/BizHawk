@@ -1,5 +1,3 @@
-﻿using System;
-
 //TODO - call on unmanaged code in mednadisc if available to do deinterleaving faster. be sure to benchmark it though..
 
 //a decent little subcode reference
@@ -52,7 +50,7 @@ namespace BizHawk.Emulation.DiscSystem
 		/// <summary>
 		/// normal track: BCD indication of the current index
 		/// leadin track: 'POINT' field used to ID the TOC entry #
-		/// </summary>				
+		/// </summary>
 		public BCD2 q_index;
 
 		/// <summary>
@@ -136,5 +134,4 @@ namespace BizHawk.Emulation.DiscSystem
 		/// </summary>
 		public EControlQ CONTROL => (EControlQ)((q_status >> 4) & 0xF);
 	}
-	
 }

@@ -6,6 +6,8 @@ using System.Linq;
 using System.Xml.Linq;
 using System.Windows.Forms;
 
+using BizHawk.Common.StringExtensions;
+
 namespace BizHawk.DATTool
 {
 	public class TOSECParser : DATParser
@@ -70,9 +72,9 @@ namespace BizHawk.DATTool
 				{
 					GameDB item = new GameDB();
 					item.Name = g.Value;
-					item.SHA1 = g.Elements("rom").First().Attribute("sha1").Value.ToUpper();
-					item.MD5 = g.Elements("rom").First().Attribute("md5").Value.ToUpper();
-					item.CRC32 = g.Elements("rom").First().Attribute("crc").Value.ToUpper();
+					item.SHA1 = g.Elements("rom").First().Attribute("sha1").Value.ToUpperInvariant();
+					item.MD5 = g.Elements("rom").First().Attribute("md5").Value.ToUpperInvariant();
+					item.CRC32 = g.Elements("rom").First().Attribute("crc").Value.ToUpperInvariant();
 					item.System = GameDB.GetSystemCode(SysType);
 
 					ParseTOSECFlags(item);
@@ -104,7 +106,7 @@ namespace BizHawk.DATTool
 				AddCommentBlock("Home Brew");
 				AppendCSVData(pd);
 
-				var good = working.Where(st => st.Status == "" || st.Status == null).OrderBy(na => na.Name).ToList();
+				var good = working.Where(st => string.IsNullOrEmpty(st.Status)).OrderBy(na => na.Name).ToList();
 				AddCommentBlock("Believed Good");
 				AppendCSVData(good);
 			}
@@ -126,7 +128,7 @@ namespace BizHawk.DATTool
 			string a = RemoveUnneededOptions(nameString);
 
 			// process data contained in ()
-			string[] d = a.ToString().Split('(', ')');
+			var d = a.Split('(', ')');
 
 			if (d.Length > 0)
 			{
@@ -171,27 +173,27 @@ namespace BizHawk.DATTool
 					}
 
 					// country flag(s)
-					if (IsCountryFlag(f) == true)
+					if (IsCountryFlag(f))
 					{
 						g.Region = f;
 						continue;
 					}
 
 					// language - if present add to notes
-					if (IsLanguageFlag(f) == true)
+					if (IsLanguageFlag(f))
 					{
 						g.Notes = f;
 						continue;
 					}
 
 					// check copyright status (not currently implemented)
-					if (IsCopyrightStatus(f) == true)
+					if (IsCopyrightStatus(f))
 					{
 						continue;
 					}
 
 					// check development status (not currently implemented)
-					if (IsDevelopmenttStatus(f) == true)
+					if (IsDevelopmenttStatus(f))
 					{
 						continue;
 					}
@@ -225,28 +227,28 @@ namespace BizHawk.DATTool
 
 						if (e.Where(str => 
 						// bad dump
-						str == "b" || str.StartsWith("b ") ||
+						str == "b" || str.StartsWithOrdinal("b ") ||
 						// virus
-						str == "v" || str.StartsWith("v ") ||
+						str == "v" || str.StartsWithOrdinal("v ") ||
 						// under dump
-						str == "u" || str.StartsWith("u ")).ToList().Count > 0)
+						str == "u" || str.StartsWithOrdinal("u ")).ToList().Count > 0)
 						{
 							// RomStatus.BadDump
 							g.Status = "B";
 						}							
 						else if (e.Where(str => 
 						// cracked
-						str == "cr" || str.StartsWith("cr ") ||
+						str == "cr" || str.StartsWithOrdinal("cr ") ||
 						// fixed
-						str == "f" || str.StartsWith("f ") ||
+						str == "f" || str.StartsWithOrdinal("f ") ||
 						// hack
-						str == "h" || str.StartsWith("h ") ||
+						str == "h" || str.StartsWithOrdinal("h ") ||
 						// modified
-						str == "m" || str.StartsWith("m ") ||
+						str == "m" || str.StartsWithOrdinal("m ") ||
 						// pirated
-						str == "p" || str.StartsWith("p ") ||
+						str == "p" || str.StartsWithOrdinal("p ") ||
 						// trained
-						str == "t" || str.StartsWith("t ")
+						str == "t" || str.StartsWithOrdinal("t ")
 						).ToList().Count > 0)
 						{
 							// RomStatus.Hack
@@ -254,7 +256,7 @@ namespace BizHawk.DATTool
 						}
 						else if (e.Where(str =>
 						// over dump
-						str == "o" || str.StartsWith("o ")).ToList().Count > 0)
+						str == "o" || str.StartsWithOrdinal("o ")).ToList().Count > 0)
 						{
 							// RomStatus.Overdump
 							g.Status = "O";
@@ -268,7 +270,7 @@ namespace BizHawk.DATTool
 						}
 						else if (e.Where(str =>
 						// translated
-						str == "tr" || str.StartsWith("tr ")).ToList().Count > 0)
+						str == "tr" || str.StartsWithOrdinal("tr ")).ToList().Count > 0)
 						{
 							// RomStatus.TranslatedRom
 							g.Status = "T";
@@ -282,22 +284,18 @@ namespace BizHawk.DATTool
 		{
 			List<string> DS = new List<string>
 			{
-				"alpha", "beta", "preview", "pre-release", "proto"
+				"alpha", "beta", "preview", "pre-release", "proto",
 			};
-
-			bool b = DS.Any(s.Contains);
-			return b;
+			return DS.Exists(s.Contains);
 		}
 
 		public static bool IsCopyrightStatus(string s)
 		{
 			List<string> CS = new List<string>
 			{
-				"CW", "CW-R", "FW", "GW", "GW-R", "LW", "PD", "SW", "SW-R"
+				"CW", "CW-R", "FW", "GW", "GW-R", "LW", "PD", "SW", "SW-R",
 			};
-
-			bool b = CS.Any(s.Contains);
-			return b;
+			return CS.Exists(s.Contains);
 		}
 
 		public static bool IsLanguageFlag(string s)
@@ -307,7 +305,7 @@ namespace BizHawk.DATTool
 				"ar", "bg", "bs", "cs", "cy", "da", "de", "el", "en", "eo", "es", "et", "fa", "fi", "fr", "ga",
 				"gu", "he", "hi", "hr", "hu", "is", "it", "ja", "ko", "lt", "lv", "ms", "nl", "no", "pl", "pt",
 				"ro", "ru", "sk", "sl", "sq", "sr", "sv", "th", "tr", "ur", "vi", "yi", "zh", "M1", "M2", "M3",
-				"M4", "M5", "M6", "M7", "M8", "M9"
+				"M4", "M5", "M6", "M7", "M8", "M9",
 			};
 
 			bool b = false;
@@ -316,14 +314,14 @@ namespace BizHawk.DATTool
 			{
 				foreach (var x in LC)
 				{
-					if (s == x || s.StartsWith(x) || s.EndsWith(x))
+					if (s == x || s.StartsWithOrdinal(x) || s.EndsWithOrdinal(x))
 					{
 						b = true;
 						break;
 					}
 				}
 
-				//b = LC.Any(s.Contains);
+//				b = LC.Exists(s.Contains);
 			}
 
 			return b;
@@ -337,7 +335,7 @@ namespace BizHawk.DATTool
 				"DE", "DK", "EE", "EG", "EU", "ES", "FI", "FR", "GB", "GR", "HK", "HR", "HU", "ID", "IE", "IL",
 				"IN", "IR", "IS", "IT", "JO", "JP", "KR", "LT", "LU", "LV", "MN", "MX", "MY", "NL", "NO", "NP",
 				"NZ", "OM", "PE", "PH", "PL", "PT", "QA", "RO", "RU", "SE", "SG", "SI", "SK", "TH", "TR", "TW",
-				"US", "VN", "YU", "ZA"
+				"US", "VN", "YU", "ZA",
 			};
 
 			bool b = false;
@@ -346,14 +344,14 @@ namespace BizHawk.DATTool
 			{
 				foreach (var x in CC)
 				{
-					if (s == x || s.StartsWith(x) || s.EndsWith(x))
+					if (s == x || s.StartsWithOrdinal(x) || s.EndsWithOrdinal(x))
 					{
 						b = true;
 						break;
 					}
 				}
 
-				//b = CC.Any(s.Contains);
+//				b = CC.Exists(s.Contains);
 			}
 
 			return b;

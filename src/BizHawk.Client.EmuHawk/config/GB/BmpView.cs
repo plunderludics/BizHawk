@@ -1,6 +1,5 @@
 ﻿//TODO - this is redundant with RetainedViewportPanel. Someone needs to reconcile the two.
 
-using System;
 using System.ComponentModel;
 using System.Drawing.Imaging;
 using System.Drawing;
@@ -83,7 +82,7 @@ namespace BizHawk.Client.EmuHawk
 
 
 			Bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb);
-			BmpView_SizeChanged(null, null);
+			BmpView_SizeChanged(null, EventArgs.Empty);
 			Refresh();
 		}
 

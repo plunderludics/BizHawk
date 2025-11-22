@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 
 using BizHawk.Emulation.Common;
@@ -103,7 +102,7 @@ namespace BizHawk.Emulation.Cores.Computers.AppleII
 			}
 		}
 
-		public void Step(StepType type) 
+		public void Step(StepType type)
 		{
 			switch (type)
 			{

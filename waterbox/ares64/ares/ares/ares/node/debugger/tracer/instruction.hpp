@@ -31,7 +31,7 @@ struct Instruction : Tracer {
   auto address(u64 address) -> bool {
     address &= ~0ull >> (64 - _addressBits);  //mask upper bits of address
     _address = address;
-    /*address >>= _addressMask;  //clip unneeded alignment bits (to reduce _masks size)
+    address >>= _addressMask;  //clip unneeded alignment bits (to reduce _masks size)
 
     if(_mask) {
       auto mask = _masks.find(address);
@@ -50,7 +50,7 @@ struct Instruction : Tracer {
         _history[index] = _history[index + 1];
       }
       _history.last() = _address;
-    }*/
+    }
 
     return true;
   }
@@ -58,22 +58,20 @@ struct Instruction : Tracer {
   //mark an already-executed address as not executed yet for trace masking.
   //call when writing to executable RAM to support self-modifying code.
   auto invalidate(u64 address) -> void {
-    /*if(unlikely(_mask)) {
+    if(unlikely(_mask)) {
       address &= ~0ull >> (64 - _addressBits);
       address >>= _addressMask;
 
       auto mask = _masks.find(address);
       if(mask) mask->unvisit(address);
-    }*/
+    }
   }
 
   auto notify(const string& instruction, const string& context, const string& extra = {}) -> void {
     if(!enabled()) return;
 
     if(_omitted) {
-      PlatformLog({
-        "[Omitted: ", _omitted, "]\n"}
-      );
+      PlatformLog(shared(), {"[Omitted: ", _omitted, "]"});
       _omitted = 0;
     }
 
@@ -84,7 +82,7 @@ struct Instruction : Tracer {
       context, "  ",
       extra
     };
-    PlatformLog({output.strip(), "\n"});
+    PlatformLog(shared(), {output.strip()});
   }
 
   auto serialize(string& output, string depth) -> void override {

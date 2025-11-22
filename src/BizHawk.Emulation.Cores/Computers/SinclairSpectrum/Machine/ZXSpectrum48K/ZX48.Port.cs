@@ -17,19 +17,14 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
             // Technically the ULA should respond to every even I/O address
             bool lowBitReset = (port & 0x0001) == 0;
             byte lowByte = (byte)(port & 0xff);
-            
+
             // Kempston joystick input takes priority over keyboard input
             // if this is detected just return the kempston byte
             if (lowByte == 0x1f)
             {
-                if (LocateUniqueJoystick(JoystickType.Kempston) != null)
-				{
-					InputRead = true;
-					return (byte)((KempstonJoystick)LocateUniqueJoystick(JoystickType.Kempston) as KempstonJoystick).JoyLine;
-				}
-
                 // not a lag frame
                 InputRead = true;
+                if (LocateUniqueJoystick(JoystickType.Kempston) is KempstonJoystick j) return (byte) j.JoyLine;
             }
             // Even ports always address the ULA
             else if (lowBitReset)
@@ -38,7 +33,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
                 KeyboardDevice.ReadPort(port, ref result);
 
                 // not a lagframe
-                InputRead = true;           
+                InputRead = true;
 
                 // process tape INs
                 TapeDevice.ReadPort(port, ref result);
@@ -54,7 +49,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 
                 // If this is an unused port the floating memory bus should be returned
-                ULADevice.ReadFloatingBus((int)CurrentFrameCycle, ref result, port);                
+                ULADevice.ReadFloatingBus((int)CurrentFrameCycle, ref result, port);
             }
 
             return (byte)result;
@@ -97,8 +92,6 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
             // Tape mic processing (not implemented yet)
             //TapeDevice.ProcessMicBit((value & MIC_BIT) != 0);
-
         }
-
     }
 }

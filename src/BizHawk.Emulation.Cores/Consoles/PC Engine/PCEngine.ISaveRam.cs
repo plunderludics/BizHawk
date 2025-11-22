@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.PCEngine
@@ -7,8 +6,9 @@ namespace BizHawk.Emulation.Cores.PCEngine
 	{
 		public bool SaveRamModified { get; private set; }
 
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
+			if (clearDirty) SaveRamModified = false;
 			return (byte[]) BRAM?.Clone();
 		}
 
@@ -18,6 +18,8 @@ namespace BizHawk.Emulation.Cores.PCEngine
 			{
 				Array.Copy(data, BRAM, data.Length);
 			}
+
+			SaveRamModified = false;
 		}
 	}
 }

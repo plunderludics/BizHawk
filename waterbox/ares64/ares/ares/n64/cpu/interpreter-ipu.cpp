@@ -252,14 +252,24 @@ auto CPU::DADDU(r64& rd, cr64& rs, cr64& rt) -> void {
 auto CPU::DDIV(cr64& rs, cr64& rt) -> void {
   if(!context.kernelMode() && context.bits == 32) return exception.reservedInstruction();
   if(rt.s64) {
+    #if defined(_MSC_VER) || !defined(__SIZEOF_INT128__)
+    if(rs.s64 != (-1LL << 63) || rt.s64 != -1LL) {
+      LO.u64 = rs.s64 / rt.s64;
+      HI.u64 = rs.s64 % rt.s64;
+    } else {
+      LO.u64 = rs.s64;
+      HI.u64 = 0;
+    }
+    #else
     //cast to i128 to prevent exception on INT64_MIN / -1
     LO.u64 = s128(rs.s64) / s128(rt.s64);
     HI.u64 = s128(rs.s64) % s128(rt.s64);
+    #endif
   } else {
     LO.u64 = rs.s64 < 0 ? +1 : -1;
     HI.u64 = rs.s64;
   }
-  step(69);
+  step((69 - 1) * 2);
 }
 
 auto CPU::DDIVU(cr64& rs, cr64& rt) -> void {
@@ -271,7 +281,7 @@ auto CPU::DDIVU(cr64& rs, cr64& rt) -> void {
     LO.u64 = -1;
     HI.u64 = rs.u64;
   }
-  step(69);
+  step((69 - 1) * 2);
 }
 
 auto CPU::DIV(cr64& rs, cr64& rt) -> void {
@@ -284,7 +294,7 @@ auto CPU::DIV(cr64& rs, cr64& rt) -> void {
     LO.u64 = rs.s32 < 0 ? +1 : -1;
     HI.u64 = rs.s32;
   }
-  step(37);
+  step((37 - 1) * 2);
 }
 
 auto CPU::DIVU(cr64& rs, cr64& rt) -> void {
@@ -296,23 +306,47 @@ auto CPU::DIVU(cr64& rs, cr64& rt) -> void {
     LO.u64 = -1;
     HI.u64 = rs.s32;
   }
-  step(37);
+  step((37 - 1) * 2);
 }
 
 auto CPU::DMULT(cr64& rs, cr64& rt) -> void {
   if(!context.kernelMode() && context.bits == 32) return exception.reservedInstruction();
-  u128 result = rs.s128() * rt.s128();
+#if defined(COMPILER_MICROSOFT) && (defined(ARCHITECTURE_AMD64) || defined(ARCHITECTURE_ARM64))
+  #if defined(ARCHITECTURE_AMD64)
+  LO.s64 = _mul128(rs.s64, rt.s64, &HI.s64);
+  #else
+	LO.s64 = rs.s64 * rt.s64;
+	HI.s64 = __mulh(rs.s64, rt.s64);
+  #endif
+#else
+  #if defined(__SIZEOF_INT128__)
+  u128 result = s128(rs.s64) * s128(rt.s64);
+  #else
+  u128 result = u128(rs.u64) * u128(rt.u64);
+  if(rs.s64 < 0) result -= u128(rt.u64) << 64;
+  if(rt.s64 < 0) result -= u128(rs.u64) << 64;
+  #endif
   LO.u64 = result >>  0;
   HI.u64 = result >> 64;
-  step(8);
+#endif
+  step((8 - 1) * 2);
 }
 
 auto CPU::DMULTU(cr64& rs, cr64& rt) -> void {
   if(!context.kernelMode() && context.bits == 32) return exception.reservedInstruction();
-  u128 result = rs.u128() * rt.u128();
+#if defined(COMPILER_MICROSOFT) && (defined(ARCHITECTURE_AMD64) || defined(ARCHITECTURE_ARM64))
+  #if defined(ARCHITECTURE_AMD64)
+  LO.u64 = _umul128(rs.u64, rt.u64, &HI.u64);
+  #else
+	LO.u64 = rs.u64 * rt.u64;
+	HI.u64 = __umulh(rs.u64, rt.u64);
+  #endif
+#else
+  u128 result = u128(rs.u64) * u128(rt.u64);
   LO.u64 = result >>  0;
   HI.u64 = result >> 64;
-  step(8);
+#endif
+  step((8 - 1) * 2);
 }
 
 auto CPU::DSLL(r64& rd, cr64& rt, u8 sa) -> void {
@@ -752,14 +786,14 @@ auto CPU::MULT(cr64& rs, cr64& rt) -> void {
   u64 result = s64(rs.s32) * s64(rt.s32);
   LO.u64 = s32(result >>  0);
   HI.u64 = s32(result >> 32);
-  step(5);
+  step((5 - 1) * 2);
 }
 
 auto CPU::MULTU(cr64& rs, cr64& rt) -> void {
   u64 result = u64(rs.u32) * u64(rt.u32);
   LO.u64 = s32(result >>  0);
   HI.u64 = s32(result >> 32);
-  step(5);
+  step((5 - 1) * 2);
 }
 
 auto CPU::NOR(r64& rd, cr64& rs, cr64& rt) -> void {
@@ -1027,17 +1061,17 @@ auto CPU::SWL(cr64& rt, cr64& rs, s16 imm) -> void {
   if(context.bigEndian())
   switch(vaddr & 3) {
   case 0:
-    if(!write<Word>(vaddr & ~3 | 0, data >>  0)) return;
+    if(!write<Word>(vaddr + 0, data >>  0)) return;
     break;
   case 1:
-    if(!write<Byte>(vaddr & ~3 | 1, data >> 24)) return;
-    if(!write<Half>(vaddr & ~3 | 2, data >>  8)) return;
+    if(!write<Byte>(vaddr + 0, data >> 24)) return;
+    if(!write<Half>(vaddr + 1, data >>  8)) return;
     break;
   case 2:
-    if(!write<Half>(vaddr & ~3 | 2, data >> 16)) return;
+    if(!write<Half>(vaddr + 0, data >> 16)) return;
     break;
   case 3:
-    if(!write<Byte>(vaddr & ~3 | 3, data >> 24)) return;
+    if(!write<Byte>(vaddr + 0, data >> 24)) return;
     break;
   }
 }
@@ -1066,17 +1100,17 @@ auto CPU::SWR(cr64& rt, cr64& rs, s16 imm) -> void {
   if(context.bigEndian())
   switch(vaddr & 3) {
   case 0:
-    if(!write<Byte>(vaddr & ~3 | 0, data >>  0)) return;
+    if(!write<Byte>(vaddr + 0, data >>  0, false)) return;
     break;
   case 1:
-    if(!write<Half>(vaddr & ~3 | 0, data >>  0)) return;
+    if(!write<Half>(vaddr + 0, data >>  0, false)) return;
     break;
   case 2:
-    if(!write<Half>(vaddr & ~3 | 0, data >>  8)) return;
-    if(!write<Byte>(vaddr & ~3 | 2, data >>  0)) return;
+    if(!write<Byte>(vaddr + 0, data >>  0, false)) return;
+    if(!write<Half>(vaddr - 2, data >>  8, false)) return;
     break;
   case 3:
-    if(!write<Word>(vaddr & ~3 | 0, data >>  0)) return;
+    if(!write<Word>(vaddr + 0, data >>  0, false)) return;
     break;
   }
 }

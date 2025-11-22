@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 using System.IO;
-using BizHawk.Common.PathExtensions;
+
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -26,8 +26,6 @@ namespace BizHawk.Client.Common
 			_firmwareUserSpecifications = firmwareUserSpecifications;
 		}
 
-		public string DllPath() => PathUtils.DllDirectoryPath;
-
 		// Poop
 		public string GetRetroSaveRAMDirectory(IGameInfo game)
 			=> _pathEntries.RetroSaveRamAbsolutePath(game);
@@ -35,6 +33,22 @@ namespace BizHawk.Client.Common
 		// Poop
 		public string GetRetroSystemPath(IGameInfo game)
 			=> _pathEntries.RetroSystemAbsolutePath(game);
+
+		public string GetUserPath(string sysID, bool temp)
+		{
+			if (temp)
+			{
+				var tempUserPath = Path.Combine(Path.GetTempPath(), $"biz-temp{sysID}user");
+				if (Directory.Exists(tempUserPath))
+				{
+					Directory.Delete(tempUserPath, true);
+				}
+
+				return tempUserPath;
+			}
+
+			return _pathEntries.UserAbsolutePathFor(sysID);
+		}
 
 		private (byte[] FW, string Path)? GetFirmwareWithPath(FirmwareID id)
 		{
@@ -52,7 +66,7 @@ namespace BizHawk.Client.Common
 		}
 
 		private (byte[] FW, string Path) GetFirmwareWithPathOrThrow(FirmwareID id, string? msg)
-			=> GetFirmwareWithPath(id) ?? throw new MissingFirmwareException($"Couldn't find required firmware {id}.  This is fatal{(msg is null ? "." : $": {msg}")}");
+			=> GetFirmwareWithPath(id) ?? throw new MissingFirmwareException($"Couldn't find required firmware {id}.  This prevents the core from loading{(msg is null ? "." : $": {msg}")}");
 
 		public byte[]? GetFirmware(FirmwareID id, string? msg = null)
 		{

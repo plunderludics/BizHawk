@@ -1,5 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -12,8 +10,6 @@ namespace BizHawk.Client.EmuHawk
 	public partial class PlatformChooser : Form
 	{
 		private readonly Config _config;
-		private readonly List<SystemLookup.SystemInfo> _availableSystems = new SystemLookup().AllSystems.ToList();
-		
 
 		public PlatformChooser(Config config)
 		{
@@ -32,17 +28,17 @@ namespace BizHawk.Client.EmuHawk
 				? $"{RomGame.RomData.Length / 1024 / 1024:n0}mb"
 				: $"{RomGame.RomData.Length / 1024:n0}kb";
 
-			ExtensionLabel.Text = RomGame.Extension.ToLower();
+			ExtensionLabel.Text = RomGame.Extension.ToLowerInvariant();
 			HashBox.Text = RomGame.GameInfo.Hash;
 			int count = 0;
 			int spacing = 25;
-			foreach (var platform in _availableSystems)
+			foreach (var (systemId, fullName) in EmulatorExtensions.SystemIDDisplayNames)
 			{
 				var radio = new RadioButton
 				{
-					Text = platform.FullName,
+					Text = fullName,
 					Location = UIHelper.Scale(new Point(15, 15 + (count * spacing))),
-					Size = UIHelper.Scale(new Size(200, 23))
+					Size = UIHelper.Scale(new Size(200, 23)),
 				};
 
 				PlatformsGroupBox.Controls.Add(radio);
@@ -63,19 +59,17 @@ namespace BizHawk.Client.EmuHawk
 		private void OkBtn_Click(object sender, EventArgs e)
 		{
 			var selectedValue = SelectedRadio != null ? SelectedRadio.Text : "";
-			PlatformChoice = _availableSystems.First(x => x.FullName == selectedValue).SystemId;
+			PlatformChoice = EmulatorExtensions.SystemIDDisplayNames.First(x => x.Value == selectedValue).Key;
 
 			if (AlwaysCheckbox.Checked)
 			{
-				_config.PreferredPlatformsForExtensions[RomGame.Extension.ToLower()] = PlatformChoice;
+				_config.PreferredPlatformsForExtensions[RomGame.Extension.ToLowerInvariant()] = PlatformChoice;
 			}
 
 			Close();
 		}
 
 		private void label4_Click(object sender, EventArgs e)
-		{
-			AlwaysCheckbox.Checked ^= true;
-		}
+			=> AlwaysCheckbox.Checked = !AlwaysCheckbox.Checked;
 	}
 }

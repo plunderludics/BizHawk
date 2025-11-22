@@ -1,4 +1,3 @@
-﻿using System;
 using System.Runtime.InteropServices;
 
 using BizHawk.Emulation.Common;
@@ -7,7 +6,7 @@ namespace BizHawk.Emulation.Cores.Atari.Lynx
 {
 	public partial class Lynx : ISaveRam
 	{
-		public byte[] CloneSaveRam()
+		public byte[] CloneSaveRam(bool clearDirty)
 		{
 			if (!LibLynx.GetSaveRamPtr(Core, out var size, out var data))
 			{

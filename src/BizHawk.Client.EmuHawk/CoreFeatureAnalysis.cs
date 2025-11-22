@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -6,6 +5,7 @@ using System.Windows.Forms;
 using System.Reflection;
 
 using BizHawk.Client.Common;
+using BizHawk.Common.CollectionExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores;
 
@@ -25,27 +25,15 @@ namespace BizHawk.Client.EmuHawk
 			{
 				CoreName = emu.Attributes().CoreName;
 				Released = emu.Attributes().Released;
-				Services = new Dictionary<string, ServiceInfo>();
 				var ser = emu.ServiceProvider;
-				foreach (Type t in ser.AvailableServices.Where(type => type != emu.GetType()))
-				{
-					var si = new ServiceInfo(t, ser.GetService(t));
-					Services.Add(si.TypeName, si);
-				}
-
+				Services = ser.AvailableServices.Except([ emu.GetType() ])
+					.Select(t => new ServiceInfo(t, ser.GetService(t)))
+					.OrderBy(si => si.TypeName)
+					.ToDictionary(static si => si.TypeName);
 				var notApplicableAttribute = ((ServiceNotApplicableAttribute)Attribute
 					.GetCustomAttribute(emu.GetType(), typeof(ServiceNotApplicableAttribute)));
-
-				if (notApplicableAttribute != null)
-				{
-					NotApplicableTypes = notApplicableAttribute.NotApplicableTypes
-					.Select(x => x.ToString())
-					.ToList();
-				}
-				else
-				{
-					NotApplicableTypes = new List<string>();
-				}
+				NotApplicableTypes = (notApplicableAttribute?.NotApplicableTypes ?? [ ])
+					.Select(static x => x.ToString()).Order().ToList();
 			}
 		}
 
@@ -78,7 +66,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					Functions.Add(new FunctionInfo(method, service));
 				}
-				Complete = Functions.All(f => f.Complete);
+				Complete = Functions.TrueForAll(static f => f.Complete);
 			}
 		}
 
@@ -102,6 +90,9 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
+		public static Icon ToolIcon
+			=> Properties.Resources.Logo;
+
 		[ConfigPersist]
 		private Dictionary<string, CoreInfo> KnownCores { get; set; }
 
@@ -114,7 +105,7 @@ namespace BizHawk.Client.EmuHawk
 		public CoreFeatureAnalysis()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.Logo;
+			Icon = ToolIcon;
 			KnownCores = new Dictionary<string, CoreInfo>();
 		}
 
@@ -123,7 +114,7 @@ namespace BizHawk.Client.EmuHawk
 			var ret = new TreeNode
 			{
 				Text = ci.CoreName + (ci.Released ? "" : " (UNRELEASED)"),
-				ForeColor = ci.Released ? Color.Black : Color.DarkGray
+				ForeColor = ci.Released ? Color.Black : Color.DarkGray,
 			};
 
 			foreach (var service in ci.Services.Values)
@@ -135,7 +126,7 @@ namespace BizHawk.Client.EmuHawk
 					ForeColor = service.Complete ? Color.Black : Color.Red,
 					ImageKey = img,
 					SelectedImageKey = img,
-					StateImageKey = img
+					StateImageKey = img,
 				};
 
 				foreach (var function in service.Functions)
@@ -147,7 +138,7 @@ namespace BizHawk.Client.EmuHawk
 						ForeColor = function.Complete ? Color.Black : Color.Red,
 						ImageKey = img,
 						SelectedImageKey = img,
-						StateImageKey = img
+						StateImageKey = img,
 					});
 				}
 				ret.Nodes.Add(serviceNode);
@@ -165,7 +156,7 @@ namespace BizHawk.Client.EmuHawk
 					ForeColor = Color.Red,
 					ImageKey = img,
 					SelectedImageKey = img,
-					StateImageKey = img
+					StateImageKey = img,
 				};
 				ret.Nodes.Add(serviceNode);
 			}
@@ -225,7 +216,7 @@ namespace BizHawk.Client.EmuHawk
 						ForeColor = core.CoreAttr.Released ? Color.Black : Color.DarkGray,
 						ImageKey = img,
 						SelectedImageKey = img,
-						StateImageKey = img
+						StateImageKey = img,
 					};
 					CoreTree.Nodes.Add(coreNode);
 				}

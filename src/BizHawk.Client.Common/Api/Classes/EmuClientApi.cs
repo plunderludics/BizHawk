@@ -1,8 +1,5 @@
-using System;
 using System.Drawing;
 using System.IO;
-
-using BizHawk.Common;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Client.Common
@@ -10,6 +7,8 @@ namespace BizHawk.Client.Common
 	public sealed class EmuClientApi : IEmuClientApi
 	{
 		private readonly Config _config;
+
+		private readonly IDialogController _dialogController;
 
 		private readonly DisplayManagerBase _displayManager;
 
@@ -33,15 +32,29 @@ namespace BizHawk.Client.Common
 
 		public event StateSavedEventHandler StateSaved;
 
-		public EmuClientApi(Action<string> logCallback, IMainFormForApi mainForm, DisplayManagerBase displayManager, Config config, IEmulator emulator, IGameInfo game)
+		public EmuClientApi(
+			Config config,
+			IDialogController dialogController,
+			DisplayManagerBase displayManager,
+			IEmulator emulator,
+			IGameInfo game,
+			IMainFormForApi mainForm,
+			Action<string> logCallback)
 		{
 			_config = config;
+			_dialogController = dialogController;
 			_displayManager = displayManager;
 			Emulator = emulator;
 			Game = game;
 			_logCallback = logCallback;
 			_mainForm = mainForm;
 			VideoProvider = Emulator.AsVideoProviderOrDefault();
+
+			_mainForm.QuicksaveLoad += CallBeforeQuickLoad;
+			_mainForm.QuicksaveSave += CallBeforeQuickSave;
+			_mainForm.RomLoaded += CallRomLoaded;
+			_mainForm.SavestateLoaded += CallStateLoaded;
+			_mainForm.SavestateSaved += CallStateSaved;
 		}
 
 		public int BorderHeight() => _displayManager.TransformPoint(new Point(0, 0)).Y;
@@ -52,6 +65,23 @@ namespace BizHawk.Client.Common
 
 		public int BufferWidth() => VideoProvider.BufferWidth;
 
+#pragma warning disable MA0091 // passing through `sender` is intentional
+		private void CallBeforeQuickLoad(object sender, BeforeQuickLoadEventArgs args)
+			=> BeforeQuickLoad?.Invoke(sender, args);
+
+		private void CallBeforeQuickSave(object sender, BeforeQuickSaveEventArgs args)
+			=> BeforeQuickSave?.Invoke(sender, args);
+
+		private void CallRomLoaded(object sender, EventArgs args)
+			=> RomLoaded?.Invoke(sender, args);
+
+		private void CallStateLoaded(object sender, StateLoadedEventArgs args)
+			=> StateLoaded?.Invoke(sender, args);
+
+		private void CallStateSaved(object sender, StateSavedEventArgs args)
+			=> StateSaved?.Invoke(sender, args);
+#pragma warning restore MA0091
+
 		public void ClearAutohold() => _mainForm.ClearHolds();
 
 		public void CloseEmulator(int? exitCode = null) => _mainForm.CloseEmulator(exitCode);
@@ -60,9 +90,18 @@ namespace BizHawk.Client.Common
 
 		public void DisplayMessages(bool value) => _config.DisplayMessages = value;
 
+		public void Dispose()
+		{
+			_mainForm.QuicksaveLoad -= CallBeforeQuickLoad;
+			_mainForm.QuicksaveSave -= CallBeforeQuickSave;
+			_mainForm.RomLoaded -= CallRomLoaded;
+			_mainForm.SavestateLoaded -= CallStateLoaded;
+			_mainForm.SavestateSaved -= CallStateSaved;
+		}
+
 		public void DoFrameAdvance()
 		{
-			_mainForm.FrameAdvance();
+			_mainForm.FrameAdvance(discardApiHawkSurfaces: false); // we're rendering, so we don't want to discard
 			_mainForm.StepRunLoop_Throttle();
 			_mainForm.Render();
 		}
@@ -93,7 +132,8 @@ namespace BizHawk.Client.Common
 
 		public int GetTargetScanlineIntensity() => _config.TargetScanlineFilterIntensity;
 
-		public int GetWindowSize() => _config.TargetZoomFactors[Emulator.SystemId];
+		public int GetWindowSize()
+			=> _config.GetWindowScaleFor(Emulator.SystemId);
 
 		public void InvisibleEmulation(bool invisible) => _mainForm.InvisibleEmulation = invisible;
 
@@ -103,47 +143,21 @@ namespace BizHawk.Client.Common
 
 		public bool IsTurbo() => _mainForm.IsTurboing;
 
-		public bool LoadState(string name)
-			=> _mainForm.LoadState(
-				path: Path.Combine(_config.PathEntries.SaveStateAbsolutePath(Game.System), $"{name}.State"),
+		public bool LoadState(string name, bool isFullPath = false)
+		{
+			// [UnityHawk] annoying hack to allow loading directly from path
+			var path = name;
+			if (!isFullPath) {
+				path = Path.Combine(_config.PathEntries.SaveStateAbsolutePath(Game.System), $"{name}.State");
+			}
+			return _mainForm.LoadState(
+				path: path,
 				userFriendlyStateName: name,
 				suppressOSD: false);
-
-		public void OnBeforeQuickLoad(object sender, string quickSaveSlotName, out bool eventHandled)
-		{
-			if (BeforeQuickLoad == null)
-			{
-				eventHandled = false;
-				return;
-			}
-			var e = new BeforeQuickLoadEventArgs(quickSaveSlotName);
-			BeforeQuickLoad(sender, e);
-			eventHandled = e.Handled;
 		}
-
-		public void OnBeforeQuickSave(object sender, string quickSaveSlotName, out bool eventHandled)
-		{
-			if (BeforeQuickSave == null)
-			{
-				eventHandled = false;
-				return;
-			}
-			var e = new BeforeQuickSaveEventArgs(quickSaveSlotName);
-			BeforeQuickSave(sender, e);
-			eventHandled = e.Handled;
-		}
-
-		public void OnRomLoaded()
-		{
-			RomLoaded?.Invoke(null, EventArgs.Empty);
-		}
-
-		public void OnStateLoaded(object sender, string stateName) => StateLoaded?.Invoke(sender, new StateLoadedEventArgs(stateName));
-
-		public void OnStateSaved(object sender, string stateName) => StateSaved?.Invoke(sender, new StateSavedEventArgs(stateName));
 
 		public bool OpenRom(string path)
-			=> _mainForm.LoadRom(path, new LoadRomArgs { OpenAdvanced = OpenAdvancedSerializer.ParseWithLegacy(path) });
+			=> _mainForm.LoadRom(path, new LoadRomArgs(OpenAdvancedSerializer.ParseWithLegacy(path)));
 
 		public void Pause() => _mainForm.PauseEmulator();
 
@@ -153,7 +167,14 @@ namespace BizHawk.Client.Common
 
 		public void SaveRam() => _mainForm.FlushSaveRAM();
 
-		public void SaveState(string name) => _mainForm.SaveState(Path.Combine(_config.PathEntries.SaveStateAbsolutePath(Game.System), $"{name}.State"), name, fromLua: false);
+		public void SaveState(string name, bool isFullPath = false) {
+			// [UnityHawk] annoying hack to allow loading directly from path
+			var path = name;
+			if (!isFullPath) {
+				path = Path.Combine(_config.PathEntries.SaveStateAbsolutePath(Game.System), $"{name}.State");
+			}
+			_mainForm.SaveState(path, name, fromLua: false);
+		}
 
 		public int ScreenHeight() => _displayManager.GetPanelNativeSize().Height;
 
@@ -204,9 +225,9 @@ namespace BizHawk.Client.Common
 		{
 			if (size == 1 || size == 2 || size == 3 || size == 4 || size == 5 || size == 10)
 			{
-				_config.TargetZoomFactors[Emulator.SystemId] = size;
-				_mainForm.FrameBufferResized();
-				_displayManager.OSD.AddMessage($"Window size set to {size}x");
+				_config.SetWindowScaleFor(Emulator.SystemId, size);
+				_mainForm.FrameBufferResized(forceWindowResize: true);
+				_dialogController.AddOnScreenMessage($"Window size set to {size}x");
 			}
 			else
 			{
@@ -216,7 +237,7 @@ namespace BizHawk.Client.Common
 
 		public void SpeedMode(int percent)
 		{
-			if (percent.StrictlyBoundedBy(0.RangeTo(6400))) _mainForm.ClickSpeedItem(percent);
+			if (percent is > 0 and <= 6400) _mainForm.ClickSpeedItem(percent);
 			else _logCallback("Invalid speed value");
 		}
 

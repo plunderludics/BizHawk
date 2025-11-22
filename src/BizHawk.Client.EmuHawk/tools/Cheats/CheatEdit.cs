@@ -1,4 +1,3 @@
-﻿using System;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -39,12 +38,8 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return;
 			}
-
-			DomainDropDown.Items.Clear();
-			DomainDropDown.Items.AddRange(MemoryDomains
-				.Where(d => d.Writable)
-				.Select(d => (object) d.ToString())
-				.ToArray());
+			DomainDropDown.ReplaceItems(items: MemoryDomains.Where(static d => d.Writable)
+				.Select(static d => d.ToString()));
 
 			DomainDropDown.SelectedItem = MemoryDomains.HasSystemBus
 				? MemoryDomains.SystemBus.ToString()
@@ -180,6 +175,19 @@ namespace BizHawk.Client.EmuHawk
 
 		private void PopulateTypeDropdown()
 		{
+			var wasSelected = DisplayTypeDropDown.SelectedItem?.ToString() ?? string.Empty;
+			bool Reselect()
+			{
+				for (var i = 0; i < DisplayTypeDropDown.Items.Count; i++)
+				{
+					if (DisplayTypeDropDown.Items[i].ToString() == wasSelected)
+					{
+						DisplayTypeDropDown.SelectedIndex = i;
+						return true;
+					}
+				}
+				return false;
+			}
 			DisplayTypeDropDown.Items.Clear();
 			switch (SizeDropDown.SelectedIndex)
 			{
@@ -206,8 +214,10 @@ namespace BizHawk.Client.EmuHawk
 
 					break;
 			}
-
-			DisplayTypeDropDown.SelectedItem = DisplayTypeDropDown.Items[0];
+			DisplayTypeDropDown.SelectedIndex = 0;
+			if (Reselect()) return;
+			wasSelected = Watch.DisplayTypeToString(WatchDisplayType.Hex);
+			_ = Reselect();
 		}
 
 		private void CheckFormState()
@@ -254,9 +264,10 @@ namespace BizHawk.Client.EmuHawk
 
 		private void DisplayTypeDropDown_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			ValueBox.Type =
-				CompareBox.Type =
-				Watch.StringToDisplayType(DisplayTypeDropDown.SelectedItem.ToString());
+			var newDisp = Watch.StringToDisplayType(DisplayTypeDropDown.SelectedItem.ToString()); //TODO use Tag or Index
+			ValueBox.Type = CompareBox.Type = newDisp;
+			ValueHexIndLabel.Text = CompareHexIndLabel.Text = newDisp is WatchDisplayType.Hex ? HexInd : string.Empty; //TODO "0b" for binary
+			// NOT writing to `_cheat`, the "Override" button handles that
 		}
 
 		private void AddButton_Click(object sender, EventArgs e)
@@ -315,7 +326,7 @@ namespace BizHawk.Client.EmuHawk
 					"<" => Cheat.CompareType.LessThan,
 					"<=" => Cheat.CompareType.LessThanOrEqual,
 					"!=" => Cheat.CompareType.NotEqual,
-					_ => Cheat.CompareType.None
+					_ => Cheat.CompareType.None,
 				};
 
 				var compare = CompareBox.ToRawInt();
@@ -327,7 +338,7 @@ namespace BizHawk.Client.EmuHawk
 					comparisonType);
 			}
 
-			MessageBox.Show($"{address} is not a valid address for the domain {domain.Name}", "Index out of range", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			MessageBox.Show($"0x{address:X} is not a valid address for the domain {domain.Name}", "Index out of range", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 			return Cheat.Separator;
 		}
 
@@ -358,7 +369,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				return;
 			}
-			
+
 			// Don't need to do anything in this case
 			if (!empty && CompareTypeDropDown.Items.Count == 6)
 			{
@@ -369,10 +380,7 @@ namespace BizHawk.Client.EmuHawk
 
 			if (empty)
 			{
-				CompareTypeDropDown.Items.AddRange(new object[]
-				{
-					""
-				});
+				CompareTypeDropDown.Items.Add(string.Empty);
 			}
 			else
 			{
@@ -383,7 +391,7 @@ namespace BizHawk.Client.EmuHawk
 					">=",
 					"<",
 					"<=",
-					"!="
+					"!=",
 				});
 			}
 

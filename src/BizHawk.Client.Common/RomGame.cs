@@ -1,7 +1,10 @@
-﻿using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Threading;
 
 using BizHawk.Common;
+using BizHawk.Common.IOExtensions;
 using BizHawk.Common.NumberExtensions;
 using BizHawk.Emulation.Common;
 
@@ -20,6 +23,12 @@ namespace BizHawk.Client.Common
 
 		private const int BankSize = 1024;
 
+		// 3DS roms typically exceed 2GiB, so we don't want to load them into memory
+		// TODO: Don't rely only on extension if this is actually a 3DS ROM (validate in some way)
+		// TODO: ELF is another 3DS extension, but it's too generic / might be used for other systems...
+		public static bool Is3DSRom(string ext)
+			=> ext is ".3DS" or ".3DSX" or ".AXF" or ".CCI" or ".CXI" or ".APP" or ".CIA";
+
 		public RomGame(HawkFile file)
 			: this(file, null)
 		{
@@ -35,6 +44,35 @@ namespace BizHawk.Client.Common
 
 			Extension = file.Extension.ToUpperInvariant();
 
+			if (Is3DSRom(Extension))
+			{
+				if (file.IsArchive)
+				{
+					throw new InvalidOperationException("3DS ROMs cannot be in archives.");
+				}
+
+				Console.WriteLine("3DS ROM detected, skipping full file hashing...");
+
+				FileData = RomData = [ ];
+				GameInfo = new()
+				{
+					Name = Path.GetFileNameWithoutExtension(file.Name).Replace('_', ' '),
+					System = VSystemID.Raw.N3DS,
+					Hash = "N/A",
+					Status = RomStatus.NotInDatabase,
+					NotInDatabase = true,
+				};
+
+#pragma warning disable CA1862 // testing whether it's all-caps
+				if (!string.IsNullOrWhiteSpace(GameInfo.Name) && GameInfo.Name == GameInfo.Name.ToUpperInvariant())
+#pragma warning restore CA1862
+				{
+					GameInfo.Name = Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(GameInfo.Name.ToLowerInvariant());
+				}
+
+				return;
+			}
+
 			var stream = file.GetStream();
 			int fileLength = (int)stream.Length;
 
@@ -45,7 +83,7 @@ namespace BizHawk.Client.Common
 			// assume we have a header of that size. Otherwise, assume it's just all rom.
 			// Other 'recognized' header sizes may need to be added.
 			int headerOffset = fileLength % BankSize;
-			if (headerOffset.In(0, 128, 512) == false)
+			if (!headerOffset.In(0, 128, 512))
 			{
 				Console.WriteLine("ROM was not a multiple of 1024 bytes, and not a recognized header size: {0}. Assume it's purely ROM data.", headerOffset);
 				headerOffset = 0;
@@ -58,7 +96,8 @@ namespace BizHawk.Client.Common
 			// read the entire file into FileData.
 			FileData = new byte[fileLength];
 			stream.Position = 0;
-			stream.Read(FileData, 0, fileLength);
+			var bytesRead = stream.Read(FileData, offset: 0, count: fileLength);
+			Debug.Assert(bytesRead == fileLength, "failed to read whole rom stream");
 
 			string SHA1_check = SHA1Checksum.ComputePrefixedHex(FileData);
 
@@ -69,8 +108,7 @@ namespace BizHawk.Client.Common
 			{
 				RomData = FileData;
 			}
-			else if (file.Extension == ".dsk" || file.Extension == ".tap" || file.Extension == ".tzx" ||
-				file.Extension == ".pzx" || file.Extension == ".csw" || file.Extension == ".wav" || file.Extension == ".cdt")
+			else if (file.Extension is ".cdt" or ".csw" or ".dsk" or ".pzx" or ".tap" or ".tzx" or ".wav")
 			{
 				// these are not roms. unfortunately if treated as such there are certain edge-cases
 				// where a header offset is detected. This should mitigate this issue until a cleaner solution is found
@@ -110,16 +148,31 @@ namespace BizHawk.Client.Common
 
 			CheckForPatchOptions();
 
-			if (patch != null)
+			if (patch is null) return;
+			using var patchFile = new HawkFile(patch);
+			patchFile.BindFirstOf(".ips");
+			if (!patchFile.IsBound) patchFile.BindFirstOf(".bps");
+			if (!patchFile.IsBound) return;
+			var patchBytes = patchFile.GetStream().ReadAllBytes();
+			if (BPSPatcher.IsIPSFile(patchBytes))
 			{
-				using var patchFile = new HawkFile(patch);
-				patchFile.BindFirstOf(".ips");
-				if (patchFile.IsBound)
-				{
-					RomData = IPS.Patch(RomData, patchFile.GetStream());
-				}
+				RomData = BPSPatcher.Patch(RomData, new BPSPatcher.IPSPayload(patchBytes));
+			}
+			else if (BPSPatcher.IsBPSFile(patchBytes, out var patchStruct))
+			{
+				var ignoreBaseChecksum = true; //TODO check base checksum and ask user before continuing
+				RomData = BPSPatcher.Patch(StripSNESDumpHeader(RomData), patchStruct, out var checksumsMatch);
+				if (!checksumsMatch && !ignoreBaseChecksum) throw new Exception("BPS patch didn't produce the expected output");
+			}
+			else
+			{
+				throw new Exception("doesn't appear to be a BPS or IPS patch");
 			}
 		}
+
+		/// <remarks>https://snes.nesdev.org/wiki/ROM_file_formats#Detecting_Headered_ROM</remarks>
+		private static ReadOnlySpan<byte> StripSNESDumpHeader(ReadOnlySpan<byte> rom)
+			=> rom.Length % 512 is 0 ? rom : rom.Slice(start: 512);
 
 		private static byte[] DeInterleaveSMD(byte[] source)
 		{

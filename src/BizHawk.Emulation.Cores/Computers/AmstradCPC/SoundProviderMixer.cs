@@ -1,7 +1,6 @@
 ﻿using BizHawk.Emulation.Common;
-using System;
+
 using System.Collections.Generic;
-using System.Linq;
 
 namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 {
@@ -142,8 +141,8 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 			}
 
 			// are all the sample lengths the same?
-			var firstEntry = SoundProviders[0];
-			bool sameCount = SoundProviders.All(s => s.NSamp == firstEntry.NSamp);
+			var firstEntry = SoundProviders[0].NSamp;
+			var sameCount = SoundProviders.TrueForAll(s => s.NSamp == firstEntry);
 
 			if (!sameCount)
 			{
@@ -174,7 +173,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 				}
 				else
 				{
-					// just process what we have as-is 
+					// just process what we have as-is
 				}
 			}
 
@@ -194,7 +193,6 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 						else
 							sectorVal += sp.Buffer[i];
 					}
-
 				}
 
 				samples[i] = sectorVal;

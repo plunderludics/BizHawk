@@ -13,8 +13,10 @@
 namespace nall {
   using mutex = std::mutex;
   using recursive_mutex = std::recursive_mutex;
+  using condition_variable = std::condition_variable;
   template<typename T> using lock_guard = std::lock_guard<T>;
   template<typename T> using atomic = std::atomic<T>;
+  template<typename T> using unique_lock = std::unique_lock<T>;
 }
 
 #if defined(API_POSIX)
@@ -128,50 +130,10 @@ private:
   HANDLE handle = 0;
 };
 
-inline auto WINAPI _threadCallback(void* parameter) -> DWORD {
-  auto context = (thread::context*)parameter;
-  context->callback(context->parameter);
-  delete context;
-  return 0;
 }
 
-inline auto thread::close() -> void {
-  if(handle) {
-    CloseHandle(handle);
-    handle = 0;
-  }
-}
+#endif
 
-inline auto thread::join() -> void {
-  if(handle) {
-    //wait until the thread has finished executing ...
-    WaitForSingleObject(handle, INFINITE);
-    CloseHandle(handle);
-    handle = 0;
-  }
-}
-
-inline auto thread::create(const function<void (uintptr)>& callback, uintptr parameter, u32 stacksize) -> thread {
-  thread instance;
-
-  auto context = new thread::context;
-  context->callback = callback;
-  context->parameter = parameter;
-
-  instance.handle = CreateThread(nullptr, stacksize, _threadCallback, (void*)context, 0, nullptr);
-  return instance;
-}
-
-inline auto thread::detach() -> void {
-  //Windows threads do not use this concept:
-  //~thread() frees resources via CloseHandle()
-  //thread continues to run even after handle is closed
-}
-
-inline auto thread::exit() -> void {
-  ExitThread(0);
-}
-
-}
-
+#if defined(NALL_HEADER_ONLY)
+  #include <nall/thread.cpp>
 #endif

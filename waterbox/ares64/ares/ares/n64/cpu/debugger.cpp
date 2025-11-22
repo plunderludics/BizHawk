@@ -2,6 +2,12 @@ auto CPU::Debugger::load(Node::Object parent) -> void {
   tracer.instruction = parent->append<Node::Debugger::Tracer::Instruction>("Instruction", "CPU");
   tracer.instruction->setAddressBits(64, 2);
   tracer.instruction->setDepth(64);
+  if constexpr(Accuracy::CPU::Recompiler) {
+    tracer.instruction->setToggle([&] {
+      cpu.recompiler.reset();
+      cpu.recompiler.callInstructionPrologue = tracer.instruction->enabled();
+    });
+  }
 
   tracer.exception = parent->append<Node::Debugger::Tracer::Notification>("Exception", "CPU");
   tracer.interrupt = parent->append<Node::Debugger::Tracer::Notification>("Interrupt", "CPU");
@@ -66,6 +72,12 @@ auto CPU::Debugger::interrupt(u8 mask) -> void {
     if(mask & 0x40) sources.append("write RDB");
     if(mask & 0x80) sources.append("timer");
     tracer.interrupt->notify(sources.merge(","));
+  }
+}
+
+auto CPU::Debugger::nmi() -> void {
+  if(unlikely(tracer.exception->enabled())) {
+    tracer.exception->notify("NMI");
   }
 }
 

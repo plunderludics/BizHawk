@@ -1,6 +1,6 @@
-﻿using System;
 using System.Globalization;
 
+#pragma warning disable MA0089
 namespace BizHawk.Client.Common.cheats
 {
 	// TODO: cheats support comparison type, so we could support a lot more codes, by having Compare and Type properties and parsing
@@ -14,7 +14,7 @@ namespace BizHawk.Client.Common.cheats
 				throw new ArgumentNullException(nameof(code));
 			}
 
-			if (code.IndexOf(" ") != 8)
+			if (code.IndexOf(" ", StringComparison.Ordinal) != 8)
 			{
 				return new InvalidCheatCode("All PSX GameShark Codes need to contain a space after the eighth character.");
 			}
@@ -46,7 +46,7 @@ namespace BizHawk.Client.Common.cheats
 				"E1" => WatchSize.Byte,
 				"E2" => WatchSize.Byte,
 				"E3" => WatchSize.Byte,
-				_ => WatchSize.Byte
+				_ => WatchSize.Byte,
 			};
 
 			var s = code.Remove(0, 2);
@@ -57,3 +57,4 @@ namespace BizHawk.Client.Common.cheats
 		}
 	}
 }
+#pragma warning restore MA0089

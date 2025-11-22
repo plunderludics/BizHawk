@@ -3,7 +3,48 @@
 #include <emulibc.h>
 #include <waterboxcore.h>
 
-#define EXPORT extern "C" ECL_EXPORT
+struct CallinFenvGuard {
+	nall::float_env saved_fenv;
+	nall::float_env& fenv;
+
+	CallinFenvGuard(float_env& fenv_) : fenv(fenv_)
+	{
+		if (fenv.getRound() != saved_fenv.getRound())
+		{
+			fenv.setRound(fenv.getRound());
+		}
+	}
+
+	~CallinFenvGuard()
+	{
+		if (fenv.getRound() != saved_fenv.getRound())
+		{
+			saved_fenv.setRound(saved_fenv.getRound());
+		}
+	}
+};
+
+struct CallbackFenvGuard {
+	nall::float_env& saved_fenv;
+
+	CallbackFenvGuard(float_env& saved_fenv_) : saved_fenv(saved_fenv_)
+	{
+		nall::float_env cur_fenv;
+		if (cur_fenv.getRound() != nall::float_env::toNearest)
+		{
+			cur_fenv.setRound(nall::float_env::toNearest);
+		}
+	}
+
+	~CallbackFenvGuard()
+	{
+		nall::float_env cur_fenv;
+		if (cur_fenv.getRound() != saved_fenv.getRound())
+		{
+			saved_fenv.setRound(saved_fenv.getRound());
+		}
+	}
+};
 
 typedef enum
 {
@@ -33,33 +74,21 @@ typedef enum
 	START   = 1 << 13,
 } Buttons_t;
 
-static u64 biztime = 0;
-
-static u64 GetBizTime()
-{
-	return biztime;
-}
-
 struct BizPlatform : ares::Platform
 {
 	auto attach(ares::Node::Object) -> void override;
 	auto pak(ares::Node::Object) -> ares::VFS::Pak override;
-	auto log(string_view) -> void override;
-	auto video(ares::Node::Video::Screen, const u32*, u32, u32, u32) -> void override;
 	auto audio(ares::Node::Audio::Stream) -> void override;
 	auto input(ares::Node::Input::Input) -> void override;
+	auto time() -> n64 override;
 
 	ares::VFS::Pak bizpak = nullptr;
-	u32* videobuf = nullptr;
-	u32 pitch = 0;
-	u32 width = 0;
-	u32 height = 0;
 	u16* soundbuf = alloc_invisible<u16>(1024 * 2);
 	u32 nsamps = 0;
 	bool hack = false;
 	void (*inputcb)() = nullptr;
 	bool lagged = true;
-	void (*tracecb)(const char*) = nullptr;
+	u64 biztime = 0;
 };
 
 auto BizPlatform::attach(ares::Node::Object node) -> void
@@ -73,19 +102,6 @@ auto BizPlatform::attach(ares::Node::Object node) -> void
 auto BizPlatform::pak(ares::Node::Object) -> ares::VFS::Pak
 {
 	return bizpak;
-}
-
-auto BizPlatform::log(string_view message) -> void
-{
-	if (tracecb) tracecb(message.data());
-}
-
-auto BizPlatform::video(ares::Node::Video::Screen screen, const u32* data, u32 pitch, u32 width, u32 height) -> void
-{
-	videobuf = (u32*)data;
-	this->pitch = pitch >> 2;
-	this->width = width;
-	this->height = height;
 }
 
 auto BizPlatform::audio(ares::Node::Audio::Stream stream) -> void
@@ -107,10 +123,19 @@ auto BizPlatform::input(ares::Node::Input::Input node) -> void
 		if (input->name() == "Start" || input->name() == "Left Click")
 		{
 			lagged = false;
-			if (inputcb) inputcb();
+			if (inputcb)
+			{
+				CallbackFenvGuard guard(ares::Nintendo64::cpu.fenv);
+				inputcb();
+			}
 		}
 	}
-};
+}
+
+auto BizPlatform::time() -> n64
+{
+	return biztime;
+}
 
 static ares::Node::System root = nullptr;
 static BizPlatform* platform = nullptr;
@@ -120,6 +145,7 @@ static array_view<u8>* romData = nullptr;
 static array_view<u8>* diskData = nullptr;
 static array_view<u8>* diskErrorData = nullptr;
 static array_view<u8>* saveData = nullptr;
+static array_view<u8>* rtcData = nullptr;
 static array_view<u8>* gbRomData[4] = { nullptr, nullptr, nullptr, nullptr, };
 
 typedef enum
@@ -205,7 +231,6 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NCR") ret = EEPROM512;
 	if (id == "NEA") ret = EEPROM512;
 	if (id == "NPW") ret = EEPROM512;
-	if (id == "NPM") ret = EEPROM512;
 	if (id == "NPY") ret = EEPROM512;
 	if (id == "NPT") ret = EEPROM512;
 	if (id == "NRA") ret = EEPROM512;
@@ -215,7 +240,6 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NK2") ret = EEPROM512;
 	if (id == "NSV") ret = EEPROM512;
 	if (id == "NFX") ret = EEPROM512;
-	if (id == "NFP") ret = EEPROM512;
 	if (id == "NS6") ret = EEPROM512;
 	if (id == "NNA") ret = EEPROM512;
 	if (id == "NRS") ret = EEPROM512;
@@ -223,7 +247,6 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NSC") ret = EEPROM512;
 	if (id == "NSA") ret = EEPROM512;
 	if (id == "NB6") ret = EEPROM512;
-	if (id == "NSM") ret = EEPROM512;
 	if (id == "NSS") ret = EEPROM512;
 	if (id == "NTX") ret = EEPROM512;
 	if (id == "NT6") ret = EEPROM512;
@@ -236,12 +259,13 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NIR") ret = EEPROM512;
 	if (id == "NVL") ret = EEPROM512;
 	if (id == "NVY") ret = EEPROM512;
-	if (id == "NWR") ret = EEPROM512;
 	if (id == "NWC") ret = EEPROM512;
 	if (id == "NAD") ret = EEPROM512;
 	if (id == "NWU") ret = EEPROM512;
 	if (id == "NYK") ret = EEPROM512;
 	if (id == "NMZ") ret = EEPROM512;
+	if (id == "NSM") ret = EEPROM512;
+	if (id == "NWR") ret = EEPROM512;
 	if (id == "NDK" && region_code == 'J') ret = EEPROM512;
 	if (id == "NWT" && region_code == 'J') ret = EEPROM512;
 
@@ -257,7 +281,6 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NMX") ret = EEPROM2KB;
 	if (id == "NGC") ret = EEPROM2KB;
 	if (id == "NIM") ret = EEPROM2KB;
-	if (id == "NK4") ret = EEPROM2KB;
 	if (id == "NNB") ret = EEPROM2KB;
 	if (id == "NMV") ret = EEPROM2KB;
 	if (id == "NM8") ret = EEPROM2KB;
@@ -269,16 +292,17 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NR7") ret = EEPROM2KB;
 	if (id == "NEP") ret = EEPROM2KB;
 	if (id == "NYS") ret = EEPROM2KB;
+	if (id == "NK4") ret = EEPROM2KB;
 	if (id == "ND3" && region_code == 'J') ret = EEPROM2KB;
 	if (id == "ND4" && region_code == 'J') ret = EEPROM2KB;
 
 	if (id == "NTE") ret = SRAM32KB;
 	if (id == "NVB") ret = SRAM32KB;
+	if (id == "NB5") ret = SRAM32KB;
 	if (id == "CFZ") ret = SRAM32KB;
 	if (id == "NFZ") ret = SRAM32KB;
 	if (id == "NSI") ret = SRAM32KB;
 	if (id == "NG6") ret = SRAM32KB;
-	if (id == "N3H") ret = SRAM32KB;
 	if (id == "NGP") ret = SRAM32KB;
 	if (id == "NYW") ret = SRAM32KB;
 	if (id == "NHY") ret = SRAM32KB;
@@ -299,7 +323,7 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NUM") ret = SRAM32KB;
 	if (id == "NOB") ret = SRAM32KB;
 	if (id == "CPS") ret = SRAM32KB;
-	if (id == "NB5") ret = SRAM32KB;
+	if (id == "NPM") ret = SRAM32KB;
 	if (id == "NRE") ret = SRAM32KB;
 	if (id == "NAL") ret = SRAM32KB;
 	if (id == "NT3") ret = SRAM32KB;
@@ -309,6 +333,7 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NWL") ret = SRAM32KB;
 	if (id == "NW2") ret = SRAM32KB;
 	if (id == "NWX") ret = SRAM32KB;
+	if (id == "N3H" && region_code == 'J') ret = SRAM32KB;
 	if (id == "NK4" && region_code == 'J' && revision < 2) ret = SRAM32KB;
 
 	if (id == "CDZ") ret = SRAM96KB;
@@ -333,7 +358,8 @@ static inline SaveType DetectSaveType(u8* rom)
 	if (id == "NW4") ret = FLASH128KB;
 	if (id == "NDP") ret = FLASH128KB;
 
-	if(id[1] == 'E' && id[2] == 'D') {
+	if (id[1] == 'E' && id[2] == 'D')
+	{
 		n8 config = revision;
 		if (config.bit(4,7) == 1) ret = EEPROM512;
 		else if (config.bit(4,7) == 2) ret = EEPROM2KB;
@@ -346,7 +372,31 @@ static inline SaveType DetectSaveType(u8* rom)
 	return ret;
 }
 
-namespace ares::Nintendo64 { extern bool BobDeinterlace; }
+static inline bool DetectRtc(u8* rom)
+{
+	string id;
+	id.append((char)rom[0x3B]);
+	id.append((char)rom[0x3C]);
+	id.append((char)rom[0x3D]);
+
+	u8 revision = rom[0x3f];
+
+	if (id == "NAF") return true;
+
+	if (id[1] == 'E' && id[2] == 'D')
+	{
+		n8 config = revision;
+		return config.bit(0) == 1;
+	}
+
+	return false;
+}
+
+namespace ares::Nintendo64
+{
+	extern bool BobDeinterlace;
+	extern bool FastVI;
+}
 
 typedef struct
 {
@@ -368,16 +418,6 @@ typedef struct
 	u64 DiskErrorLen;
 	GbRom GbRoms[4];
 } LoadData;
-
-#define SET_RTC_CALLBACK(NUM) do { \
-	if (auto pad = dynamic_cast<ares::Nintendo64::Gamepad*>(ares::Nintendo64::controllerPort##NUM.device.data())) \
-	{ \
-		if (auto mbc3 = dynamic_cast<ares::Nintendo64::Mbc3*>(pad->transferPak.mbc.data())) \
-		{ \
-			mbc3->rtcCallback = GetBizTime; \
-		} \
-	} \
-} while (0)
 
 static bool LoadRom(LoadData* loadData, bool isPal)
 {
@@ -422,6 +462,15 @@ static bool LoadRom(LoadData* loadData, bool isPal)
 		memset(data, 0xFF, len);
 		saveData = new array_view<u8>(data, len);
 		platform->bizpak->append(name, *saveData);
+	}
+
+	if (DetectRtc(data))
+	{
+		len = 32, name = "save.rtc";
+		data = new u8[len];
+		memset(data, 0xFF, len);
+		rtcData = new array_view<u8>(data, len);
+		platform->bizpak->append(name, *rtcData);
 	}
 
 	if (auto port = root->find<ares::Node::Port>("Cartridge Slot"))
@@ -470,14 +519,24 @@ static bool LoadDisk(LoadData* loadData)
 	return true;
 }
 
-EXPORT bool Init(LoadData* loadData, ControllerType* controllers, bool isPal, bool bobDeinterlace, u64 initTime)
+namespace angrylion
 {
+	extern u32 * OutFrameBuffer;
+	extern u32 OutHeight;
+}
+
+ECL_EXPORT bool Init(LoadData* loadData, ControllerType* controllers, bool isPal, u64 initTime)
+{
+	CallinFenvGuard guard(ares::Nintendo64::cpu.fenv);
+
 	platform = new BizPlatform;
 	platform->bizpak = new vfs::directory;
 	ares::platform = platform;
 
-	biztime = initTime;
-	ares::Nintendo64::dd.rtcCallback = GetBizTime;
+	platform->biztime = initTime;
+
+	angrylion::OutFrameBuffer = NULL;
+	angrylion::OutHeight = isPal ? 576 : 480;
 
 	u8* data;
 	u32 len;
@@ -588,13 +647,6 @@ EXPORT bool Init(LoadData* loadData, ControllerType* controllers, bool isPal, bo
 		}
 	}
 
-	SET_RTC_CALLBACK(1);
-	SET_RTC_CALLBACK(2);
-	SET_RTC_CALLBACK(3);
-	SET_RTC_CALLBACK(4);
-
-	ares::Nintendo64::BobDeinterlace = bobDeinterlace;
-
 	root->power(false);
 	root->run(); // HACK, first frame dirties a ton of memory, so we emulate it then seal (this should be investigated, not sure why 60MBish of memory would be dirtied in a single frame?)
 	return true;
@@ -602,7 +654,7 @@ EXPORT bool Init(LoadData* loadData, ControllerType* controllers, bool isPal, bo
 
 // todo: might need to account for mbc5 rumble?
 // largely pointless tho
-EXPORT bool GetRumbleStatus(u32 num)
+ECL_EXPORT bool GetRumbleStatus(u32 num)
 {
 	ares::Nintendo64::Gamepad* c = nullptr;
 	switch (num)
@@ -693,15 +745,17 @@ static u8 PeekFunc(u64 address)
 		}
 	}
 
-	return ares::Nintendo64::bus.read<ares::Nintendo64::Byte>(addr);
+	ares::Nintendo64::Thread unused;
+	return ares::Nintendo64::bus.read<ares::Nintendo64::Byte>(addr, unused, nullptr);
 }
 
 static void SysBusAccess(u8* buffer, u64 address, u64 count, bool write)
 {
 	if (write)
 	{
+		ares::Nintendo64::Thread unused;
 		while (count--)
-			ares::Nintendo64::bus.write<ares::Nintendo64::Byte>(address++, *buffer++);
+			ares::Nintendo64::bus.write<ares::Nintendo64::Byte>(address++, *buffer++, unused, nullptr);
 	}
 	else
 	{
@@ -710,7 +764,7 @@ static void SysBusAccess(u8* buffer, u64 address, u64 count, bool write)
 	}
 }
 
-EXPORT void GetMemoryAreas(MemoryArea *m)
+ECL_EXPORT void GetMemoryAreas(MemoryArea *m)
 {
 	int i = 0;
 	ADD_MEMORY_DOMAIN(rdram.ram, "RDRAM", MEMORYAREA_FLAGS_PRIMARY);
@@ -760,6 +814,10 @@ struct MyFrameInfo : public FrameInfo
 
 	bool Reset;
 	bool Power;
+
+	bool BobDeinterlace;
+	bool FastVI;
+	bool SkipDraw;
 };
 
 #define UPDATE_CONTROLLER(NUM) do { \
@@ -791,9 +849,16 @@ struct MyFrameInfo : public FrameInfo
 	} \
 } while (0)
 
-EXPORT void FrameAdvance(MyFrameInfo* f)
+ECL_EXPORT void FrameAdvance(MyFrameInfo* f)
 {
-	biztime = f->Time;
+	CallinFenvGuard guard(ares::Nintendo64::cpu.fenv);
+
+	ares::Nintendo64::BobDeinterlace = f->BobDeinterlace;
+	ares::Nintendo64::FastVI = f->FastVI;
+
+	angrylion::OutFrameBuffer = f->SkipDraw ? NULL : f->VideoBuffer;
+
+	platform->biztime = f->Time;
 
 	if (f->Power)
 	{
@@ -814,16 +879,8 @@ EXPORT void FrameAdvance(MyFrameInfo* f)
 
 	root->run();
 
-	f->Width = platform->width;
-	f->Height = platform->height;
-	u32* src = platform->videobuf;
-	u32* dst = f->VideoBuffer;
-	for (int i = 0; i < f->Height; i++)
-	{
-		memcpy(dst, src, f->Width * 4);
-		dst += f->Width;
-		src += platform->pitch;
-	}
+	f->Width = 640;
+	f->Height = angrylion::OutHeight;
 
 	f->Samples = platform->nsamps;
 	memcpy(f->SoundBuffer, platform->soundbuf, f->Samples * 4);
@@ -831,24 +888,29 @@ EXPORT void FrameAdvance(MyFrameInfo* f)
 	f->Lagged = platform->lagged;
 }
 
-EXPORT void SetInputCallback(void (*callback)())
+ECL_EXPORT void SetInputCallback(void (*callback)())
 {
 	platform->inputcb = callback;
 }
 
-EXPORT void GetDisassembly(u32 address, u32 instruction, char* buf)
+ECL_EXPORT void PostLoadState()
+{
+	// fixme: make it so we can actually use this approach (there's various invalidation problems with the recompiler atm)
+#if false
+	ares::Nintendo64::cpu.recompiler.allocator.release(bump_allocator::zero_fill);
+	ares::Nintendo64::cpu.recompiler.reset();
+	ares::Nintendo64::rsp.recompiler.allocator.release(bump_allocator::zero_fill);
+	ares::Nintendo64::rsp.recompiler.reset();
+#endif
+}
+
+ECL_EXPORT void GetDisassembly(u32 address, u32 instruction, char* buf)
 {
 	auto s = ares::Nintendo64::cpu.disassembler.disassemble(address, instruction).strip();
 	strcpy(buf, s.data());
 }
 
-EXPORT void SetTraceCallback(void (*callback)(const char*))
-{
-	ares::Nintendo64::cpu.debugger.tracer.instruction->setEnabled(!!callback);
-	platform->tracecb = callback;
-}
-
-EXPORT void GetRegisters(u64* buf)
+ECL_EXPORT void GetRegisters(u64* buf)
 {
 	for (int i = 0; i < 32; i++)
 	{

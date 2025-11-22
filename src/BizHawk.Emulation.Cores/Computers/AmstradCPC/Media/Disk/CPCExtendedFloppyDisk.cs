@@ -1,7 +1,8 @@
 ﻿using System.Text;
 using BizHawk.Common;
-using System;
+
 using System.Collections.Generic;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 {
@@ -27,7 +28,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 			// look for standard magic string
 			string ident = Encoding.ASCII.GetString(data, 0, 16);
 
-			if (!ident.ToUpper().Contains("EXTENDED CPC DSK"))
+			if (!ident.ContainsIgnoreCase("EXTENDED CPC DSK"))
 			{
 				// incorrect format
 				return false;
@@ -68,7 +69,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 				// check for unformatted track
 				if (DiskHeader.TrackSizes[i] == 0)
 				{
-					DiskTracks[i] = new Track { Sectors = new Sector[0] };
+					DiskTracks[i] = new() { Sectors = Array.Empty<Sector>() };
 					continue;
 				}
 
@@ -152,7 +153,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 		{
 			// look for standard magic string
 			string ident = Encoding.ASCII.GetString(data, 0, 16);
-			if (!ident.ToUpper().Contains("EXTENDED CPC DSK"))
+			if (!ident.ContainsIgnoreCase("EXTENDED CPC DSK"))
 			{
 				// incorrect format
 				return false;
@@ -240,7 +241,7 @@ namespace BizHawk.Emulation.Cores.Computers.AmstradCPC
 			ser.Sync(nameof(DirtyData), ref DirtyData);
 			if (DirtyData)
 			{
-
+				//TODO
 			}
 
 			// sync deterministic track and sector counters

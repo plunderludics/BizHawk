@@ -1,4 +1,3 @@
-﻿using System;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
@@ -21,7 +20,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 		{
 			switch (Cart.BoardType)
 			{
-				
+
 				case "UNIF_BMC-70in1":
 					isLargeBanks = false;
 					break;

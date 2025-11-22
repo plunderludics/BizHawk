@@ -3,14 +3,15 @@
 #include <nall/function.hpp>
 #include <nall/string.hpp>
 
+#include <chrono>
+
 namespace nall::chrono {
 
 //passage of time functions (from unknown epoch)
 
 inline auto nanosecond() -> u64 {
-  timespec tv;
-  clock_gettime(CLOCK_MONOTONIC, &tv);
-  return tv.tv_sec * 1'000'000'000 + tv.tv_nsec;
+  auto now = std::chrono::steady_clock::now().time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
 }
 
 inline auto microsecond() -> u64 { return nanosecond() / 1'000; }
@@ -22,6 +23,12 @@ inline auto benchmark(const function<void ()>& f, u64 times = 1) -> void {
   while(times--) f();
   auto end = nanosecond();
   print("[chrono::benchmark] ", (double)(end - start) / 1'000'000'000.0, "s\n");
+}
+
+inline auto daysInMonth(u32 month, u32 year) -> u8 {
+  u32 days = 30 + ((month + (month >> 3)) & 1);
+  if (month == 2) days -= (year % 4 == 0) ? 1 : 2;
+  return days;
 }
 
 //exact date/time functions (from system epoch)

@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -15,6 +14,7 @@ namespace BizHawk.Client.Common
 	public sealed class FirmwareManager
 	{
 		private static readonly FirmwareID NDS_FIRMWARE = new("NDS", "firmware");
+		private const int DSI_NAND_LENGTH = 251658240 + 64;
 
 		public static (byte[] Patched, string ActualHash) PerformPatchInMemory(byte[] @base, in FirmwarePatchOption patchOption)
 		{
@@ -26,7 +26,7 @@ namespace BizHawk.Client.Common
 		{
 			var @base = File.ReadAllBytes(baseFilename);
 			var (patched, actualHash) = PerformPatchInMemory(@base, in patchOption);
-			Trace.Assert(actualHash == patchOption.TargetHash);
+			if (actualHash != patchOption.TargetHash) throw new InvalidOperationException("patch produced incorrect output");
 			var patchedParentDir = Path.Combine(pathEntries[PathEntryCollection.GLOBAL, "Temp Files"].Path, "AutopatchedFirmware");
 			Directory.CreateDirectory(patchedParentDir);
 			var ff = FirmwareDatabase.FirmwareFilesByHash[patchOption.TargetHash];
@@ -61,12 +61,12 @@ namespace BizHawk.Client.Common
 				FilePath = patchedFilePath,
 				KnownFirmwareFile = ff,
 				Hash = patchOption.Value.TargetHash,
-				Size = patchedFileLength
+				Size = patchedFileLength,
 			};
 		}
 
 		/// <remarks>
-		/// Sometimes this is called from a loop in <c>FirmwaresConfig.DoScan</c>.
+		/// Sometimes this is called from a loop in <c>FirmwareConfig.DoScan</c>.
 		/// In that case, we don't want to call <see cref="DoScanAndResolve"/> repeatedly, so we use <paramref name="forbidScan"/> to skip it.
 		/// </remarks>
 		public ResolutionInfo? Resolve(PathEntryCollection pathEntries, IDictionary<string, string> userSpecifications, FirmwareRecord record, bool forbidScan = false)
@@ -101,6 +101,15 @@ namespace BizHawk.Client.Common
 			public RealFirmwareFile Read(FileInfo fi)
 			{
 				using var fs = fi.OpenRead();
+
+				// DSi NAND is huge, and the hash is useless (can't use it to identify a good dump)
+				// Not sure how well the system can handle a dummy hash, so let's just hash the nocash footer (which should be unique for each NAND)
+				if (fs.Length == DSI_NAND_LENGTH)
+				{
+					fs.Seek(-64, SeekOrigin.End);
+					// we can let it fall through here, as ReadAllBytes just reads all bytes starting from the stream position :)
+				}
+
 				var hash = SHA1Checksum.ComputeDigestHex(fs.ReadAllBytes());
 				return _dict![hash] = new RealFirmwareFile(fi, hash);
 			}
@@ -135,8 +144,8 @@ namespace BizHawk.Client.Common
 		{
 			var reader = new RealFirmwareReader();
 
-			// build a list of files under the global firmwares path, and build a hash for each of them (as ResolutionInfo) while we're at it
-			var todo = new Queue<DirectoryInfo>(new[] { new DirectoryInfo(pathEntries.AbsolutePathFor(pathEntries.FirmwaresPathFragment, null)) });
+			// build a list of files under the global firmware path, and build a hash for each of them (as ResolutionInfo) while we're at it
+			Queue<DirectoryInfo> todo = [ new(pathEntries.FirmwareAbsolutePath()) ];
 			while (todo.Count != 0)
 			{
 				var di = todo.Dequeue();
@@ -151,18 +160,17 @@ namespace BizHawk.Client.Common
 			foreach (var fr in FirmwareDatabase.FirmwareRecords)
 			{
 				_resolutionDictionary.Remove(fr); // clear previous resolution results
-				// check each acceptable option for this firmware, looking for the first that's in the reader's file list
-				var found = FirmwareDatabase.FirmwareOptions.FirstOrNull(fo1 => fo1.ID == fr.ID && fo1.IsAcceptableOrIdeal
-					&& reader.Dict.ContainsKey(fo1.Hash));
-				if (found == null) continue; // didn't find any of them
-				var fo = found.Value;
-				// else found one, add it to the dict
-				_resolutionDictionary[fr] = new ResolutionInfo
+				// check each acceptable option for this firmware, looking for the first available sorted by status
+				var found = FirmwareDatabase.FirmwareOptions
+					.Where(fo1 => fo1.ID == fr.ID && fo1.IsAcceptableOrIdeal && reader.Dict.ContainsKey(fo1.Hash))
+					.OrderByDescending(fo => fo.Status)
+					.Take(1).ToArray(); // 0..1 elements (essentially, first or null)
+				if (found is [ FirmwareOption fo ]) _resolutionDictionary[fr] = new()
 				{
 					FilePath = reader.Dict[fo.Hash].FileInfo.FullName,
 					KnownFirmwareFile = FirmwareDatabase.FirmwareFilesByHash[fo.Hash],
 					Hash = fo.Hash,
-					Size = fo.Size
+					Size = fo.Size,
 				};
 			}
 
@@ -172,11 +180,7 @@ namespace BizHawk.Client.Common
 				// do we have a user specification for this firmware record?
 				if (!userSpecifications.TryGetValue(fr.ID.ConfigKey, out var userSpec)) continue;
 
-				if (!_resolutionDictionary.TryGetValue(fr, out var ri))
-				{
-					ri = new ResolutionInfo();
-					_resolutionDictionary[fr] = ri;
-				}
+				var ri = _resolutionDictionary.GetValueOrPutNew(fr);
 				// local ri is a reference to a ResolutionInfo which is now definitely in the dict
 
 				// flag it as user specified
@@ -203,7 +207,7 @@ namespace BizHawk.Client.Common
 				ri.Size = fi.Length;
 				ri.Hash = rff.Hash;
 
-				// check whether it was a known file anyway, and go ahead and bind to the known file, as a perk (the firmwares config doesn't really use this information right now)
+				// check whether it was a known file anyway, and go ahead and bind to the known file, as a perk (the firmware config doesn't really use this information right now)
 				if (FirmwareDatabase.FirmwareFilesByHash.TryGetValue(rff.Hash, out var ff))
 				{
 					ri.KnownFirmwareFile = ff;

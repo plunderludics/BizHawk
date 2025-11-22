@@ -9,19 +9,14 @@
 #include <nall/cipher/chacha20.hpp>
 #endif
 
-#if defined(PLATFORM_LINUX) && __has_include(<sys/random.h>)
-  #include <sys/random.h>
-#elif defined(PLATFORM_ANDROID) && __has_include(<sys/syscall.h>)
-  #include <sys/syscall.h>
-#elif defined(PLATFORM_WINDOWS) && __has_include(<wincrypt.h>)
-  #include <wincrypt.h>
-#else
-  #include <stdio.h>
-#endif
-
 namespace nall {
 
-template<typename Base> struct RNG {
+struct RNGBase {
+protected:
+  auto randomSeed() -> u256;
+};
+
+template<typename Base> struct RNG : RNGBase {
   template<typename T = u64> auto random() -> T {
     u64 value = 0;
     for(u32 n : range((sizeof(T) + 3) / 4)) {
@@ -36,32 +31,6 @@ template<typename Base> struct RNG {
       T value = random<T>();
       if(value >= threshold) return value % range;
     }
-  }
-
-protected:
-  auto randomSeed() -> u256 {
-    u256 seed = 0;
-    #if defined(PLATFORM_BSD) || defined(PLATFORM_MACOS)
-    for(u32 n : range(8)) seed = seed << 32 | (u32)arc4random();
-    #elif defined(PLATFORM_LINUX) && __has_include(<sys/random.h>)
-    getrandom(&seed, 32, GRND_NONBLOCK);
-    #elif defined(PLATFORM_ANDROID) && __has_include(<sys/syscall.h>)
-    syscall(__NR_getrandom, &seed, 32, 0x0001);  //GRND_NONBLOCK
-    #elif defined(PLATFORM_WINDOWS) && __has_include(<wincrypt.h>)
-    HCRYPTPROV provider;
-    if(CryptAcquireContext(&provider, nullptr, MS_STRONG_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
-      CryptGenRandom(provider, 32, (BYTE*)&seed);
-      CryptReleaseContext(provider, 0);
-    }
-    #else
-    srand(time(nullptr));
-    for(u32 n : range(32)) seed = seed << 8 | (u8)rand();
-    if(auto fp = fopen("/dev/urandom", "rb")) {
-      fread(&seed, 32, 1, fp);
-      fclose(fp);
-    }
-    #endif
-    return seed;
   }
 };
 
@@ -88,7 +57,7 @@ private:
   static const u64 crc64 = 0xc96c'5795'd787'0f42;
   u64 lfsr = crc64;
 
-  friend class RNG<LFSR>;
+  friend struct RNG<LFSR>;
 };
 
 struct PCG : RNG<PCG> {
@@ -122,7 +91,7 @@ private:
   u64 state = 0;
   u64 increment = 0;
 
-  friend class RNG<PCG>;
+  friend struct RNG<PCG>;
 };
 
 }
@@ -152,7 +121,7 @@ private:
   Cipher::XChaCha20 context{0, 0};
   u32 counter = 0;
 
-  friend class RNG<XChaCha20>;
+  friend struct RNG<XChaCha20>;
 };
 
 }
@@ -170,3 +139,7 @@ template<typename T = u64> inline auto random() -> T {
 }
 
 }
+
+#if defined(NALL_HEADER_ONLY)
+  #include <nall/random.cpp>
+#endif

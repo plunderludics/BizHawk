@@ -3,12 +3,14 @@
 #if defined(SLJIT)
 namespace nall::recompiler {
   struct generic {
+    static constexpr bool supported = Architecture::amd64 | Architecture::arm64 | Architecture::ppc64 | Architecture::rv64;
+
     bump_allocator& allocator;
     sljit_compiler* compiler = nullptr;
     sljit_label* epilogue = nullptr;
 
     generic(bump_allocator& alloc) : allocator(alloc) {}
-    ~generic() { /*resetCompiler();*/ }
+    ~generic() { resetCompiler(); }
 
     auto beginFunction(int args) -> void {
       assert(args <= 3);
@@ -29,6 +31,7 @@ namespace nall::recompiler {
 
     auto endFunction() -> u8* {
       u8* code = (u8*)sljit_generate_code(compiler);
+      allocator.reserve(sljit_get_generated_code_size(compiler));
       resetCompiler();
       return code;
     }

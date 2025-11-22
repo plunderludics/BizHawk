@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -6,8 +5,6 @@ using System.Reflection;
 
 using BizHawk.Common.IOExtensions;
 using BizHawk.Emulation.Cores;
-
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using static BizHawk.Tests.Testroms.GB.GBHelper;
 
@@ -17,7 +14,7 @@ namespace BizHawk.Tests.Testroms.GB
 	public sealed class RTC3Test
 	{
 		[AttributeUsage(AttributeTargets.Method)]
-		private sealed class RTC3TestData : Attribute, ITestDataSource
+		private sealed class RTC3TestDataAttribute : Attribute, ITestDataSource
 		{
 			public IEnumerable<object?[]> GetData(MethodInfo methodInfo)
 			{
@@ -31,8 +28,8 @@ namespace BizHawk.Tests.Testroms.GB
 					.Select(static setup => new object?[] { setup });
 			}
 
-			public string GetDisplayName(MethodInfo methodInfo, object?[] data)
-				=> $"{methodInfo.Name}({(CoreSetup) data[0]!})";
+			public string? GetDisplayName(MethodInfo methodInfo, object?[]? data)
+				=> $"{methodInfo.Name}(\"{(CoreSetup) data![0]!}\")";
 		}
 
 		private const string ROM_EMBED_PATH = "res.rtc3test_artifact.rtc3test.gb";

@@ -1,6 +1,6 @@
 #include <n64/n64.hpp>
 
-#include "Gfx #1.3.h"
+#include "angrylion.h"
 
 namespace ares::Nintendo64 {
 
@@ -14,14 +14,12 @@ auto RDP::load(Node::Object parent) -> void {
   node = parent->append<Node::Object>("RDP");
   debugger.load(node);
 
-  angrylion::RomOpen();
+  angrylion::Init();
 }
 
 auto RDP::unload() -> void {
   debugger = {};
   node.reset();
-
-  angrylion::RomClosed();
 }
 
 auto RDP::crash(const char *reason) -> void {
@@ -33,11 +31,11 @@ auto RDP::crash(const char *reason) -> void {
 }
 
 auto RDP::main() -> void {
-  step(system.frequency());
-}
-
-auto RDP::step(u32 clocks) -> void {
-  Thread::clock += clocks;
+  const u32 clocks = system.frequency();
+  while(Thread::clock < 0) {
+    step(clocks);
+    command.clock += clocks / 3;
+  }
 }
 
 auto RDP::power(bool reset) -> void {

@@ -1,6 +1,4 @@
-﻿using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows.Forms;
 using BizHawk.Client.Common;
 
@@ -12,13 +10,15 @@ namespace BizHawk.Client.EmuHawk
 		private readonly bool _readOnly;
 		private string _lastHeaderClicked;
 		private bool _sortReverse;
+		private readonly bool _dispose;
 
-		public EditCommentsForm(IMovie movie, bool readOnly)
+		public EditCommentsForm(IMovie movie, bool readOnly, bool disposeOnClose = false)
 		{
 			_movie = movie;
 			_readOnly = readOnly;
 			_lastHeaderClicked = "";
 			_sortReverse = false;
+			_dispose = disposeOnClose;
 
 			InitializeComponent();
 			Icon = Properties.Resources.TAStudioIcon;
@@ -26,14 +26,11 @@ namespace BizHawk.Client.EmuHawk
 
 		private void EditCommentsForm_Load(object sender, EventArgs e)
 		{
-			if (_movie.Comments.Any())
+			for (int i = 0; i < _movie.Comments.Count; i++)
 			{
-				for (int i = 0; i < _movie.Comments.Count; i++)
-				{
-					CommentGrid.Rows.Add();
-					var c = CommentGrid.Rows[i].Cells[0];
-					c.Value = _movie.Comments[i];
-				}
+				CommentGrid.Rows.Add();
+				var c = CommentGrid.Rows[i].Cells[0];
+				c.Value = _movie.Comments[i];
 			}
 
 			if (_readOnly)
@@ -98,6 +95,14 @@ namespace BizHawk.Client.EmuHawk
 			_lastHeaderClicked = column.Name;
 			_sortReverse = !_sortReverse;
 			CommentGrid.Refresh();
+		}
+
+		private void OnClosed(object sender, FormClosedEventArgs e)
+		{
+			if (_dispose && _movie is ITasMovie tasMovie)
+			{
+				tasMovie.Dispose();
+			}
 		}
 	}
 }

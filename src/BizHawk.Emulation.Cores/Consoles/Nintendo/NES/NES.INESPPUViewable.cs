@@ -1,9 +1,8 @@
-﻿using System;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Nintendo.NES
 {
-	partial class NES : INESPPUViewable
+	public sealed partial class NES : INESPPUViewable
 	{
 		public int[] GetPalette() => palette_compiled;
 

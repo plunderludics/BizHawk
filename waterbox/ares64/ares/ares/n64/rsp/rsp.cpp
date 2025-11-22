@@ -3,6 +3,7 @@
 namespace ares::Nintendo64 {
 
 RSP rsp;
+#include "decoder.cpp"
 #include "dma.cpp"
 #include "io.cpp"
 #include "interpreter.cpp"
@@ -29,12 +30,10 @@ auto RSP::unload() -> void {
 }
 
 auto RSP::main() -> void {
-  if(status.halted) return step(128);
-  instruction();
-}
-
-auto RSP::step(u32 clocks) -> void {
-  Thread::clock += clocks;
+  while(Thread::clock < 0) {
+    if(status.halted) return step(128);
+    instruction();
+  }
 }
 
 auto RSP::instruction() -> void {
@@ -44,18 +43,43 @@ auto RSP::instruction() -> void {
   }
 
   if constexpr(Accuracy::RSP::Interpreter) {
-    pipeline.address = ipu.pc;
-    pipeline.instruction = imem.read<Word>(pipeline.address);
-    debugger.instruction();
-    decoderEXECUTE();
-    instructionEpilogue();
-    step(3);
+    u32 instruction = imem.read<Word>(ipu.pc);
+    instructionPrologue(instruction);
+    pipeline.begin();
+    OpInfo op0 = decoderEXECUTE(instruction);
+    pipeline.issue(op0);
+    interpreterEXECUTE();
+
+    if(!pipeline.singleIssue && !op0.branch()) {
+      u32 instruction = imem.read<Word>(ipu.pc + 4);
+      OpInfo op1 = decoderEXECUTE(instruction);
+
+      if(canDualIssue(op0, op1)) {
+        instructionEpilogue(0);
+        instructionPrologue(instruction);
+        pipeline.issue(op1);
+        interpreterEXECUTE();
+      }
+    }
+
+    pipeline.end();
+    instructionEpilogue(0);
   }
+
+  //this handles all stepping for the interpreter
+  //with the recompiler, it only steps for taken branch stalls
+  step(pipeline.clocks);
 }
 
-auto RSP::instructionEpilogue() -> s32 {
+auto RSP::instructionPrologue(u32 instruction) -> void {
+  pipeline.address = ipu.pc;
+  pipeline.instruction = instruction;
+  debugger.instruction();
+}
+
+auto RSP::instructionEpilogue(u32 clocks) -> s32 {
   if constexpr(Accuracy::RSP::Recompiler) {
-    step(3);
+    step(clocks);
   }
 
   ipu.r[0].u32 = 0;
@@ -63,7 +87,12 @@ auto RSP::instructionEpilogue() -> s32 {
   switch(branch.state) {
   case Branch::Step: ipu.pc += 4; return status.halted;
   case Branch::Take: ipu.pc += 4; branch.delaySlot(); return status.halted;
-  case Branch::DelaySlot: ipu.pc = branch.pc; branch.reset(); return 1;
+  case Branch::DelaySlot:
+    ipu.pc = branch.pc;
+    branch.reset();
+    pipeline.stall();
+    if(branch.pc & 4) pipeline.singleIssue = 1;
+    return 1;
   }
 
   unreachable;
@@ -86,15 +115,15 @@ auto RSP::power(bool reset) -> void {
   for(auto& r : ipu.r) r.u32 = 0;
   ipu.pc = 0;
   branch = {};
-  for(auto& r : vpu.r) r.u128 = 0;
-  vpu.acch.u128 = 0;
-  vpu.accm.u128 = 0;
-  vpu.accl.u128 = 0;
-  vpu.vcoh.u128 = 0;
-  vpu.vcol.u128 = 0;
-  vpu.vcch.u128 = 0;
-  vpu.vccl.u128 = 0;
-  vpu.vce.u128 = 0;
+  for(auto& r : vpu.r) r = zero;
+  vpu.acch = zero;
+  vpu.accm = zero;
+  vpu.accl = zero;
+  vpu.vcoh = zero;
+  vpu.vcol = zero;
+  vpu.vcch = zero;
+  vpu.vccl = zero;
+  vpu.vce = zero;
   vpu.divin = 0;
   vpu.divout = 0;
   vpu.divdp = 0;
@@ -115,8 +144,8 @@ auto RSP::power(bool reset) -> void {
   }
 
   if constexpr(Accuracy::RSP::Recompiler) {
-    auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(64_MiB);
-    recompiler.allocator.resize(64_MiB, bump_allocator::executable | bump_allocator::zero_fill, buffer);
+    auto buffer = ares::Memory::FixedAllocator::get().tryAcquire(4_MiB);
+    recompiler.allocator.resize(64_MiB, bump_allocator::executable, buffer);
     recompiler.reset();
   }
 

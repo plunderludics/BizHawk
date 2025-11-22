@@ -1,7 +1,7 @@
-﻿using System;
 using System.Collections.Generic;
 
 using BizHawk.Common;
+using BizHawk.Common.CollectionExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores.Components;
 using BizHawk.Emulation.Cores.Components.H6280;
@@ -9,7 +9,12 @@ using BizHawk.Emulation.DiscSystem;
 
 namespace BizHawk.Emulation.Cores.PCEngine
 {
-	public enum NecSystemType { TurboGrafx, TurboCD, SuperGrafx }
+	public enum NecSystemType
+	{
+		TurboGrafx,
+		TurboCD,
+		SuperGrafx,
+	}
 
 	[Core(CoreNames.PceHawk, "Vecna")]
 	public sealed partial class PCEngine : IEmulator, ISaveRam, IInputPollable, IVideoLogicalOffsets, IRomInfo,
@@ -31,12 +36,12 @@ namespace BizHawk.Emulation.Cores.PCEngine
 				SystemId = VSystemID.Raw.PCECD;
 				Type = NecSystemType.TurboCD;
 				this.disc = lp.Discs[0].DiscData;
-				Settings = (PCESettings)lp.Settings ?? new PCESettings();
-				_syncSettings = (PCESyncSettings)lp.SyncSettings ?? new PCESyncSettings();
+				Settings = lp.Settings ?? new PCESettings();
+				_syncSettings = lp.SyncSettings ?? new PCESyncSettings();
 
 				var (rom, biosInfo) = lp.Comm.CoreFileProvider.GetFirmwareWithGameInfoOrThrow(
 					new("PCECD", "Bios"),
-					"PCE-CD System Card not found. Please check the BIOS settings in Config->Firmwares.");
+					"PCE-CD System Card not found. Please check the BIOS settings in Config > Firmware...");
 
 				if (biosInfo.Status == RomStatus.BadDump)
 				{
@@ -49,7 +54,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 					lp.Comm.ShowMessage(
 						"The PCE-CD System Card you have selected is not recognized in our database. That might mean it's a bad dump, or isn't the correct rom.");
 				}
-				else if (biosInfo["BIOS"] == false)
+				else if (!biosInfo["BIOS"])
 				{
 					// zeromus says: someone please write a note about how this could possibly happen.
 					// it seems like this is a relic of using gameDB for storing whether something is a bios? firmwareDB should be handling it now.
@@ -62,7 +67,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 					lp.Game.AddOption("SuperSysCard", "");
 				}
 
-				if (lp.Game["NeedSuperSysCard"] && lp.Game["SuperSysCard"] == false)
+				if (lp.Game["NeedSuperSysCard"] && !lp.Game["SuperSysCard"])
 				{
 					lp.Comm.ShowMessage(
 						"This game requires a version 3.0 System card and won't run with the system card you've selected. Try selecting a 3.0 System Card in the firmware configuration.");
@@ -96,8 +101,8 @@ namespace BizHawk.Emulation.Cores.PCEngine
 						break;
 				}
 
-				Settings = (PCESettings)lp.Settings ?? new PCESettings();
-				_syncSettings = (PCESyncSettings)lp.SyncSettings ?? new PCESyncSettings();
+				Settings = lp.Settings ?? new PCESettings();
+				_syncSettings = lp.SyncSettings ?? new PCESyncSettings();
 				Init(lp.Game, lp.Roms[0].RomData);
 
 				_controllerDeck = new PceControllerDeck(
@@ -203,35 +208,29 @@ namespace BizHawk.Emulation.Cores.PCEngine
 				Cpu.ThinkAction = cycles => { SCSI.Think(); ADPCM.Think(cycles); };
 			}
 
-			if (rom.Length == 0x60000)
-			{
-				// 384k roms require special loading code. Why ;_;
-				// In memory, 384k roms look like [1st 256k][Then full 384k]
-				RomData = new byte[0xA0000];
-				var origRom = rom;
-				for (int i = 0; i < 0x40000; i++)
-					RomData[i] = origRom[i];
-				for (int i = 0; i < 0x60000; i++)
-					RomData[i + 0x40000] = origRom[i];
-				RomLength = RomData.Length;
-			}
-			else if (rom.Length > 1024 * 1024)
+			if (rom.Length > 1024 * 1024)
 			{
 				// If the rom is bigger than 1 megabyte, switch to Street Fighter 2 mapper
 				Cpu.ReadMemory21 = ReadMemorySF2;
 				Cpu.WriteMemory21 = WriteMemorySF2;
 				RomData = rom;
-				RomLength = RomData.Length;
 
 				// user request: current value of the SF2MapperLatch on the tracelogger
-				Cpu.Logger = s => Tracer.Put(new(disassembly: $"{SF2MapperLatch:X1}:{s}", registerInfo: string.Empty));
+				Cpu.Logger = s => Tracer.Put(new(disassembly: $"{SF2MapperLatch:X1}:{s.Disassembly}", registerInfo: string.Empty));
+			}
+			else if (rom.Length is 0x60000)
+			{
+				// 384k roms require special loading code. Why ;_;
+				// In memory, 384k roms look like [1st 256k][Then full 384k]
+				RomData = new byte[0xA0000];
+				((ReadOnlySpan<byte>) rom.AsSpan(start: 0, length: 0x40000)).ConcatArray(rom, dest: RomData);
 			}
 			else
 			{
 				// normal rom.
 				RomData = rom;
-				RomLength = RomData.Length;
 			}
+			RomLength = RomData.Length;
 
 			if (game["BRAM"] || Type == NecSystemType.TurboCD)
 			{
@@ -298,7 +297,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 			// 2) The games which have custom HBlankPeriods work without it, the override only
 			//    serves to clean up minor gfx anomalies.
 			// 3) There's no point in haxing the timing with incorrect values in an attempt to avoid this.
-			//    The proper fix is cycle-accurate/bus-accurate timing. That isn't coming to the C# 
+			//    The proper fix is cycle-accurate/bus-accurate timing. That isn't coming to the C#
 			//    version of this core. Let's just acknolwedge that the timing is imperfect and fix
 			//    it in the least intrusive and most honest way we can.
 			if (game["HBlankPeriod"])
@@ -322,6 +321,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 			ser.Register<IDisassemblable>(Cpu);
 			ser.Register<IVideoProvider>((IVideoProvider)VPC ?? VDC1);
 			ser.Register<ISoundProvider>(_soundProvider);
+			ser.Register<IPCEngineSoundDebuggable>(PSG);
 			ser.Register<IStatable>(new StateSerializer(SyncState));
 			SetupMemoryDomains();
 		}
@@ -333,10 +333,7 @@ namespace BizHawk.Emulation.Cores.PCEngine
 			Dictionary<string, int> sizes = new Dictionary<string, int>();
 			foreach (var m in mm)
 			{
-				if (!sizes.ContainsKey(m.Name) || m.MaxOffs >= sizes[m.Name])
-				{
-					sizes[m.Name] = m.MaxOffs;
-				}
+				if (!sizes.TryGetValue(m.Name, out var size) || size <= m.MaxOffs) sizes[m.Name] = m.MaxOffs;
 			}
 
 			var keys = new List<string>(sizes.Keys);

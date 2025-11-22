@@ -1,11 +1,12 @@
-﻿using System;
 using System.IO;
 using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 {
-	public partial class QuickNES : IStatable
+	public sealed partial class QuickNES : IStatable
 	{
+		public bool AvoidRewind => false;
+
 		public void SaveStateBinary(BinaryWriter writer)
 		{
 			CheckDisposed();

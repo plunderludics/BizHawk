@@ -1,4 +1,3 @@
-﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
@@ -12,6 +11,9 @@ namespace BizHawk.Client.EmuHawk
 	[SpecializedTool("Tile Viewer")]
 	public partial class PceTileViewer : ToolFormBase, IToolFormAutoConfig
 	{
+		public static Icon ToolIcon
+			=> Properties.Resources.PceIcon;
+
 		[RequiredService]
 		public IPceGpuView Viewer { get; private set; }
 
@@ -26,7 +28,7 @@ namespace BizHawk.Client.EmuHawk
 		public PceTileViewer()
 		{
 			InitializeComponent();
-			Icon = Properties.Resources.PceIcon;
+			Icon = ToolIcon;
 			bmpViewBG.ChangeBitmapSize(512, 256);
 			bmpViewSP.ChangeBitmapSize(512, 256);
 			bmpViewBGPal.ChangeBitmapSize(256, 256);
@@ -78,8 +80,8 @@ namespace BizHawk.Client.EmuHawk
 
 				int* dest = (int*)lockData.Scan0;
 				int pitch = lockData.Stride / sizeof(int);
-				byte* src = (byte*)view.SpriteCache;
-				int* pal = (int*)view.PaletteCache + 256 + _spPalNum * 16;
+				byte* src = view.SpriteCache;
+				int* pal = view.PaletteCache + 256 + _spPalNum * 16;
 				for (int tile = 0; tile < 512; tile++)
 				{
 					int srcAddr = tile * 256;
@@ -100,8 +102,8 @@ namespace BizHawk.Client.EmuHawk
 
 				int* dest = (int*)lockData.Scan0;
 				int pitch = lockData.Stride / sizeof(int);
-				byte* src = (byte*)view.BackgroundCache;
-				int* pal = (int*)view.PaletteCache + _bgPalNum * 16;
+				byte* src = view.BackgroundCache;
+				int* pal = view.PaletteCache + _bgPalNum * 16;
 				for (int tile = 0; tile < 2048; tile++)
 				{
 					int srcAddr = tile * 64;
@@ -118,7 +120,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			Viewer.GetGpuData(checkBoxVDC2.Checked ? 1 : 0, view =>
 			{
-				int* pal = (int*)view.PaletteCache;
+				int* pal = view.PaletteCache;
 				DrawPalette(bmpViewBGPal.Bmp, pal);
 				DrawPalette(bmpViewSPPal.Bmp, pal + 256);
 			});
@@ -157,7 +159,7 @@ namespace BizHawk.Client.EmuHawk
 				checkBoxVDC2.Checked = false;
 			}
 
-			CheckBoxVDC2_CheckedChanged(null, null);
+			CheckBoxVDC2_CheckedChanged(null, EventArgs.Empty);
 		}
 
 		private void CheckBoxVDC2_CheckedChanged(object sender, EventArgs e)
@@ -185,17 +187,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (ModifierKeys.HasFlag(Keys.Control) && e.KeyCode == Keys.C)
 			{
-				// find the control under the mouse
-				Point m = Cursor.Position;
-				Control top = this;
-				Control found;
-				do
-				{
-					found = top.GetChildAtPoint(top.PointToClient(m));
-					top = found;
-				} while (found != null && found.HasChildren);
-
-				if (found is BmpView bv)
+				if (this.InnermostControlAt(Cursor.Position) is BmpView bv)
 				{
 					Clipboard.SetImage(bv.Bmp);
 				}

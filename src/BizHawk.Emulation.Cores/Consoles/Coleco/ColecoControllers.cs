@@ -1,4 +1,3 @@
-﻿using System;
 using System.ComponentModel;
 using System.Linq;
 
@@ -96,7 +95,7 @@ namespace BizHawk.Emulation.Cores.ColecoVision
 				if (c.IsPressed(Definition.BoolButtons[7])) retVal = 0x0D;
 				if (c.IsPressed(Definition.BoolButtons[12])) retVal = 0x0E;
 
-				if (c.IsPressed(Definition.BoolButtons[5]) == false) retVal |= 0x40;
+				if (!c.IsPressed(Definition.BoolButtons[5])) retVal |= 0x40;
 				retVal |= 0x30; // always set these bits
 				return retVal;
 			}
@@ -139,18 +138,18 @@ namespace BizHawk.Emulation.Cores.ColecoVision
 			if (leftMode)
 			{
 				byte retVal = 0x4F;
-				
+
 				if (c.IsPressed(Definition.BoolButtons[0])) retVal &= 0x3F;
-				
+
 				float x = c.AxisValue(Definition.Axes[0]);
 				float y = c.AxisValue(Definition.Axes[1]);
 
 				var angle = updateWheel ? wheelAngle : CalcDirection(x, y);
-				
+
 				byte temp2 = 0;
 
 				int temp1 = (int)Math.Floor(angle / 1.25);
-				temp1 = temp1 % 4;
+				temp1 %= 4;
 
 				if (temp1 == 0)
 				{
@@ -173,7 +172,7 @@ namespace BizHawk.Emulation.Cores.ColecoVision
 
 
 				retVal |= temp2;
-				
+
 				return retVal;
 			}
 
@@ -252,7 +251,7 @@ namespace BizHawk.Emulation.Cores.ColecoVision
 				byte temp2 = 0;
 
 				int temp1 = (int)Math.Floor(angle / 1.25);
-				temp1 = temp1 % 4;
+				temp1 %= 4;
 
 				if (temp1 == 0)
 				{
@@ -300,7 +299,7 @@ namespace BizHawk.Emulation.Cores.ColecoVision
 				if (c.IsPressed(Definition.BoolButtons[18])) retVal = 0x04;
 				if (c.IsPressed(Definition.BoolButtons[19])) retVal = 0x08;
 
-				if (c.IsPressed(Definition.BoolButtons[5]) == false) retVal |= 0x40;
+				if (!c.IsPressed(Definition.BoolButtons[5])) retVal |= 0x40;
 				retVal |= 0x30; // always set these bits
 				return retVal;
 			}

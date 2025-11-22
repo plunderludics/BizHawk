@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using BizHawk.Emulation.Common;
@@ -89,6 +88,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 
 		private void SyncByteArrayDomain(string name, byte[] data)
 		{
+#pragma warning disable MEN014 // unclear how this check works from looking only at this code --yoshi
 			if (_memoryDomainsInit || _byteArrayDomains.ContainsKey(name))
 			{
 				var m = _byteArrayDomains[name];
@@ -99,6 +99,7 @@ namespace BizHawk.Emulation.Cores.Computers.SinclairSpectrum
 				var m = new MemoryDomainByteArray(name, MemoryDomain.Endian.Little, data, true, 1);
 				_byteArrayDomains.Add(name, m);
 			}
+#pragma warning restore MEN014
 		}
 	}
 }

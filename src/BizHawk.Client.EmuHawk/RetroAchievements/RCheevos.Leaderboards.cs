@@ -1,19 +1,50 @@
 using System.Text;
-using System.Threading.Tasks;
 
 namespace BizHawk.Client.EmuHawk
 {
 	public partial class RCheevos
 	{
+#if false
 		private readonly RCheevosLeaderboardListForm _lboardListForm = new();
+#endif
 
-		private bool LBoardsActive { get; set; }
+		private sealed class LboardTriggerRequest : RCheevoHttpRequest
+		{
+			private readonly LibRCheevos.rc_api_submit_lboard_entry_request_t _apiParams;
+			private readonly DateTime _completionTime;
 
+			protected override void ResponseCallback(byte[] serv_resp)
+			{
+				var res = _lib.rc_api_process_submit_lboard_entry_response(out var resp, serv_resp);
+				_lib.rc_api_destroy_submit_lboard_entry_response(ref resp);
+				if (res != LibRCheevos.rc_error_t.RC_OK)
+				{
+					Console.WriteLine($"LboardTriggerRequest failed in ResponseCallback with {res}");
+				}
+			}
+
+			public override void DoRequest()
+			{
+				var secondsSinceCompletion = (DateTime.UtcNow - _completionTime).TotalSeconds;
+				var apiParams = new LibRCheevos.rc_api_submit_lboard_entry_request_t(_apiParams.username, _apiParams.api_token,
+					_apiParams.leaderboard_id, _apiParams.score, _apiParams.game_hash, (uint)secondsSinceCompletion);
+				var apiParamsResult = _lib.rc_api_init_submit_lboard_entry_request(out var api_req, in apiParams);
+				InternalDoRequest(apiParamsResult, ref api_req);
+			}
+
+			public LboardTriggerRequest(string username, string api_token, uint id, int value, string hash)
+			{
+				_apiParams = new(username, api_token, id, value, hash, seconds_since_completion: 0);
+				_completionTime = DateTime.UtcNow;
+			}
+		}
+
+		private bool LBoardNotifsActive { get; set; }
 		private LBoard CurrentLboard { get; set; }
 
 		public class LBoard
 		{
-			public int ID { get; }
+			public uint ID { get; }
 			public int Format { get; }
 			public string Title { get; }
 			public string Description { get; }
@@ -57,27 +88,5 @@ namespace BizHawk.Client.EmuHawk
 				SetScore(0);
 			}
 		}
-
-		private static async Task SendTriggerLeaderboardAsync(string username, string api_token, int id, int value, string hash)
-		{
-			var api_params = new LibRCheevos.rc_api_submit_lboard_entry_request_t(username, api_token, id, value, hash);
-			var res = LibRCheevos.rc_error_t.RC_INVALID_STATE;
-			if (_lib.rc_api_init_submit_lboard_entry_request(out var api_req, ref api_params) == LibRCheevos.rc_error_t.RC_OK)
-			{
-				var serv_req = await SendAPIRequest(in api_req).ConfigureAwait(false);
-				res = _lib.rc_api_process_submit_lboard_entry_response(out var resp, serv_req);
-				_lib.rc_api_destroy_submit_lboard_entry_response(ref resp);
-			}
-
-			_lib.rc_api_destroy_request(ref api_req);
-
-			if (res != LibRCheevos.rc_error_t.RC_OK)
-			{
-				// todo: warn user?
-			}
-		}
-
-		private static async void SendTriggerLeaderboard(string username, string api_token, int id, int value, string hash)
-			=> await SendTriggerLeaderboardAsync(username, api_token, id, value, hash).ConfigureAwait(false);
 	}
 }

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using BizHawk.Common;
@@ -18,10 +17,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 				BSNES_INPUT_DEVICE.None => new BsnesUnpluggedController(),
 				BSNES_INPUT_DEVICE.Gamepad => new BsnesController(),
 				BSNES_INPUT_DEVICE.ExtendedGamepad => new BsnesExtendedController(),
-				BSNES_INPUT_DEVICE.Mouse => new BsnesMouseController
-				{
-					LimitAnalogChangeSensitivity = ss.LimitAnalogChangeSensitivity
-				},
+				BSNES_INPUT_DEVICE.Mouse => new BsnesMouseController(LimitAnalogChangeSensitivity: ss.LimitAnalogChangeSensitivity),
 				BSNES_INPUT_DEVICE.SuperMultitap => new BsnesMultitapController(),
 				BSNES_INPUT_DEVICE.Payload => new BsnesPayloadController(),
 				BSNES_INPUT_DEVICE.SuperScope => new BsnesSuperScopeController(),
@@ -172,14 +168,13 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 		}
 	}
 
-	internal class BsnesMouseController : IBsnesController
+	internal class BsnesMouseController(bool LimitAnalogChangeSensitivity = true) : IBsnesController
 	{
 		private static readonly ControllerDefinition _definition = new ControllerDefinition("(SNES Controller fragment)")
 				{ BoolButtons = { "0Mouse Left", "0Mouse Right" } }
 			.AddXYPair("0Mouse {0}", AxisPairOrientation.RightAndDown, (-127).RangeTo(127), 0);
 
 		public ControllerDefinition Definition => _definition;
-		public bool LimitAnalogChangeSensitivity { get; init; } = true;
 
 		public short GetState(IController controller, int index, int id)
 		{
@@ -303,13 +298,16 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 	internal class BsnesSuperScopeController : IBsnesController
 	{
 		private static readonly ControllerDefinition _definition = new ControllerDefinition("(SNES Controller fragment)")
-			{ BoolButtons = { "0Trigger", "0Cursor", "0Turbo", "0Pause" } }
+			{ BoolButtons = { "0Trigger", "0Cursor", "0Turbo", "0Pause", "0Offscreen" } }
 			.AddLightGun("0Scope {0}");
 
 		public ControllerDefinition Definition => _definition;
 
 		public short GetState(IController controller, int index, int id)
 		{
+			if (id is 0 or 1 && controller.IsPressed("0Offscreen"))
+				return -1;
+
 			return id switch
 			{
 				0 => (short) controller.AxisValue("0Scope X"),
@@ -326,11 +324,11 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 		{
 			Definition = chained
 				? new ControllerDefinition("(SNES Controller fragment)")
-					{ BoolButtons = { "0Trigger", "0Start", "1Trigger", "1Start" } }
+					{ BoolButtons = { "0Trigger", "0Start", "0Offscreen", "1Trigger", "1Start", "1Offscreen" } }
 					.AddLightGun("0Justifier {0}")
 					.AddLightGun("1Justifier {0}")
 				: new ControllerDefinition("(SNES Controller fragment)")
-					{BoolButtons = { "0Trigger", "0Start"} }
+					{ BoolButtons = { "0Trigger", "0Start", "0Offscreen" } }
 					.AddLightGun("0Justifier {0}");
 			_chained = chained;
 		}
@@ -344,11 +342,14 @@ namespace BizHawk.Emulation.Cores.Nintendo.BSNES
 			if (index == 1 && !_chained)
 				return 0;
 
+			if (id is 0 or 1 && controller.IsPressed($"{index}Offscreen"))
+				return -1;
+
 			return id switch
 			{
 				0 => (short) controller.AxisValue($"{index}Justifier X"),
 				1 => (short) controller.AxisValue($"{index}Justifier Y"),
-				2 or 3 => (short) (controller.IsPressed(Definition.BoolButtons[index * 2 + id - 2]) ? 1 : 0),
+				2 or 3 => (short) (controller.IsPressed(Definition.BoolButtons[index * 3 + id - 2]) ? 1 : 0),
 				_ => 0
 			};
 		}

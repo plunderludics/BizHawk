@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using BizHawk.Common;
@@ -74,7 +73,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.N64.NativeApi
 			GFXReadScreen2Res(IntPtr.Zero, ref width, ref height, 0);
 		}
 
-		private int[] m64pBuffer = new int[0];
+		private int[] m64pBuffer = [ ];
+
 		/// <summary>
 		/// This function copies the frame buffer from mupen64plus
 		/// </summary>

@@ -1,9 +1,10 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 using BizHawk.Common.CollectionExtensions;
+using BizHawk.Common.StringExtensions;
 
 namespace BizHawk.Common
 {
@@ -21,6 +22,10 @@ namespace BizHawk.Common
 	/// </remarks>
 	public sealed class HawkFile : IDisposable
 	{
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool PathContainsPipe(string s)
+			=> s.ContainsOrdinal('|');
+
 		private readonly List<HawkArchiveFileItem>? _archiveItems;
 
 		private Stream? _boundStream;
@@ -71,26 +76,14 @@ namespace BizHawk.Common
 		public string Name => ArchiveMemberPath ?? FullPathWithoutMember;
 
 		/// <summary>Makes a new HawkFile based on the provided path.</summary>
-		/// <param name="delayIOAndDearchive">Pass <see langword="true"/> to only populate a few fields (those that can be computed from the string <paramref name="path"/>), which is less computationally expensive.</param>
-		public HawkFile([HawkFilePath] string path, bool delayIOAndDearchive = false, bool allowArchives = true)
+		public HawkFile([HawkFilePath] string path, bool allowArchives = true)
 		{
-			if (delayIOAndDearchive)
-			{
-				var split = SplitArchiveMemberPath(path);
-				if (split != null)
-				{
-					(path, ArchiveMemberPath) = split.Value;
-					IsArchive = true; // we'll assume that the '|' is only used for archives
-				}
-				FullPathWithoutMember = path;
-				return;
-			}
-
 			string? autobind = null;
 			var split1 = SplitArchiveMemberPath(path);
 			if (split1 != null) (path, autobind) = split1.Value;
+			Exists = _rootExists = File.Exists(path);
+			if (_rootExists) path = Path.GetFullPath(path);
 			FullPathWithoutMember = path;
-			Exists = _rootExists = !string.IsNullOrEmpty(path) && new FileInfo(path).Exists;
 			if (!_rootExists) return;
 
 			if (DearchivalMethod != null && allowArchives)
@@ -140,13 +133,11 @@ namespace BizHawk.Common
 						Exists = false;
 						return;
 					}
-					for (int i = 0, l = scanResults.Count; i < l; i++)
+					var i = scanResults.FindIndex(item => item.Name.EqualsIgnoreCase(autobind));
+					if (i >= 0)
 					{
-						if (string.Equals(scanResults[i].Name, autobind, StringComparison.InvariantCultureIgnoreCase))
-						{
-							BindArchiveMember(i);
-							return;
-						}
+						BindArchiveMember(i);
+						return;
 					}
 				}
 
@@ -267,9 +258,14 @@ namespace BizHawk.Common
 		public Stream GetStream() => _boundStream ?? throw new InvalidOperationException($"{nameof(HawkFile)}: Can't call {nameof(GetStream)}() before you've successfully bound something!");
 
 		/// <summary>attempts to read all the content from the file</summary>
-		public byte[] ReadAllBytes()
+		/// <remarks>
+		/// unlike <see cref="IOExtensions.IOExtensions.ReadAllBytes(Stream)"/>,
+		/// DOES seek to beginning unless <paramref name="fromStart"/> is <see langword="false"/>
+		/// </remarks>
+		public byte[] ReadAllBytes(bool fromStart = true)
 		{
-			using var stream = GetStream();
+			var stream = GetStream();
+			if (fromStart) stream.Position = 0L;
 			using var ms = new MemoryStream((int) stream.Length);
 			stream.CopyTo(ms);
 			return ms.GetBuffer();
@@ -285,19 +281,19 @@ namespace BizHawk.Common
 		}
 
 		/// <summary>Set this with an instance which can construct archive handlers as necessary for archive handling.</summary>
-		public static IFileDearchivalMethod<IHawkArchiveFile>? DearchivalMethod;
+		public static IFileDearchivalMethod<IHawkArchiveFile>? DearchivalMethod { get; set; }
 
 		[return: HawkFilePath]
 		private static string MakeCanonicalName(string root, string? member) => member == null ? root : $"{root}|{member}";
 
 		/// <returns>path / member path pair iff <paramref name="path"/> contains <c>'|'</c>, <see langword="null"/> otherwise</returns>
-		private static (string, string)? SplitArchiveMemberPath([HawkFilePath] string path)
+		public static (string ArchivePath, string MemberPath)? SplitArchiveMemberPath([HawkFilePath] string path)
 		{
 			var i = path.LastIndexOf('|');
 #if DEBUG
 			if (path.IndexOf('|') != i) Console.WriteLine($"{nameof(HawkFile)} path contains multiple '|'");
 #endif
-			return i == -1 ? ((string, string)?) null : (path.Substring(0, i), path.Substring(i + 1));
+			return i == -1 ? null : (path.Substring(0, i), path.Substring(i + 1));
 		}
 	}
 }

@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using BizHawk.Emulation.Common;
 
@@ -19,7 +18,7 @@ namespace BizHawk.Client.Common
 		{
 			var guid = Guid.NewGuid();
 			_memorySavestates.Add(guid, StatableCore.CloneSavestate());
-			return guid.ToString();
+			return guid.ToString("D");
 		}
 
 		public void LoadCoreStateFromMemory(string identifier)

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Globalization;
+using System.Threading;
 
 using BizHawk.Bizware.Graphics;
 using BizHawk.Common;
@@ -89,6 +91,13 @@ namespace BizHawk.Client.EmuHawk
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 		private static int SubMain(string[] args)
 		{
+			var customLocale = Environment.GetEnvironmentVariable("LOCALE");
+			if (!string.IsNullOrEmpty(customLocale))
+			{
+				Thread.CurrentThread.CurrentCulture = new CultureInfo(customLocale);
+				Thread.CurrentThread.CurrentUICulture = new CultureInfo(customLocale);
+			}
+
 			// this check has to be done VERY early.  i stepped through a debug build with wrong .dll versions purposely used,
 			// and there was a TypeLoadException before the first line of SubMain was reached (some static ColorType init?)
 			var thisAsmVer = ReflectionCache.AsmVersion;

@@ -1,6 +1,5 @@
 #nullable enable
 
-using System;
 using System.Runtime.InteropServices;
 
 namespace Plunderludics.UnityHawk.Shared

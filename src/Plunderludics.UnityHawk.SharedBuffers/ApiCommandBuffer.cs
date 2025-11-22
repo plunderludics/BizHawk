@@ -1,8 +1,6 @@
 // This is for unity to call write-only api commands that don't require a return value
 #nullable enable
 
-using System;
-using System.Text;
 using System.Runtime.InteropServices;
 
 using SharedMemory;

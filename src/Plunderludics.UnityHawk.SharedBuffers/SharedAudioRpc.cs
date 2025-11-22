@@ -1,7 +1,5 @@
 #nullable enable
 
-using System;
-
 using SharedMemory;
 
 namespace Plunderludics.UnityHawk.SharedBuffers

@@ -1,8 +1,5 @@
 // For calling C# methods in Unity from BizHawk lua
 
-using System;
-using System.Text;
-
 using SharedMemory;
 
 using Plunderludics.UnityHawk.Shared;
@@ -29,7 +26,7 @@ namespace Plunderludics.UnityHawk.SharedBuffers
 			// serialize (methodName, input) into a MethodCall struct
 			MethodCall methodCall = new MethodCall {
 				MethodName = methodName,
-				Argument = arg != null ? arg : string.Empty
+				Argument = arg ?? string.Empty,
 			};
 			byte[] bytes = Serialization.Serialize(methodCall);
 

@@ -1,6 +1,5 @@
-﻿// This should probably move under the Plunderludics.UnityHawk namespace/directory? idk
+﻿// TODO: This should probably move under the Plunderludics.UnityHawk namespace/directory? idk
 
-using System;
 using System.ComponentModel;
 using System.Text;
 using Plunderludics.UnityHawk.SharedBuffers;
